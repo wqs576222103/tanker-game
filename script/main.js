@@ -383,8 +383,14 @@ function resetGame() {
   updateHud();
 }
 
+// 根据分数计算最大敌人数量：0~50分=2个，之后每增加100分加1个，最多8个
+function maxEnemies() {
+  return Math.min(8, 2 + Math.floor(Math.max(0, score - 50) / 100));
+}
+
 function spawnEnemy(instant) {
-  if (tanks.filter((t) => t.alive && !t.isPlayer).length >= 7) return;
+  if (tanks.filter((t) => t.alive && !t.isPlayer).length >= maxEnemies())
+    return;
   let sp = ENEMY_SPAWNS[0];
   let least = Infinity;
   for (const s of ENEMY_SPAWNS) {
@@ -657,7 +663,7 @@ function pickEnemyDir(t) {
 
 function updateEnemies(dt) {
   const alive = tanks.filter((t) => t.alive && !t.isPlayer);
-  if (spawnTimer <= 0 && alive.length < 7) {
+  if (spawnTimer <= 0 && alive.length < maxEnemies()) {
     spawnEnemy(false);
     spawnTimer = Math.max(2, 4.5 - gtMs / 30000);
   } else {
