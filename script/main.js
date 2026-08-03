@@ -801,6 +801,7 @@ function damagePlayer() {
   }
   player.hp--;
   player.flash = 300;
+  damageFlash = 350;
   spawnExplosion(
     player.x + player.w / 2,
     player.y + player.h / 2,
@@ -966,6 +967,7 @@ function spawnRandomItem() {
   });
 }
 
+let damageFlash = 0;
 let itemSpawnTimer = 3;
 function updateItems(dt) {
   itemSpawnTimer -= dt;
@@ -1426,6 +1428,7 @@ function loop(ts) {
   const dt = Math.min(0.033, (ts - lastTime) / 1000 || 0.016);
   lastTime = ts;
   if (state === "playing") update(dt);
+  if (damageFlash > 0) damageFlash -= dt * 1000;
 
   drawMap();
   drawItems();
@@ -1437,6 +1440,13 @@ function loop(ts) {
   drawGrassOverlay();
   drawParticles();
   drawFloats();
+
+  if (damageFlash > 0) {
+    ctx.strokeStyle = `rgba(255, 0, 0, ${0.4 * Math.min(1, damageFlash / 150)})`;
+    ctx.lineWidth = 12;
+    ctx.strokeRect(2, 2, W - 4, H - 4);
+  }
+
   requestAnimationFrame(loop);
 }
 
