@@ -41,6 +41,7 @@ let score = 0;
 let hiScore = +(localStorage.getItem("tank-hi") || 0);
 let gtMs = 0; // 游戏时间
 let spawnTimer = 2;
+let mapGenerated = false; // 地图是否已生成
 
 let map = [];
 let gates = [];
@@ -365,7 +366,18 @@ function resetGame() {
   gtMs = 0;
   score = 0;
   spawnTimer = 3;
-  genMap();
+  if (!mapGenerated) {
+    genMap();
+    mapGenerated = true;
+  } else {
+    // 游戏重置时恢复地图中可破坏的碎石墙的耐久值
+    crackHp = {};
+    for (let r = 1; r < ROWS - 1; r++)
+      for (let c = 1; c < COLS - 1; c++) {
+        if (map[r][c] === CRACK)
+          crackHp[protectedKey(c, r)] = 2 + randInt(0, 1);
+      }
+  }
   tanks = [];
   bullets = [];
   items = [];
@@ -418,6 +430,78 @@ function spawnEnemy(instant) {
   sfx("enemy");
 }
 
+function tanksCollide(a, b) {
+  return (
+    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+  );
+}
+
+function resolveTankCollision(attacker, defender) {
+  const attackerMoving =
+    Math.abs(attacker.dir.x) + Math.abs(attacker.dir.y) > 0;
+  const defenderMoving =
+    Math.abs(defender.dir.x) + Math.abs(defender.dir.y) > 0;
+  const oppositeDir =
+    attacker.dir.x + defender.dir.x === 0 &&
+    attacker.dir.y + defender.dir.y === 0;
+
+  if (attackerMoving && defenderMoving && oppositeDir) {
+    // 正面相撞
+    if (attacker.hp >= defender.hp) {
+      attacker.hp -= defender.hp;
+      defender.hp = 0;
+      defender.flash = 120;
+      spawnExplosion(
+        defender.x + defender.w / 2,
+        defender.y + defender.h / 2,
+        25,
+        "#ff6040",
+      );
+      sfx("boom");
+      if (defender.hp <= 0) {
+        defender.alive = false;
+        if (defender.isPlayer) damagePlayer();
+        else killEnemy(defender);
+      }
+    } else {
+      defender.hp -= attacker.hp;
+      attacker.hp = 0;
+      attacker.flash = 120;
+      spawnExplosion(
+        attacker.x + attacker.w / 2,
+        attacker.y + attacker.h / 2,
+        25,
+        "#ff6040",
+      );
+      sfx("boom");
+      if (attacker.hp <= 0) {
+        attacker.alive = false;
+        if (attacker.isPlayer) damagePlayer();
+        else killEnemy(attacker);
+      }
+    }
+    return true;
+  } else if (attackerMoving && !oppositeDir) {
+    // 正面撞击非正面，攻击者获胜
+    defender.hp -= 1;
+    defender.flash = 120;
+    spawnExplosion(
+      defender.x + defender.w / 2,
+      defender.y + defender.h / 2,
+      15,
+      "#ff8a5a",
+    );
+    sfx("hit");
+    if (defender.hp <= 0) {
+      defender.alive = false;
+      if (defender.isPlayer) damagePlayer();
+      else killEnemy(defender);
+    }
+    return true;
+  }
+  return false;
+}
+
 // 障碍/坦克 碰撞
 function blocked(x, y, w, h, self) {
   const c1 = Math.max(0, Math.floor(x / CELL)),
@@ -431,8 +515,10 @@ function blocked(x, y, w, h, self) {
     }
   for (const o of tanks) {
     if (!o.alive || o === self) continue;
-    if (o.x < x + w && o.x + o.w > x && o.y < y + h && o.y + o.h > y)
+    if (o.x < x + w && o.x + o.w > x && o.y < y + h && o.y + o.h > y) {
+      resolveTankCollision(self, o);
       return true;
+    }
   }
   return false;
 }
@@ -555,14 +641,6 @@ function updateBullets(dt) {
     // 命中判定
     if (!b.dead) {
       const br = { x: b.x - 2, y: b.y - 2, w: 4, h: 4 };
-      // 地雷
-      for (const m of mines) {
-        if (!m.dead && rectHit(br, m)) {
-          explodeMine(m);
-          b.dead = true;
-          break;
-        }
-      }
       if (!b.dead) {
         for (const t of tanks) {
           if (!t.alive) continue;
@@ -821,9 +899,9 @@ function updatePlayer(dt) {
           best.x + best.h / 2 - dr.x,
         );
         fireDir(dr.x, dr.y, ang, "player", 1);
-        dr.fireCd = 0.9;
-      } else {
         dr.fireCd = 0.3;
+      } else {
+        dr.fireCd = 0.15;
       }
     }
   }
