@@ -34,6 +34,7 @@ canvas {
   padding: 8px 22px; border-radius: 20px; font-size: 15px; cursor: pointer;
 }
 #btn-group button:active { background: #3a4a3a; }
+#btn-group button.active { background: #4a7a4a; border-color: #6a9a6a; }
 /* 移动端控制 */
 #controls { display: none; }
 @media (pointer: coarse) {

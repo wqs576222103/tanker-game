@@ -739,6 +739,10 @@ function updateMines(dt) {
 // ====================== 更新 ======================
 function update(dt) {
   gtMs += dt * 1000;
+
+  // AI 更新（在玩家控制之前）
+  AIPlayer.update(dt);
+
   TankActions.updatePlayer(dt);
   TankActions.updateBullets(dt);
   TankActions.updateEnemies(dt);
@@ -1179,6 +1183,7 @@ function gameOver() {
 
 function startGame() {
   resetGame();
+  AIPlayer.init();
   state = "playing";
   document.getElementById("ov-start").classList.add("hidden");
   document.getElementById("ov-over").classList.add("hidden");
@@ -1226,6 +1231,7 @@ document.addEventListener("keydown", (e) => {
     if (state === "playing") keys.mine = true;
   } else if (k === "p") togglePause();
   else if (k === "r" && state !== "start") startGame();
+  else if (k === "t" && state === "playing") toggleAI();
 });
 document.addEventListener("keyup", (e) => {
   const k = e.key.toLowerCase();
@@ -1279,6 +1285,16 @@ document.getElementById("btn-pause").addEventListener("click", () => {
   if (state === "playing" || state === "paused") togglePause();
 });
 document.getElementById("btn-resume").addEventListener("click", togglePause);
+
+// AI 按钮
+const btnAI = document.getElementById("btn-ai");
+btnAI.addEventListener("click", toggleAI);
+
+function toggleAI() {
+  const enabled = AIPlayer.toggle();
+  btnAI.textContent = enabled ? "🤖 AI: 开" : "🤖 AI: 关";
+  btnAI.classList.toggle("active", enabled);
+}
 
 // ====================== 画面缩放 / 全屏 ======================
 function isFullscreen() {
