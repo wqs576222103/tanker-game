@@ -15,6 +15,9 @@ playerImg.src = "assets/player.svg";
 const enemyImg = new Image();
 enemyImg.src = "assets/enemy.svg";
 
+const bossImg = new Image();
+bossImg.src = "assets/enemy-boss.svg";
+
 const EMPTY = 0,
   WALL = 1,
   GATE = 2,
@@ -55,6 +58,9 @@ let drones = [];
 let particles = [];
 let floats = [];
 let lastTeleport = {}; // tank 传送冷却
+let boss = null; // 关卡boss
+let baseEnemyHp = 2; // 基础怪血量（击败boss后+1）
+let lastBossScore = 0; // 上一次出现boss的分数
 
 const keys = {
   up: false,
@@ -366,6 +372,9 @@ function resetGame() {
   gtMs = 0;
   score = 0;
   spawnTimer = 3;
+  boss = null;
+  lastBossScore = 0;
+  baseEnemyHp = 2;
   if (!mapGenerated) {
     genMap();
     mapGenerated = true;
@@ -403,9 +412,18 @@ function maxEnemies() {
 function spawnEnemy(instant) {
   if (tanks.filter((t) => t.alive && !t.isPlayer).length >= maxEnemies())
     return;
-  let sp = ENEMY_SPAWNS[0];
+  const available = ENEMY_SPAWNS.filter((s) => {
+    if (!player || !player.alive) return true;
+    const spCx = s.c * CELL + CELL / 2;
+    const spCy = s.r * CELL + CELL / 2;
+    const pCx = player.x + player.w / 2;
+    const pCy = player.y + player.h / 2;
+    return Math.abs(spCx - pCx) > 90 || Math.abs(spCy - pCy) > 90;
+  });
+  if (available.length === 0) return;
+  let sp = available[0];
   let least = Infinity;
-  for (const s of ENEMY_SPAWNS) {
+  for (const s of available) {
     const cnt = tanks.filter(
       (t) =>
         t.alive &&
@@ -423,11 +441,58 @@ function spawnEnemy(instant) {
   const t = makeTank(x, y, Math.random() < 0.5 ? "down" : "left", false);
   const diff = 1 + Math.floor(gtMs / 45000);
   t.speed = Math.min(82 + diff * 14, 132);
-  t.hp = 2;
-  t.maxHp = 2;
+  t.hp = baseEnemyHp;
+  t.maxHp = baseEnemyHp;
   t.invincible = instant ? 300 : 800;
   tanks.push(t);
   sfx("enemy");
+}
+
+// 生成关卡boss
+function spawnBoss() {
+  // 寻找合适的出生位置（屏幕中央）
+  const c = Math.floor(COLS / 2) - 1;
+  const r = Math.floor(ROWS / 2) - 1;
+
+  // 检查位置是否可用
+  if (blocked(c * CELL, r * CELL, CELL * 2, CELL * 2, null)) {
+    // 如果中央位置不可用，尝试其他位置
+    for (let i = 0; i < 10; i++) {
+      const randC = randInt(2, COLS - 4);
+      const randR = randInt(2, ROWS - 4);
+      if (!blocked(randC * CELL, randR * CELL, CELL * 2, CELL * 2, null)) {
+        c = randC;
+        r = randR;
+        break;
+      }
+    }
+  }
+
+  boss = {
+    id: Math.random().toString(36).slice(2),
+    x: c * CELL,
+    y: r * CELL,
+    w: CELL * 2,
+    h: CELL * 2,
+    dirName: "down",
+    dir: { ...DIRS.down },
+    hp: Math.floor(score / 10),
+    maxHp: Math.floor(score / 10),
+    speed: 40,
+    alive: true,
+    invincible: 1000,
+    spreadCd: 0,
+    rotateCd: 0,
+    moveTimer: 0,
+  };
+
+  sfx("boom");
+  addFloat(
+    boss.x + boss.w / 2,
+    boss.y + boss.h / 2,
+    "关卡BOSS出现！",
+    "#ee5253",
+  );
 }
 
 function tanksCollide(a, b) {
@@ -460,8 +525,12 @@ function resolveTankCollision(attacker, defender) {
       sfx("boom");
       if (defender.hp <= 0) {
         defender.alive = false;
-        if (defender.isPlayer) damagePlayer();
-        else killEnemy(defender);
+        if (defender.isPlayer) {
+          player.flash = 300;
+          damageFlash = 350;
+          deathReason = "被敌人坦克撞击";
+          gameOver();
+        } else killEnemy(defender);
       }
     } else {
       defender.hp -= attacker.hp;
@@ -476,8 +545,12 @@ function resolveTankCollision(attacker, defender) {
       sfx("boom");
       if (attacker.hp <= 0) {
         attacker.alive = false;
-        if (attacker.isPlayer) damagePlayer();
-        else killEnemy(attacker);
+        if (attacker.isPlayer) {
+          player.flash = 300;
+          damageFlash = 350;
+          deathReason = "被敌人坦克撞击";
+          gameOver();
+        } else killEnemy(attacker);
       }
     }
     return true;
@@ -494,12 +567,89 @@ function resolveTankCollision(attacker, defender) {
     sfx("hit");
     if (defender.hp <= 0) {
       defender.alive = false;
-      if (defender.isPlayer) damagePlayer();
-      else killEnemy(defender);
+      if (defender.isPlayer) {
+        player.flash = 300;
+        damageFlash = 350;
+        deathReason = "被敌人坦克撞击";
+        gameOver();
+      } else killEnemy(defender);
     }
     return true;
   }
   return false;
+}
+
+// 移动boss
+function moveBoss(dt) {
+  if (!boss || !boss.alive) return;
+
+  boss.moveTimer -= dt;
+  if (boss.moveTimer <= 0) {
+    // 随机改变方向
+    const dirs = Object.keys(DIRS);
+    const randomDir = dirs[Math.floor(Math.random() * dirs.length)];
+    boss.dirName = randomDir;
+    boss.dir = { ...DIRS[randomDir] };
+    boss.moveTimer = 2 + Math.random() * 3;
+  }
+
+  // 移动boss
+  const sp = boss.speed * dt;
+  const nx = boss.x + boss.dir.x * sp;
+  const ny = boss.y + boss.dir.y * sp;
+
+  if (!blocked(nx, boss.y, boss.w, boss.h, boss)) boss.x = nx;
+  if (!blocked(boss.x, ny, boss.w, boss.h, boss)) boss.y = ny;
+
+  if (boss.invincible > 0) boss.invincible -= dt * 1000;
+}
+
+// boss射击逻辑
+function bossFire(dt) {
+  if (!boss || !boss.alive) return;
+
+  // 散弹冷却
+  boss.spreadCd -= dt;
+  if (boss.spreadCd <= 0) {
+    boss.spreadCd = 8;
+    // 发射散弹
+    const cx = boss.x + boss.w / 2;
+    const cy = boss.y + boss.h / 2;
+
+    // 向8个方向发射子弹
+    const angles = [
+      0,
+      Math.PI / 4,
+      Math.PI / 2,
+      (3 * Math.PI) / 4,
+      Math.PI,
+      (5 * Math.PI) / 4,
+      (3 * Math.PI) / 2,
+      (7 * Math.PI) / 4,
+    ];
+    for (const angle of angles) {
+      fireDir(cx, cy, angle, "enemy", 2);
+    }
+
+    addFloat(cx, cy, "散弹攻击！", "#ee5253");
+  }
+
+  // 旋转弹冷却
+  boss.rotateCd -= dt;
+  if (boss.rotateCd <= 0) {
+    boss.rotateCd = 15;
+    // 发射旋转弹（发射后沿直线传播，不再原地旋转）
+    const cx = boss.x + boss.w / 2;
+    const cy = boss.y + boss.h / 2;
+    const pcx = player.x + player.w / 2;
+    const pcy = player.y + player.h / 2;
+    const baseAng = Math.atan2(pcy - cy, pcx - cx);
+    for (let i = 0; i < 4; i++) {
+      fireDir(cx, cy, baseAng + (i * Math.PI) / 2, "enemy", 2);
+    }
+
+    addFloat(cx, cy, "旋转弹攻击！", "#ee5253");
+  }
 }
 
 // 障碍/坦克 碰撞
@@ -520,6 +670,21 @@ function blocked(x, y, w, h, self) {
       return true;
     }
   }
+  // 检查boss碰撞
+  if (boss && boss.alive && self !== boss) {
+    if (
+      boss.x < x + w &&
+      boss.x + boss.w > x &&
+      boss.y < y + h &&
+      boss.y + boss.h > y
+    ) {
+      if (self && self.isPlayer) {
+        // 玩家碰到boss会受伤
+        damagePlayer("撞上BOSS");
+      }
+      return true;
+    }
+  }
   return false;
 }
 
@@ -528,8 +693,14 @@ function moveTank(t, dx, dy, dt) {
   if (t.isPlayer && t.speedT > gtMs) sp *= 1.4;
   const nx = t.x + dx * sp,
     ny = t.y + dy * sp;
-  if (!blocked(nx, t.y, t.w, t.h, t)) t.x = nx;
-  if (!blocked(t.x, ny, t.w, t.h, t)) t.y = ny;
+  if (!blocked(nx, t.y, t.w, t.h, t)) {
+    t.x = nx;
+    if (dx !== 0) t.y = Math.round(t.y / CELL) * CELL + (CELL - t.h) / 2;
+  }
+  if (!blocked(t.x, ny, t.w, t.h, t)) {
+    t.y = ny;
+    if (dy !== 0) t.x = Math.round(t.x / CELL) * CELL + (CELL - t.w) / 2;
+  }
   t.dir = { x: dx, y: dy };
   t.dirName = dx > 0 ? "right" : dx < 0 ? "left" : dy > 0 ? "down" : "up";
   if (t.invincible > 0) t.invincible -= dt * 1000;
@@ -581,14 +752,22 @@ function fireDir(x, y, angle, owner, dmg) {
 function updateBullets(dt) {
   for (const b of bullets) {
     if (b.dead) continue;
-    const step = 210 * dt;
+
+    // 处理旋转弹
+    if (b.rotationSpeed) {
+      b.angle += b.rotationSpeed * dt;
+      b.dx = Math.cos(b.angle);
+      b.dy = Math.sin(b.angle);
+    }
+
+    const step = (b.speed || 210) * dt;
     const steps = Math.max(1, Math.ceil(step / 3));
     const d = step / steps;
     for (let i = 0; i < steps && !b.dead; i++) {
       const px = b.x,
         py = b.y;
-      b.x += b.dx * d;
-      b.y += b.dy * d;
+      b.x += (b.dx || 0) * d;
+      b.y += (b.dy || 0) * d;
       const cc = cellOf(b.x, b.y);
       const g = gateAt(cc.c, cc.r);
       if (g && g.partner && !b.tp && gtMs - b.born > 60) {
@@ -649,9 +828,9 @@ function updateBullets(dt) {
           if (t.invincible > 0) continue;
           if (rectHit(br, t)) {
             if (t.isPlayer) {
-              damagePlayer();
+              damagePlayer("被敌人子弹击中", true);
             } else {
-              t.hp -= b.dmg;
+              t.hp -= b.dmg || 1;
               t.flash = 90;
               spawnExplosion(b.x, b.y, 10, "#ff8a5a");
               if (t.hp <= 0) killEnemy(t);
@@ -670,6 +849,18 @@ function updateBullets(dt) {
             spawnExplosion(b.x, b.y, 8, "#58a6ff");
             break;
           }
+        }
+      }
+      // 命中boss
+      if (!b.dead && b.owner === "player" && boss && boss.alive) {
+        if (rectHit(br, boss)) {
+          boss.hp -= b.dmg || 1;
+          boss.flash = 90;
+          spawnExplosion(b.x, b.y, 15, "#ee5253");
+          if (boss.hp <= 0) {
+            killBoss();
+          }
+          b.dead = true;
         }
       }
     }
@@ -694,6 +885,54 @@ function killEnemy(t) {
   sfx("boom");
   if (Math.random() < 0.28) spawnItemAtTank(t);
   updateHud();
+
+  // 检查是否需要生成关卡boss
+  checkSpawnBoss();
+}
+
+// 检查是否需要生成关卡boss
+function checkSpawnBoss() {
+  if (boss && boss.alive) return;
+  // boss出现分数为 100 200 400 800 ... 每个翻倍
+  const next = lastBossScore === 0 ? 100 : lastBossScore * 2;
+  if (score >= next) {
+    lastBossScore = next;
+    spawnBoss();
+  }
+}
+
+// 杀死boss
+function killBoss() {
+  if (!boss || !boss.alive) return;
+  boss.alive = false;
+  spawnExplosion(boss.x + boss.w / 2, boss.y + boss.h / 2, 60, "#ee5253");
+  score += 25;
+  baseEnemyHp += 1;
+  sfx("boom");
+  addFloat(boss.x + boss.w / 2, boss.y + boss.h / 2, "BOSS已击败！", "#ee5253");
+  // 掉落高级道具
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      spawnItemAtPosition(boss.x + boss.w / 2, boss.y + boss.h / 2);
+    }, i * 500);
+  }
+  updateHud();
+}
+
+// 在指定位置生成道具
+function spawnItemAtPosition(x, y) {
+  const cc = cellOf(x, y);
+  if (map[cc.r][cc.c] !== EMPTY) return;
+  const def = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+  items.push({
+    def,
+    x: cc.c * CELL,
+    y: cc.r * CELL,
+    size: CELL,
+    age: 0,
+    life: 12000,
+    dead: false,
+  });
 }
 
 function dirFree(t, name) {
@@ -778,7 +1017,16 @@ function updateEnemies(dt) {
       t.fireCd = 2.2 + Math.random() * 2.0 - Math.min(0.6, gtMs / 60000);
       const dx = player.x + player.w / 2 - (t.x + t.w / 2);
       const dy = player.y + player.h / 2 - (t.y + t.h / 2);
-      const ang = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.22;
+      // 转向玩家方向
+      let targetDir;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        targetDir = dx > 0 ? "right" : "left";
+      } else {
+        targetDir = dy > 0 ? "down" : "up";
+      }
+      setDirName(t, targetDir);
+      // 向玩家发射子弹（基于当前朝向）
+      const ang = Math.atan2(t.dir.y, t.dir.x) + (Math.random() - 0.5) * 0.22;
       fireDir(t.x + t.w / 2, t.y + t.h / 2, ang, "enemy", 1);
     }
   }
@@ -786,17 +1034,19 @@ function updateEnemies(dt) {
 }
 
 // ====================== 玩家 ======================
-function damagePlayer() {
+function damagePlayer(reason, bullet) {
   if (player.shieldT > gtMs) {
-    player.shieldT = 0;
-    spawnExplosion(
-      player.x + player.w / 2,
-      player.y + player.h / 2,
-      22,
-      "#58a6ff",
-    );
-    addFloat(player.x, player.y - 14, "护盾破碎", "#58a6ff");
-    sfx("hit");
+    if (!bullet) {
+      player.shieldT = 0;
+      spawnExplosion(
+        player.x + player.w / 2,
+        player.y + player.h / 2,
+        22,
+        "#58a6ff",
+      );
+      addFloat(player.x, player.y - 14, "护盾破碎", "#58a6ff");
+      sfx("hit");
+    }
     return;
   }
   player.hp--;
@@ -810,6 +1060,7 @@ function damagePlayer() {
   );
   sfx("boom");
   if (player.hp <= 0) {
+    deathReason = reason || "不明原因";
     gameOver();
   }
   updateHud();
@@ -922,6 +1173,7 @@ const ITEMS = [
 function itemTimer(itemId) {
   if (itemId === "drone") return 0;
   if (itemId === "mine") return 0;
+  if (itemId === "spread") return 18000; // 散弹持续时间延长一倍
   return 9000;
 }
 
@@ -969,6 +1221,7 @@ function spawnRandomItem() {
 
 let damageFlash = 0;
 let itemSpawnTimer = 3;
+let deathReason = "";
 function updateItems(dt) {
   itemSpawnTimer -= dt;
   if (itemSpawnTimer <= 0) {
@@ -1065,10 +1318,6 @@ function explodeMine(m) {
 function updateMines(dt) {
   for (const m of mines) {
     m.age += dt;
-    if (m.age > 30) {
-      m.dead = true;
-      continue;
-    }
     for (const t of tanks) {
       if (t.isPlayer || !t.alive) continue;
       if (rectHit({ x: t.x, y: t.y, w: t.w, h: t.h }, m)) {
@@ -1084,12 +1333,21 @@ function updateMines(dt) {
 function update(dt) {
   gtMs += dt * 1000;
   updatePlayer(dt);
-  updateEnemies(dt);
   updateBullets(dt);
+  updateEnemies(dt);
   updateMines(dt);
   updateItems(dt);
   updateParticles(dt);
   updateFloats(dt);
+
+  // 更新boss
+  if (boss && boss.alive) {
+    moveBoss(dt);
+    bossFire(dt);
+  } else {
+    // 检查是否需要生成新boss
+    checkSpawnBoss();
+  }
 }
 
 function updateParticles(dt) {
@@ -1270,6 +1528,46 @@ function drawTank(t) {
   ctx.globalAlpha = 1;
 }
 
+function drawBoss() {
+  if (!boss || !boss.alive) return;
+
+  if (boss.invincible > 0 && Math.floor(gtMs / 100) % 2 === 0) {
+    ctx.globalAlpha = 0.45;
+  }
+
+  const cx = boss.x + boss.w / 2,
+    cy = boss.y + boss.h / 2;
+
+  // 绘制boss
+  ctx.save();
+  ctx.translate(cx, cy);
+  const ang = Math.atan2(boss.dir.y, boss.dir.x);
+  ctx.rotate(ang + Math.PI / 2);
+
+  if (bossImg && bossImg.complete && bossImg.naturalWidth > 0) {
+    ctx.drawImage(
+      bossImg,
+      -boss.w / 2 - 1,
+      -boss.h / 2 - 1,
+      boss.w + 2,
+      boss.h + 2,
+    );
+  } else {
+    ctx.fillStyle = "#ee5253";
+    ctx.fillRect(-boss.w / 2, -boss.h / 2, boss.w, boss.h);
+  }
+  ctx.restore();
+
+  // 血条
+  const pct = Math.max(0, boss.hp / boss.maxHp);
+  ctx.fillStyle = "#1c1f1c";
+  ctx.fillRect(cx - boss.w / 2, cy - boss.h / 2 - 6, boss.w, 4);
+  ctx.fillStyle = pct > 0.5 ? "#7de07d" : pct > 0.25 ? "#ffd76e" : "#ff6b6b";
+  ctx.fillRect(cx - boss.w / 2, cy - boss.h / 2 - 6, boss.w * pct, 4);
+
+  ctx.globalAlpha = 1;
+}
+
 function drawPlayer() {
   drawTank(player);
   if (player.shieldT > gtMs) {
@@ -1325,7 +1623,6 @@ function drawItems() {
 
 function drawMines() {
   for (const m of mines) {
-    if (m.age > 22 && Math.floor(gtMs / 300) % 2 === 0) ctx.globalAlpha = 0.4;
     ctx.fillStyle = "#3a3a3a";
     ctx.beginPath();
     ctx.arc(m.x + 12, m.y + 12, 8, 0, Math.PI * 2);
@@ -1436,6 +1733,7 @@ function loop(ts) {
   drawDrones();
   drawBullets();
   for (const t of tanks) if (t !== player) drawTank(t);
+  drawBoss();
   drawPlayer();
   drawGrassOverlay();
   drawParticles();
@@ -1467,6 +1765,8 @@ function gameOver() {
   }
   document.getElementById("ov-over-score").textContent =
     "得分：" + score + "　最高：" + hiScore;
+  document.getElementById("ov-over-reason").textContent =
+    "死因：" + (deathReason || "不明原因");
   document.getElementById("ov-over").classList.remove("hidden");
 }
 
