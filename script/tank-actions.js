@@ -42,7 +42,7 @@ const TankActions = {
     for (const o of tanks) {
       if (!o.alive || o === self) continue;
       if (o.x < x + w && o.x + o.w > x && o.y < y + h && o.y + o.h > y) {
-        this.resolveTankCollision(self, o);
+        if (self && this.resolveTankCollision(self, o)) return true;
         return true;
       }
     }

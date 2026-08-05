@@ -1361,7 +1361,7 @@ function showAILog() {
               .slice(-5)
               .map(
                 (d) => `
-              <div>[${d.time.toFixed(1)}s] ${d.action} - 权重(S:${Math.round(d.weights.survival)} K:${Math.round(d.weights.kill)} I:${Math.round(d.weights.item)})</div>
+              <div>[${d.time.toFixed(1)}s] ${d.action} ${d.weights ? `- 权重(S:${Math.round(d.weights.survival)} K:${Math.round(d.weights.kill)} I:${Math.round(d.weights.item)})` : ""}</div>
             `,
               )
               .join("")}

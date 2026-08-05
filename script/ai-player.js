@@ -40,7 +40,6 @@ const AIPlayer = {
   // ---------------- 初始化 ----------------
 
   init() {
-    this.enabled = false;
     this.clearKeys();
     if (this.ai && this.ai.onRoundStart) {
       try {
@@ -353,6 +352,15 @@ const DefaultAI = {
 
   moveDir: null,
 
+  // 远程直线打击配置（子弹无限，主攻远程，避免贴脸撞击）
+  ranged: {
+    minCells: 3, // 与敌人保持的最小格子距离（避免贴脸撞击）
+    maxCells: 9, // 最大有效打击距离（格子数）
+    preferCells: 5, // 偏好的打击距离（格子数）
+    ramDanger: 60, // 敌方坦克进入该像素距离视为撞击威胁，立即逃跑
+  },
+  targetEnemy: null, // 当前瞄准目标中心
+
   dodging: false,
   dodgeDir: null,
   dodgeTimer: 0,
@@ -384,24 +392,15 @@ const DefaultAI = {
       return {};
     }
 
+    // 子弹无限：只要存活就一直开火
+    keys.fire = true;
+
     if (this.blockedTimer > 0) {
       this.blockedTimer -= dt;
       if (this.blockedTimer <= 0) {
         this.lastBlockedDir = null;
       }
     }
-
-    if (this.dodging) {
-      this.handleDodge(dt);
-      return this.readKeys();
-    }
-
-    const now = performance.now();
-    if (now - this.lastThink < this.thinkInterval) {
-      this.executeMove();
-      return this.readKeys();
-    }
-    this.lastThink = now;
 
     const playerPos = GameUtils.getPlayerPosition();
     const enemiesList = GameUtils.getEnemyPositions();
@@ -416,6 +415,45 @@ const DefaultAI = {
     const px = playerPos.x + 15;
     const py = playerPos.y + 15;
 
+    // 1) 敌方坦克贴脸撞击：优先级最高，立即逃跑
+    const rammer = this.findClosestEnemy(px, py, enemiesList);
+    if (rammer && rammer.dist < this.ranged.ramDanger) {
+      AILogger.logDecision({
+        action: "escape",
+        threat: { x: rammer.x, y: rammer.y, dist: rammer.dist },
+      });
+      AILogger.updateAction("escape");
+      this.escapeFromEnemy(rammer, playerPos);
+      this.executeMove();
+      return this.readKeys();
+    }
+
+    // 2) 高危子弹（弹道预测）：每帧检测，立即躲避
+    const liveThreat = this.findLiveThreat(px, py, bulletsList);
+    if (liveThreat) {
+      AILogger.logDecision({
+        action: "dodge",
+        threat: { x: liveThreat.x, y: liveThreat.y, dist: liveThreat.dist },
+      });
+      AILogger.updateAction("dodge");
+      this.doDodgeBullet(liveThreat, px, py);
+      this.executeMove();
+      return this.readKeys();
+    }
+
+    // 无紧急威胁，清除上次躲避状态
+    if (this.dodging) {
+      this.dodging = false;
+      this.dodgeDir = null;
+    }
+
+    const now = performance.now();
+    if (now - this.lastThink < this.thinkInterval) {
+      this.executeMove();
+      return this.readKeys();
+    }
+    this.lastThink = now;
+
     const survivalWeight = this.calcSurvivalWeight(
       px,
       py,
@@ -427,37 +465,38 @@ const DefaultAI = {
 
     AILogger.updateWeights(survivalWeight, killWeight, itemWeight);
 
-    if (survivalWeight > 60) {
-      const threat = this.findThreateningBullets(playerPos, bulletsList);
-      if (threat) {
-        AILogger.logDecision({
-          action: "dodge",
-          weights: {
-            survival: survivalWeight,
-            kill: killWeight,
-            item: itemWeight,
-          },
-          threat: { x: threat.x, y: threat.y, dist: threat.dist },
-        });
-        AILogger.updateAction("dodge");
-        this.startDodge(threat, playerPos);
-        this.executeMove();
-        return this.readKeys();
-      }
-    }
-
     let target;
     let selectedAction;
 
     if (survivalWeight > 80) {
       target = this.findSafePosition(px, py, enemiesList, bulletsList);
       selectedAction = "survival";
-    } else if (enemiesList.length > 0) {
-      target = this.findBestEnemy(px, py, enemiesList);
+      this.targetEnemy = null;
+      this.computeMoveDir(playerPos, target);
+    } else if (enemiesList.length > 0 || (boss && boss.alive)) {
+      // 主攻远程直线打击（子弹无限）：优先就地开火，
+      // 否则移动到与敌人对齐、路径畅通的远距离打击点，避免贴脸撞击。
       selectedAction = "kill";
+      const lane = this.findShootLane(px, py, enemiesList);
+      if (lane) {
+        this.targetEnemy = lane;
+        this.moveDir = null; // 已对齐且路径畅通，站桩射击
+      } else {
+        const ranged = this.findRangedPosition(px, py, enemiesList);
+        if (ranged) {
+          this.targetEnemy = { x: ranged.ex, y: ranged.ey };
+          this.computeMoveDir(playerPos, ranged);
+        } else {
+          this.targetEnemy = this.findBestEnemy(px, py, enemiesList);
+          this.computeMoveDir(playerPos, this.targetEnemy);
+        }
+      }
+      target = this.targetEnemy;
     } else {
       target = this.findBestItem(px, py, itemsList);
       selectedAction = "item";
+      this.targetEnemy = null;
+      this.computeMoveDir(playerPos, target);
     }
 
     AILogger.logDecision({
@@ -466,8 +505,6 @@ const DefaultAI = {
       target,
     });
     AILogger.updateAction(selectedAction);
-
-    this.computeMoveDir(playerPos, target);
     AILogger.updateMoveDir(this.moveDir);
     this.executeMove();
     this.executeShoot(playerPos, enemiesList);
@@ -520,10 +557,11 @@ const DefaultAI = {
 
     for (const e of enemies) {
       const dist = Math.hypot(e.x + 15 - px, e.y + 15 - py);
-      if (dist < 40) weight += 60;
-      else if (dist < 60) weight += 40;
-      else if (dist < 90) weight += 25;
-      else if (dist < 120) weight += 15;
+      if (dist < 35) weight += 85;
+      else if (dist < 50) weight += 55;
+      else if (dist < 70) weight += 35;
+      else if (dist < 100) weight += 20;
+      else if (dist < 130) weight += 10;
     }
 
     return Math.min(weight, 100);
@@ -542,10 +580,10 @@ const DefaultAI = {
       const dist = Math.hypot(ex - px, ey - py);
 
       let distScore = 0;
-      if (dist < 100) distScore = 40;
-      else if (dist < 200) distScore = 30;
-      else if (dist < 300) distScore = 20;
-      else distScore = 10;
+      if (dist < 100) distScore = 20;
+      else if (dist < 200) distScore = 35;
+      else if (dist < 300) distScore = 25;
+      else distScore = 15;
 
       const sameRow = Math.abs(py - ey) < CELL;
       const sameCol = Math.abs(px - ex) < CELL;
@@ -610,9 +648,20 @@ const DefaultAI = {
       const ey = e.y + 15;
       const dist = Math.hypot(ex - px, ey - py);
 
-      let score = (400 - dist) * 0.1;
+      // 偏好中距离目标，避免贴脸撞击
+      const rangePrefer = 150; // 期望射程（像素）
+      let score = (400 - Math.abs(dist - rangePrefer)) * 0.1;
       if (this.isPathClear(px, py, ex, ey)) score += 30;
       if (this.isPlayerFacingEnemy(px, py, ex, ey)) score += 20;
+
+      const tank = tanks.find(
+        (t) =>
+          t.alive &&
+          !t.isPlayer &&
+          Math.abs(t.x + 15 - ex) < 1 &&
+          Math.abs(t.y + 15 - ey) < 1,
+      );
+      if (tank && tank.hp <= 1) score += 15;
 
       if (score > bestScore) {
         bestScore = score;
@@ -643,6 +692,71 @@ const DefaultAI = {
     }
 
     return best || { x: W / 2, y: H / 2 };
+  },
+
+  // 当前位置与任一敌人/Boss对齐且路径畅通时，返回可瞄准的目标中心
+  findShootLane(px, py, enemies) {
+    const targets = [];
+    for (const e of enemies) targets.push({ x: e.x + 15, y: e.y + 15 });
+    if (boss && boss.alive)
+      targets.push({ x: boss.x + boss.w / 2, y: boss.y + boss.h / 2 });
+
+    for (const t of targets) {
+      const sameRow = Math.abs(py - t.y) < CELL;
+      const sameCol = Math.abs(px - t.x) < CELL;
+      if ((sameRow || sameCol) && this.isPathClear(px, py, t.x, t.y)) {
+        return t;
+      }
+    }
+    return null;
+  },
+
+  // 计算远程直线打击位置：在敌人/Boss 的横竖线上、距离适中且路径畅通的点
+  findRangedPosition(px, py, enemies) {
+    const targets = [];
+    for (const e of enemies) targets.push({ x: e.x + 15, y: e.y + 15 });
+    if (boss && boss.alive)
+      targets.push({ x: boss.x + boss.w / 2, y: boss.y + boss.h / 2 });
+
+    const dirs = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+    ];
+
+    let best = null;
+    let bestScore = -Infinity;
+
+    for (const t of targets) {
+      // 将目标中心吸附到网格中心，保证对齐判定可靠
+      const tCell = this.getCell(t.x, t.y);
+      const ex = tCell.c * CELL + CELL / 2;
+      const ey = tCell.r * CELL + CELL / 2;
+      const distToEnemy = Math.hypot(ex - px, ey - py);
+
+      for (const d of dirs) {
+        for (let k = this.ranged.minCells; k <= this.ranged.maxCells; k++) {
+          const cx = ex + d.x * k * CELL;
+          const cy = ey + d.y * k * CELL;
+          if (cx < 30 || cx > W - 30 || cy < 30 || cy > H - 30) continue;
+          const cell = this.getCell(cx, cy);
+          const v = map[cell.r][cell.c];
+          if (v !== EMPTY && v !== GRASS) continue;
+          if (!this.isPathClear(cx, cy, ex, ey)) continue;
+
+          const travel = Math.hypot(cx - px, cy - py);
+          const rangeScore =
+            60 - Math.abs(k - this.ranged.preferCells) * 8;
+          const score = rangeScore - travel * 0.06 + distToEnemy * 0.01;
+          if (score > bestScore) {
+            bestScore = score;
+            best = { x: cx, y: cy, ex, ey };
+          }
+        }
+      }
+    }
+    return best;
   },
 
   findSafePosition(px, py, enemies, bullets) {
@@ -680,7 +794,7 @@ const DefaultAI = {
 
       const cell = this.getCell(c.x, c.y);
       if (cell.c >= 0 && cell.c < COLS && cell.r >= 0 && cell.r < ROWS) {
-        if (map[cell.c][cell.r] === EMPTY && threat < minThreat) {
+        if (map[cell.r][cell.c] === EMPTY && threat < minThreat) {
           minThreat = threat;
           safestX = c.x;
           safestY = c.y;
@@ -739,6 +853,161 @@ const DefaultAI = {
   },
 
   // ====================== 躲避系统 ======================
+
+  // 预测弹道：寻找 0.7 秒内会命中或擦到坦克的敌方子弹
+  findLiveThreat(px, py, bullets) {
+    let best = null;
+    let bestTime = Infinity;
+    const dangerRadius = 24; // 坦克半宽约 15 + 子弹半径
+    const lookahead = 0.8; // 提前量（秒）
+
+    for (const b of bullets) {
+      if (b.isPlayerBullet) continue;
+      const vx = b.vx || 0;
+      const vy = b.vy || 0;
+      const speed = Math.hypot(vx, vy);
+      if (speed === 0) continue;
+
+      const bx = b.x + 3;
+      const by = b.y + 3;
+      const dx = px - bx;
+      const dy = py - by;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 300) continue;
+
+      const ux = vx / speed;
+      const uy = vy / speed;
+
+      const along = dx * ux + dy * uy; // 沿弹道方向离玩家的分量
+      if (along < 0) continue; // 弹丸已从玩家身边越过，不再构成威胁
+
+      const perp = Math.abs(dx * uy - dy * ux); // 玩家到弹道的垂直距离
+      if (perp > dangerRadius) continue; // 会擦肩而过，不用躲
+
+      const reachT = along / speed; // 弹丸到达玩家路径的最短时间
+
+      // 已很近且会对准命中，或将在提前量内逼近
+      if ((reachT <= lookahead || dist < 50) && reachT < bestTime) {
+        bestTime = reachT;
+        best = { x: bx, y: by, vx, vy, dist, reachT };
+      }
+    }
+    return best;
+  },
+
+  // 朝与弹道垂直、空间开阔的方向横移，避开子弹
+  doDodgeBullet(threat, px, py) {
+    const angle = Math.atan2(threat.vy, threat.vx);
+    const fallback = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
+
+    const dirs = [
+      angle + Math.PI / 2,
+      angle - Math.PI / 2,
+      angle + (Math.PI * 3) / 4,
+      angle - (Math.PI * 3) / 4,
+      angle,
+    ];
+
+    let bestDir = null;
+    let bestScore = -1;
+
+    for (const a of dirs) {
+      const dir = { x: Math.cos(a), y: Math.sin(a) };
+      if (this.isBlocked(dir)) continue;
+      const free = this.getFreeDistance(dir);
+      if (free <= 0) continue;
+
+      let d = Math.abs(a - angle);
+      if (d > Math.PI) d = 2 * Math.PI - d;
+      const perpendicular = Math.abs(d - Math.PI / 2) < 0.4;
+
+      // 垂直(±90°)=真正离开弹道，优先；其次 135°；仍无路时沿原方向
+      let score = free;
+      if (perpendicular) score += 40;
+      else if (d > Math.PI * 0.6) score += 18;
+      else score += 5;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestDir = dir;
+      }
+    }
+
+    if (!bestDir) {
+      for (const d of fallback) {
+        const dir = { x: Math.cos(d), y: Math.sin(d) };
+        if (!this.isBlocked(dir)) {
+          bestDir = dir;
+          break;
+        }
+      }
+    }
+
+    this.dodgeDir = bestDir;
+    this.dodging = !!bestDir;
+    this.moveDir = bestDir;
+    this.targetEnemy = null;
+  },
+
+  findClosestEnemy(px, py, enemies) {
+    let closest = null;
+    let minD = Infinity;
+    for (const e of enemies) {
+      const ex = e.x + 15;
+      const ey = e.y + 15;
+      const d = Math.hypot(ex - px, ey - py);
+      if (d < minD) {
+        minD = d;
+        closest = { x: ex, y: ey, dist: d };
+      }
+    }
+    return closest;
+  },
+
+  // 敌方坦克贴脸：朝远离方向+自由距离最大方向逃跑，避免被撞击
+  escapeFromEnemy(enemy, playerPos) {
+    const px = playerPos.x + 15;
+    const py = playerPos.y + 15;
+
+    const awayAngle = Math.atan2(py - enemy.y, px - enemy.x);
+    const angles = [
+      awayAngle,
+      awayAngle + Math.PI / 2,
+      awayAngle - Math.PI / 2,
+      awayAngle + Math.PI / 4,
+      awayAngle - Math.PI / 4,
+    ];
+
+    let bestDir = null;
+    let bestScore = -1;
+
+    for (const a of angles) {
+      const dir = { x: Math.cos(a), y: Math.sin(a) };
+      if (this.isBlocked(dir)) continue;
+      const free = this.getFreeDistance(dir);
+      const diff = Math.abs(a - awayAngle);
+      let score = free + (diff < 0.5 ? free : 0);
+      if (score > bestScore) {
+        bestScore = score;
+        bestDir = dir;
+      }
+    }
+
+    if (!bestDir) {
+      for (const d of [DIRS.up, DIRS.down, DIRS.left, DIRS.right]) {
+        if (this.isBlocked(d)) continue;
+        const free = this.getFreeDistance(d);
+        if (free > bestScore) {
+          bestScore = free;
+          bestDir = d;
+        }
+      }
+    }
+
+    this.moveDir = bestDir;
+    this.targetEnemy = null;
+    this.dodging = false;
+  },
 
   startDodge(threat, playerPos) {
     const px = playerPos.x + 15;
@@ -858,7 +1127,7 @@ const DefaultAI = {
       const cell = this.getCell(p.x, p.y);
       if (cell.c < 0 || cell.c >= COLS || cell.r < 0 || cell.r >= ROWS)
         return true;
-      const cellType = map[cell.c][cell.r];
+      const cellType = map[cell.r][cell.c];
       if (cellType !== EMPTY) return true;
     }
     return false;
@@ -952,7 +1221,7 @@ const DefaultAI = {
       const cell = this.getCell(testX, testY);
 
       if (cell.c >= 0 && cell.c < COLS && cell.r >= 0 && cell.r < ROWS) {
-        if (map[cell.c][cell.r] === CRACK) {
+        if (map[cell.r][cell.c] === CRACK) {
           return true;
         }
       }
@@ -999,7 +1268,7 @@ const DefaultAI = {
       cx += Math.round(dir.x);
       cy += Math.round(dir.y);
       if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) break;
-      if (map[cx][cy] !== EMPTY) break;
+      if (map[cy][cx] !== EMPTY) break;
       dist += CELL;
     }
     return dist;
@@ -1007,7 +1276,8 @@ const DefaultAI = {
 
   executeMove() {
     if (!this.moveDir) {
-      this.clearKeys();
+      // 站桩：只清移动按键，保留开火（子弹无限，持续射击）
+      keys.up = keys.down = keys.left = keys.right = false;
       return;
     }
 
@@ -1030,24 +1300,29 @@ const DefaultAI = {
     const px = playerPos.x + 15;
     const py = playerPos.y + 15;
 
-    for (const e of enemies) {
-      const ex = e.x + 15;
-      const ey = e.y + 15;
+    // 子弹无限：持续开火
+    keys.fire = true;
 
-      const sameRow = Math.abs(py - ey) < CELL;
-      const sameCol = Math.abs(px - ex) < CELL;
+    const targets = [];
+    if (this.targetEnemy) targets.push(this.targetEnemy);
+    for (const e of enemies) targets.push({ x: e.x + 15, y: e.y + 15 });
+    if (boss && boss.alive)
+      targets.push({ x: boss.x + boss.w / 2, y: boss.y + boss.h / 2 });
+
+    // 优先朝目标敌人所在、路径畅通的直线瞄准
+    for (const t of targets) {
+      const sameRow = Math.abs(py - t.y) < CELL;
+      const sameCol = Math.abs(px - t.x) < CELL;
 
       if (sameRow || sameCol) {
-        if (this.isPathClear(px, py, ex, ey)) {
-          if (!this.isFacingTarget(px, py, ex, ey, player.dir)) {
-            this.turnToTarget(px, py, ex, ey);
+        if (this.isPathClear(px, py, t.x, t.y)) {
+          if (!this.isFacingTarget(px, py, t.x, t.y, player.dir)) {
+            this.turnToTarget(px, py, t.x, t.y);
           }
-          keys.fire = true;
           return;
         }
       }
     }
-    keys.fire = false;
   },
 
   turnToTarget(px, py, tx, ty) {
@@ -1086,7 +1361,7 @@ const DefaultAI = {
       const minC = Math.min(start.c, end.c);
       const maxC = Math.max(start.c, end.c);
       for (let c = minC + 1; c < maxC; c++) {
-        const cellType = map[c][start.r];
+        const cellType = map[start.r][c];
         if (cellType === WALL || cellType === CRACK || cellType === BORDER)
           return false;
       }
@@ -1097,7 +1372,7 @@ const DefaultAI = {
       const minR = Math.min(start.r, end.r);
       const maxR = Math.max(start.r, end.r);
       for (let r = minR + 1; r < maxR; r++) {
-        const cellType = map[start.c][r];
+        const cellType = map[r][start.c];
         if (cellType === WALL || cellType === CRACK || cellType === BORDER)
           return false;
       }
