@@ -398,6 +398,7 @@ function resetGame() {
   const px = CELL * PLAYER_SPAWN.c + 15 - (CELL - 4) / 2;
   const py = CELL * PLAYER_SPAWN.r + 15 - (CELL - 4) / 2;
   player = makeTank(px, py, "up", true);
+  player.invincible = 2000;
   tanks.push(player);
   spawnEnemy(true);
   spawnEnemy(true);
@@ -489,8 +490,8 @@ function spawnBoss() {
     speed: 40,
     alive: true,
     invincible: 1000,
-    spreadCd: 0,
-    rotateCd: 0,
+    spreadCd: 3,
+    rotateCd: 6,
     moveTimer: 0,
   };
 

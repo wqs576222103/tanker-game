@@ -73,6 +73,7 @@ const TankActions = {
 
   // 解决坦克碰撞
   resolveTankCollision(attacker, defender) {
+    if (attacker.invincible > 0 || defender.invincible > 0) return false;
     const attackerMoving =
       Math.abs(attacker.dir.x) + Math.abs(attacker.dir.y) > 0;
     const defenderMoving =
@@ -513,6 +514,7 @@ const TankActions = {
 
   // 玩家受伤
   damagePlayer(reason, bullet) {
+    if (player.invincible > 0) return;
     if (player.shieldT > gtMs) {
       if (!bullet) {
         player.shieldT = 0;
