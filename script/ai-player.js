@@ -163,7 +163,7 @@ const AIPlayer = {
 
   itemPriority: {
     shield: 1.0,
-    spread: 0.9,
+    spread: 0.95,
     life: 0.95,
     fireRate: 0.75,
     speed: 0.7,
@@ -498,7 +498,7 @@ const AIPlayer = {
 
   findThreateningBulletsList(px, py, bullets) {
     const threats = [];
-    const dangerRange = 180;
+    const dangerRange = 250;
 
     for (const b of bullets) {
       if (b.isPlayerBullet) continue;
@@ -551,8 +551,12 @@ const AIPlayer = {
     const angles = [
       angle + Math.PI / 2,
       angle - Math.PI / 2,
+      angle + Math.PI / 3,
+      angle - Math.PI / 3,
       angle + Math.PI / 4,
       angle - Math.PI / 4,
+      angle + (Math.PI * 2) / 3,
+      angle - (Math.PI * 2) / 3,
       angle + (Math.PI * 3) / 4,
       angle - (Math.PI * 3) / 4,
     ];
@@ -565,8 +569,23 @@ const AIPlayer = {
       if (this.isBlocked(dir)) continue;
       const free = this.getFreeDistance(dir);
       if (free <= 0) continue;
-      const score =
-        free + (Math.abs(Math.abs(a - angle) - Math.PI / 2) < 0.3 ? 20 : 0);
+
+      let score = free;
+      const angleDiff = Math.abs(a - angle);
+      if (Math.abs(angleDiff - Math.PI / 2) < 0.3) {
+        score += 30;
+      } else if (
+        Math.abs(angleDiff - Math.PI / 3) < 0.3 ||
+        Math.abs(angleDiff - (Math.PI * 2) / 3) < 0.3
+      ) {
+        score += 20;
+      } else if (
+        Math.abs(angleDiff - Math.PI / 4) < 0.3 ||
+        Math.abs(angleDiff - (Math.PI * 3) / 4) < 0.3
+      ) {
+        score += 10;
+      }
+
       if (score > bestScore) {
         bestScore = score;
         bestDir = dir;
@@ -730,7 +749,37 @@ const AIPlayer = {
     }
 
     if (best) return best;
+
+    if (this.tryShootDestructibleWall()) {
+      this.keys = this.keys || {};
+      keys.fire = true;
+      return this.moveDir || dirs[0];
+    }
+
     return dirs[Math.floor(Math.random() * dirs.length)];
+  },
+
+  tryShootDestructibleWall() {
+    const playerPos = GameUtils.getPlayerPosition();
+    if (!playerPos) return false;
+
+    const px = playerPos.x + 15;
+    const py = playerPos.y + 15;
+    const dir = player.dir;
+
+    const testDistances = [CELL, CELL * 2];
+    for (const dist of testDistances) {
+      const testX = px + dir.x * dist;
+      const testY = py + dir.y * dist;
+      const cell = this.getCell(testX, testY);
+
+      if (cell.c >= 0 && cell.c < COLS && cell.r >= 0 && cell.r < ROWS) {
+        if (map[cell.c][cell.r] === CRACK) {
+          return true;
+        }
+      }
+    }
+    return false;
   },
 
   getAlternativeDirs(preferred) {
@@ -787,7 +836,7 @@ const AIPlayer = {
 
     if (this.isBlocked(this.moveDir)) {
       this.lastBlockedDir = this.moveDir;
-      this.blockedTimer = 0.5;
+      this.blockedTimer = 1.5;
       this.moveDir = this.getBestEscapeDir();
       return;
     }

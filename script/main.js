@@ -1380,6 +1380,9 @@ document
   .getElementById("btn-export-log")
   .addEventListener("click", exportAILog);
 document.getElementById("btn-clear-log").addEventListener("click", clearAILog);
+document
+  .getElementById("btn-export-death-log")
+  .addEventListener("click", showAILog);
 
 // ====================== 画面缩放 / 全屏 ======================
 function isFullscreen() {
