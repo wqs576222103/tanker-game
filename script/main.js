@@ -1187,6 +1187,8 @@ function gameOver() {
     logBtn.style.display = AIPlayer.enabled ? "inline-block" : "none";
   }
 
+  AIPlayer.notifyDeath(deathReason);
+
   document.getElementById("ov-over").classList.remove("hidden");
 }
 
@@ -1299,9 +1301,33 @@ document.getElementById("btn-resume").addEventListener("click", togglePause);
 const btnAI = document.getElementById("btn-ai");
 btnAI.addEventListener("click", toggleAI);
 
+// ====================== 导入自定义 AI 脚本 ======================
+const btnImportAI = document.getElementById("btn-import-ai");
+const aiFileInput = document.getElementById("ai-file");
+
+btnImportAI.addEventListener("click", () => aiFileInput.click());
+
+aiFileInput.addEventListener("change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  try {
+    const name = await AIPlayer.loadFromFile(file);
+    if (!AIPlayer.enabled) {
+      AIPlayer.toggle();
+      btnAI.classList.toggle("active", true);
+    }
+    // 若已开启AI，刷新按钮/状态文案
+    AIPlayer.updateUI();
+    void name;
+  } catch (err) {
+    alert("AI 脚本加载失败：" + err.message);
+  } finally {
+    aiFileInput.value = "";
+  }
+});
+
 function toggleAI() {
   const enabled = AIPlayer.toggle();
-  btnAI.textContent = enabled ? "🤖 AI: 开" : "🤖 AI: 关";
   btnAI.classList.toggle("active", enabled);
 }
 

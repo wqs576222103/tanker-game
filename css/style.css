@@ -35,6 +35,7 @@ canvas {
 }
 #btn-group button:active { background: #3a4a3a; }
 #btn-group button.active { background: #4a7a4a; border-color: #6a9a6a; }
+.ai-status { text-align: center; font-size: 13px; color: #9fb6a6; margin-top: 6px; }
 /* 移动端控制 */
 #controls { display: none; }
 @media (pointer: coarse) {
