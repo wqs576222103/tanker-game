@@ -27,7 +27,7 @@ const GameUtils = {
     };
   },
 
-  // 获取所有敌方坦克位置
+  // 获取所有敌方坦克位置（含朝向与速度，便于预测下一步位置）
   getEnemyPositions() {
     return tanks
       .filter((t) => t.alive && !t.isPlayer)
@@ -35,44 +35,83 @@ const GameUtils = {
         id: t.id,
         x: t.x,
         y: t.y,
+        w: t.w,
+        h: t.h,
+        dir: { x: t.dir.x, y: t.dir.y },
+        dirName: t.dirName,
+        speed: t.speed,
         inGrass: isInGrass(t),
       }));
   },
 
-  // 获取子弹位置（区分敌我）
-  getBulletPositions() {
+  // 预测敌方坦克下一步位置（默认按 1 帧 16ms 线性估算）
+  predictEnemyPositions(frames = 1, dt = 0.016) {
+    return this.getEnemyPositions().map((e) => ({
+      ...e,
+      nextX: e.x + e.dir.x * e.speed * dt * frames,
+      nextY: e.y + e.dir.y * e.speed * dt * frames,
+    }));
+  },
+
+  // 获取子弹位置（区分敌我，含方向与下一帧位置）
+  getBulletPositions(frames = 1, dt = 0.016) {
     return bullets
       .filter((b) => !b.dead)
-      .map((b) => ({
-        x: b.x,
-        y: b.y,
-        vx: b.dx || b.vx || 0,
-        vy: b.dy || b.vy || 0,
-        isPlayerBullet: b.owner === "player",
-        damage: b.dmg,
-      }));
+      .map((b) => {
+        const speed = b.speed || 210;
+        const dx = b.dx || 0;
+        const dy = b.dy || 0;
+        return {
+          x: b.x,
+          y: b.y,
+          dir: { x: dx, y: dy },
+          speed,
+          nextX: b.x + dx * speed * dt * frames,
+          nextY: b.y + dy * speed * dt * frames,
+          isPlayerBullet: b.owner === "player",
+          damage: b.dmg,
+        };
+      });
   },
 
-  // 获取玩家子弹位置
-  getPlayerBullets() {
+  // 获取玩家子弹位置（含方向与下一帧位置）
+  getPlayerBullets(frames = 1, dt = 0.016) {
     return bullets
       .filter((b) => !b.dead && b.owner === "player")
-      .map((b) => ({
-        x: b.x,
-        y: b.y,
-        damage: b.dmg,
-      }));
+      .map((b) => {
+        const speed = b.speed || 210;
+        const dx = b.dx || 0;
+        const dy = b.dy || 0;
+        return {
+          x: b.x,
+          y: b.y,
+          dir: { x: dx, y: dy },
+          speed,
+          nextX: b.x + dx * speed * dt * frames,
+          nextY: b.y + dy * speed * dt * frames,
+          damage: b.dmg,
+        };
+      });
   },
 
-  // 获取敌方子弹位置
-  getEnemyBullets() {
+  // 获取敌方子弹位置（含方向与下一帧位置）
+  getEnemyBullets(frames = 1, dt = 0.016) {
     return bullets
       .filter((b) => !b.dead && b.owner === "enemy")
-      .map((b) => ({
-        x: b.x,
-        y: b.y,
-        damage: b.dmg,
-      }));
+      .map((b) => {
+        const speed = b.speed || 210;
+        const dx = b.dx || 0;
+        const dy = b.dy || 0;
+        return {
+          x: b.x,
+          y: b.y,
+          dir: { x: dx, y: dy },
+          speed,
+          nextX: b.x + dx * speed * dt * frames,
+          nextY: b.y + dy * speed * dt * frames,
+          damage: b.dmg,
+        };
+      });
   },
 
   // 获取所有障碍位置（砖墙和碎石墙）

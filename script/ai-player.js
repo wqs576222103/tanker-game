@@ -251,6 +251,7 @@ const AIPlayer = {
           h: t.h,
           dirName: t.dirName,
           dir: { x: t.dir.x, y: t.dir.y },
+          speed: t.speed,
           hp: t.hp,
           maxHp: t.maxHp,
           inGrass: isInGrass(t),
@@ -261,8 +262,10 @@ const AIPlayer = {
         .map((b) => ({
           x: b.x,
           y: b.y,
+          dir: { x: b.dx || 0, y: b.dy || 0 },
           vx: b.dx || 0,
           vy: b.dy || 0,
+          speed: b.speed || 210,
           owner: b.owner,
           dmg: b.dmg,
           bounced: b.bounced,
@@ -292,6 +295,7 @@ const AIPlayer = {
               h: boss.h,
               dirName: boss.dirName,
               dir: { x: boss.dir.x, y: boss.dir.y },
+              speed: boss.speed,
               hp: boss.hp,
               maxHp: boss.maxHp,
             }
@@ -309,6 +313,7 @@ const AIPlayer = {
         .map((t) => t.id),
 
       // 工具方法
+      utils: GameUtils,
       cellOf: (x, y) => cellOf(x, y),
       centerOf: (c, r) => centerOf(c, r),
       distance: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
@@ -354,6 +359,8 @@ const DefaultAI = {
   shootMinCells: 5, // 与敌方保持的最小格子距离（防止被贴脸撞击）
   shootMaxCells: 11, // 最大有效射击距离（格子数）
   bulletLookahead: 0.85, // 子弹躲避提前量（秒）
+  bulletSpeed: 210, // 敌方子弹速度（像素/秒）
+  dodgePredict: 0.7, // 躲避时预测自身/子弹未来位置的时长（秒）
 
   // ---- 运行时状态 ----
   moveDir: { x: 0, y: 0 },
@@ -488,13 +495,13 @@ const DefaultAI = {
     return best;
   },
 
-  // 贴脸敌人 + 预测敌方朝我推进：视为撞击威胁（最高优先级之一）
+  // 贴脸敌人 + 预测敌方朝我推进（结合速度估算撞击时间）：视为撞击威胁
   findRammer(ctx, px, py) {
     const IMM = this.ramDanger;
     let best = null;
     let bestScore = -Infinity;
 
-    const threat = (x, y, dir) => {
+    const threat = (x, y, dir, spd) => {
       const dx = px - x,
         dy = py - y;
       const d = Math.hypot(dx, dy);
@@ -502,19 +509,26 @@ const DefaultAI = {
       // 已贴脸：无论朝向都算，越近越危险
       if (d < IMM) return 1e9 + (IMM - d);
 
-      // 预测向前推进：敌方朝向与「指向玩家」方向的夹角越小越危险
-      if (d < this.ramThreatRange && dir && (dir.x || dir.y)) {
+      // 预测向前推进：敌方朝向与「指向玩家」方向的夹角越小越危险，
+      // 并结合敌方速度估算「预计撞击剩余时间」，越快越危险
+      if (d < this.ramThreatRange && dir && (dir.x || dir.y) && spd > 0) {
         const dl = Math.hypot(dir.x, dir.y);
         if (dl > 0) {
           const dot = (dir.x * dx + dir.y * dy) / (dl * d);
-          if (dot > 0.55) return this.ramThreatRange - d + dot * 20;
+          if (dot > 0.55) {
+            const closing = dot * spd; // 向我逼近的接近速度
+            const eta = d / closing; // 预计撞击剩余时间（秒）
+            return (
+              this.ramThreatRange - d + dot * 20 + (42 - Math.min(eta, 42))
+            );
+          }
         }
       }
       return -1;
     };
 
-    const push = (x, y, dir) => {
-      const s = threat(x, y, dir);
+    const push = (x, y, dir, spd) => {
+      const s = threat(x, y, dir, spd);
       if (s > bestScore) {
         bestScore = s;
         best = { x, y };
@@ -522,9 +536,14 @@ const DefaultAI = {
     };
 
     for (const e of ctx.enemies)
-      push(e.x + e.w / 2, e.y + e.h / 2, e.dir);
+      push(e.x + e.w / 2, e.y + e.h / 2, e.dir, e.speed || 0);
     if (ctx.boss)
-      push(ctx.boss.x + ctx.boss.w / 2, ctx.boss.y + ctx.boss.h / 2, ctx.boss.dir);
+      push(
+        ctx.boss.x + ctx.boss.w / 2,
+        ctx.boss.y + ctx.boss.h / 2,
+        ctx.boss.dir,
+        ctx.boss.speed || 0,
+      );
 
     return bestScore < 0 ? null : best;
   },
@@ -540,50 +559,105 @@ const DefaultAI = {
       if (b.owner === "player") continue;
       const vx = b.vx || 0,
         vy = b.vy || 0;
-      const speed = Math.hypot(vx, vy);
-      if (speed === 0) continue;
+      const vlen = Math.hypot(vx, vy);
+      if (vlen === 0) continue;
+      const ux = vx / vlen,
+        uy = vy / vlen;
+      const bspd = b.speed || this.bulletSpeed; // 使用该子弹实际速度
 
       const bx = b.x + 3,
         by = b.y + 3;
       const dx = px - bx,
         dy = py - by;
       const dist = Math.hypot(dx, dy);
-      if (dist > 260) continue;
+      if (dist > 300) continue;
 
-      const ux = vx / speed,
-        uy = vy / speed;
-      const along = dx * ux + dy * uy; // 沿弹道方向的分量
-      if (along < 0) continue; // 已从坦克身边越过
+      const along = dx * ux + dy * uy; // 沿弹道方向的分量（像素）
+      if (along < -8) continue; // 已从坦克身边越过
       const perp = Math.abs(dx * uy - dy * ux); // 到弹道的垂直距离
       if (perp > danger + cw * 0.5) continue; // 会擦肩而过
 
-      const reachT = along / speed;
-      if ((reachT <= this.bulletLookahead || dist < 40) && reachT < bestTime) {
+      const reachT = along / bspd; // 命中剩余时间（秒）
+      if (reachT <= this.bulletLookahead && reachT < bestTime) {
         bestTime = reachT;
-        best = { bx, by, vx, vy, reachT };
+        best = { bx, by, vx: ux * bspd, vy: uy * bspd, reachT };
       }
     }
     return best;
   },
 
-  // 朝与弹道垂直、空间最开阔的方向横移
+  // 预测式躲避：模拟「自身沿某方向移动」与「所有敌方子弹飞行」，
+  // 选出未来一段时间内与子弹保持最小距离最大的方向（尽量远离敌方子弹）。
   dodgeDirection(ctx, px, py, threat) {
-    const angle = Math.atan2(threat.vy, threat.vx);
-    const dirs = [
-      angle + Math.PI / 2,
-      angle - Math.PI / 2,
-      angle + (Math.PI * 3) / 4,
-      angle - (Math.PI * 3) / 4,
-      angle,
-    ];
-    for (const a of dirs) {
-      const axis = this.nearestAxis({ x: Math.cos(a), y: Math.sin(a) });
-      if (this.isClearDir(ctx, px, py, axis)) return axis;
+    const TIME = this.dodgePredict;
+    const spd = this.playerSpeed(ctx);
+    const candidates = this.dodgeCandidates(threat);
+
+    let best = null;
+    let bestScore = -Infinity;
+    for (const c of candidates) {
+      if (c.x === 0 && c.y === 0) continue;
+      if (!this.isClearDir(ctx, px, py, c)) continue;
+      const score = this.minBulletClearance(ctx, px, py, c, spd, TIME);
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
     }
+    if (best) return best;
+
     for (const c of this.cardinals) {
       if (this.isClearDir(ctx, px, py, c)) return c;
     }
     return this.getBestFreeDir(ctx, px, py);
+  },
+
+  // 候选躲避方向：优先垂直弹道横移，其次背向弹道后退
+  dodgeCandidates(threat) {
+    const angle = Math.atan2(threat.vy, threat.vx);
+    const dirs = [
+      { x: Math.cos(angle + Math.PI / 2), y: Math.sin(angle + Math.PI / 2) },
+      { x: Math.cos(angle - Math.PI / 2), y: Math.sin(angle - Math.PI / 2) },
+      { x: Math.cos(angle + Math.PI), y: Math.sin(angle + Math.PI) },
+    ];
+    return dirs.map((d) => this.nearestAxis(d));
+  },
+
+  // 沿 dir 方向匀速移动 time 秒时，与所有敌方子弹保持的最小距离（越小越危险）
+  minBulletClearance(ctx, px, py, dir, spd, time) {
+    let min = Infinity;
+    const N = 6;
+    for (const b of ctx.bullets) {
+      if (b.owner === "player") continue;
+      const vx = b.vx || 0,
+        vy = b.vy || 0;
+      const vlen = Math.hypot(vx, vy);
+      if (vlen === 0) continue;
+      const ux = vx / vlen,
+        uy = vy / vlen;
+      const bspd = b.speed || this.bulletSpeed; // 使用该子弹实际速度
+      const bx = b.x + 3,
+        by = b.y + 3;
+      let localMin = Infinity;
+      for (let k = 0; k <= N; k++) {
+        const tt = (time / N) * k;
+        const bxx = bx + ux * bspd * tt;
+        const byy = by + uy * bspd * tt;
+        const pxx = px + dir.x * spd * tt;
+        const pyy = py + dir.y * spd * tt;
+        const d = Math.hypot(bxx - pxx, byy - pyy);
+        if (d < localMin) localMin = d;
+      }
+      if (localMin < min) min = localMin;
+    }
+    return min === Infinity ? 1e6 : min;
+  },
+
+  // 玩家当前实际移动速度（含移速道具加成）
+  playerSpeed(ctx) {
+    const spd = 150;
+    if (ctx.player && ctx.player.speedT > ctx.gtMs) return spd * 1.4;
+    return spd;
   },
 
   // 朝远离敌方的方向逃跑（选最开阔方向）

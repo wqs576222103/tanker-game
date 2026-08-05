@@ -1,20 +1,30 @@
 // ====================== 示例 AI：随机游走 ======================
-// 这是一个即插即用示例。在页面点击「📥 导入AI」选择本文件即可运行。
-// 实现要点：必须提供 decide(ctx, dt)，返回要按下的方向/按键。
 //
-// ctx 提供只读游戏状态：
-//   ctx.player    玩家信息（x,y,hp,dir,...）或 null
-//   ctx.enemies   敌人数组
-//   ctx.bullets   子弹数组（vx,vy 为速度）
-//   ctx.items     道具数组
-//   ctx.mines     地雷数组
-//   ctx.drones    无人机数组
-//   ctx.boss      boss 或 null
-//   ctx.gates     传送门
-//   ctx.mapAt(c,r)  格子类型（0空 1砖 2门 3边界 4碎石 5草丛）
-//   ctx.isPathClear(x1,y1,x2,y2)
-//   ctx.cellOf / ctx.centerOf / ctx.distance
-// 常量：ctx.CELL / ctx.COLS / ctx.ROWS / ctx.W / ctx.H / ctx.DIRS / ctx.TILE
+// 玩家可以在页面中导入自定义 AI 脚本文件（.js / .mjs / .txt），
+// 脚本只需要实现以下「接口」即可被直接运行。
+//
+// ---------------------------------------------------------------
+// 接口约定（AI 脚本只需要实现这些方法）：
+//
+//   export default {
+//     name: "我的AI",                 // 可选：显示名称
+//     onLoad(ctx)       { },          // 可选：脚本被加载/启用时调用
+//     onRoundStart(ctx) { },          // 可选：每局开始时调用
+//     decide(ctx, dt) {               // 必选：每帧调用，返回本帧要执行的按键
+//       return {
+//         up: bool, down: bool, left: bool, right: bool,
+//         fire: true,                 // 持续按住=连续射击（有内置冷却）
+//         mine: false,
+//       };
+//     },
+//     onDeath(ctx, reason) { },       // 可选：玩家死亡时调用
+//     onDisabled(ctx) { },            // 可选：被关闭时调用
+//   };
+//
+// 也可以不使用 ES 模块，直接定义全局对象 window.__AI__ = { decide(ctx, dt){...} }。
+//
+// ctx（沙箱）是游戏状态的只读快照，结构见 buildContext()。
+// ---------------------------------------------------------------
 
 export default {
   name: "随机游走",
