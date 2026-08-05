@@ -1420,7 +1420,20 @@ function fitCanvas() {
   const pad = 10;
   let availW = window.innerWidth - pad;
   let availH = window.innerHeight - pad;
-  if (!isFullscreen()) availH -= 90;
+  const hud = document.getElementById("hud");
+  const group = document.getElementById("btn-group");
+  const statusEl = document.getElementById("ai-status");
+  const controls = document.getElementById("controls");
+  const chromeH =
+    (hud ? hud.offsetHeight : 0) +
+    (group ? group.offsetHeight + 8 : 0) +
+    (statusEl && statusEl.style.display !== "none"
+      ? statusEl.offsetHeight + 6
+      : 0) +
+    (controls && getComputedStyle(controls).display !== "none"
+      ? controls.offsetHeight
+      : 0);
+  availH -= chromeH;
   const scale = Math.min(availW / W, availH / H);
   canvas.style.width = Math.round(W * scale) + "px";
   canvas.style.height = Math.round(H * scale) + "px";

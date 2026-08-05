@@ -1,4 +1,4 @@
-// ====================== 示例 AI：巡游猎手 ======================
+// ====================== 示例 AI：随机游走 ======================
 // 这是一个即插即用示例。在页面点击「📥 导入AI」选择本文件即可运行。
 // 实现要点：必须提供 decide(ctx, dt)，返回要按下的方向/按键。
 //
@@ -17,10 +17,10 @@
 // 常量：ctx.CELL / ctx.COLS / ctx.ROWS / ctx.W / ctx.H / ctx.DIRS / ctx.TILE
 
 export default {
-  name: "巡游猎手",
+  name: "随机游走",
 
   onLoad(ctx) {
-    console.log("[AI] 巡游猎手已加载");
+    console.log("[AI] 随机游走已加载");
   },
 
   onRoundStart(ctx) {
@@ -31,85 +31,29 @@ export default {
   decide(ctx, dt) {
     if (!ctx.player) return {};
 
-    const p = ctx.player;
-    const pcx = p.x + p.w / 2;
-    const pcy = p.y + p.h / 2;
-
-    // 1. 逃离最近的敌方子弹
-    let danger = null;
-    for (const b of ctx.bullets) {
-      if (b.owner === "player") continue;
-      const d = ctx.distance(pcx, pcy, b.x, b.y);
-      const speed = Math.hypot(b.vx, b.vy) || 1;
-      const timeToReach = d / speed;
-      // 预测子弹是否朝我飞来
-      const nx = b.x + b.vx * timeToReach;
-      const ny = b.y + b.vy * timeToReach;
-      if (ctx.distance(nx, ny, pcx, pcy) < d * 0.4 && d < 180) {
-        danger = b;
-      }
+    // 内部状态：当前方向与方向计时器（与敌方坦克一致）
+    this.dirTimer = (this.dirTimer || 0) - dt;
+    if (!this.dir || this.dirTimer <= 0) {
+      const dirs = ["up", "down", "left", "right"];
+      this.dir = dirs[Math.floor(Math.random() * dirs.length)];
+      this.dirTimer = 0.5 + Math.random() * 1.1;
     }
 
-    if (danger) {
-      const angle = Math.atan2(pcy - danger.y, pcx - danger.x);
-      const esc = angle + Math.PI / 2; // 垂直方向逃离
-      const ex = Math.cos(esc);
-      const ey = Math.sin(esc);
-      return {
-        left: ex < -0.3,
-        right: ex > 0.3,
-        up: ey < -0.3,
-        down: ey > 0.3,
-        fire: true,
-        mine: false,
-      };
+    // 随机开火（与敌方坦克一致：2.2~4.2 秒一次）
+    this.fireTimer = (this.fireTimer || 0) - dt;
+    let fire = false;
+    if (this.fireTimer <= 0) {
+      fire = true;
+      this.fireTimer = 2.2 + Math.random() * 2.0;
     }
-
-    // 2. 朝最近敌人移动并射击
-    let target = null;
-    let best = Infinity;
-    for (const e of ctx.enemies) {
-      const ecx = e.x + e.w / 2;
-      const ecy = e.y + e.h / 2;
-      const d = ctx.distance(pcx, pcy, ecx, ecy);
-      if (d < best) {
-        best = d;
-        target = { x: ecx, y: ecy };
-      }
-    }
-
-    // 3. 没有敌人就去找道具
-    if (!target) {
-      let bd = Infinity;
-      for (const it of ctx.items) {
-        const ix = it.x + ctx.CELL / 2;
-        const iy = it.y + ctx.CELL / 2;
-        const d = ctx.distance(pcx, pcy, ix, iy);
-        if (d < bd) {
-          bd = d;
-          target = { x: ix, y: iy };
-        }
-      }
-    }
-
-    if (!target) return { fire: true };
-
-    const dx = target.x - pcx;
-    const dy = target.y - pcy;
-
-    // 同一直线且路径通畅时开火
-    const sameRow = Math.abs(dy) < ctx.CELL;
-    const sameCol = Math.abs(dx) < ctx.CELL;
-    const clear = ctx.isPathClear(pcx, pcy, target.x, target.y);
-    const fire = (sameRow || sameCol) && clear;
 
     return {
-      left: dx < -ctx.CELL,
-      right: dx > ctx.CELL,
-      up: dy < -ctx.CELL,
-      down: dy > ctx.CELL,
+      up: this.dir === "up",
+      down: this.dir === "down",
+      left: this.dir === "left",
+      right: this.dir === "right",
       fire,
-      mine: p.hp <= 1 && p.mines > 0 && Math.hypot(dx, dy) < 150,
+      mine: false,
     };
   },
 
