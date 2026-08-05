@@ -46,6 +46,8 @@ const GameUtils = {
       .map((b) => ({
         x: b.x,
         y: b.y,
+        vx: b.vx,
+        vy: b.vy,
         isPlayerBullet: b.owner === "player",
         damage: b.dmg,
       }));

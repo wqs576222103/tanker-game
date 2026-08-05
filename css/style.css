@@ -69,3 +69,83 @@ canvas {
 }
 .overlay button:active { transform: scale(.96); }
 .hidden { display: none !important; }
+
+#btn-ai-log {
+  background: #4a7a4a;
+  color: #fff;
+  border: 1px solid #6a9a6a;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+#btn-ai-log:hover { background: #5a8a5a; }
+
+#ov-ai-log {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: rgba(8,12,16,.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #d7e6d7;
+  text-align: left;
+  padding: 20px;
+  gap: 12px;
+  z-index: 10;
+  overflow-y: auto;
+}
+#ov-ai-log h2 {
+  font-size: 22px;
+  color: #ffd76e;
+  margin-bottom: 10px;
+}
+#ai-log-content {
+  width: 100%;
+  max-width: 600px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: rgba(0,0,0,.3);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+#ai-log-content .log-item {
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  padding: 10px 0;
+}
+#ai-log-content .log-item:last-child { border-bottom: none; }
+#ai-log-content .log-header {
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff7b6e;
+  margin-bottom: 6px;
+}
+#ai-log-content .log-detail {
+  color: #9fb6a6;
+  margin: 2px 0;
+}
+#ai-log-content .log-detail span {
+  color: #cfe3cf;
+}
+#ai-log-content .log-decisions {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(255,255,255,.05);
+  border-radius: 6px;
+  font-size: 11px;
+  color: #8a9a8a;
+}
+#ov-ai-log button {
+  background: #26332b;
+  color: #cfe3cf;
+  border: 1px solid #4a5a4a;
+  padding: 8px 20px;
+  border-radius: 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+#ov-ai-log button:hover { background: #3a4a3a; }

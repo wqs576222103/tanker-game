@@ -1,5 +1,143 @@
 "use strict";
 
+// ====================== AI 死亡日志系统 ======================
+
+const AILogger = {
+  maxRecords: 50,
+  currentSession: null,
+  deathRecords: [],
+
+  startSession() {
+    this.currentSession = {
+      startTime: performance.now(),
+      decisions: [],
+      lastWeights: { survival: 0, kill: 0, item: 0 },
+      lastAction: null,
+      lastMoveDir: null,
+      wasDodging: false,
+    };
+  },
+
+  logDecision(data) {
+    if (!this.currentSession) return;
+
+    this.currentSession.decisions.push({
+      time: (performance.now() - this.currentSession.startTime) / 1000,
+      ...data,
+    });
+
+    if (this.currentSession.decisions.length > 100) {
+      this.currentSession.decisions.shift();
+    }
+  },
+
+  logDeath(reason, context) {
+    if (!this.currentSession || !player) return;
+
+    const px = player.x + 15;
+    const py = player.y + 15;
+
+    const enemyTanks = tanks.filter((t) => t.alive && !t.isPlayer);
+    const nearbyEnemies = enemyTanks
+      .filter((e) => Math.hypot(e.x + 15 - px, e.y + 15 - py) < 150)
+      .map((e) => ({
+        x: e.x,
+        y: e.y,
+        hp: e.hp,
+        dist: Math.hypot(e.x + 15 - px, e.y + 15 - py),
+      }));
+
+    const liveBullets = bullets.filter((b) => !b.dead);
+    const threatBullets = liveBullets
+      .filter((b) => !b.isPlayerBullet)
+      .filter((b) => Math.hypot(b.x + 3 - px, b.y + 3 - py) < 150)
+      .map((b) => ({
+        x: b.x,
+        y: b.y,
+        vx: b.vx,
+        vy: b.vy,
+        dist: Math.hypot(b.x + 3 - px, b.y + 3 - py),
+      }));
+
+    const record = {
+      timestamp: Date.now(),
+      deathReason: reason,
+      playerState: {
+        hp: player.hp,
+        maxHp: player.maxHp || 5,
+        x: player.x,
+        y: player.y,
+        dir: { ...player.dir },
+        hasShield: player.shieldT > performance.now(),
+      },
+      aiState: {
+        survivalWeight: this.currentSession.lastWeights.survival,
+        killWeight: this.currentSession.lastWeights.kill,
+        itemWeight: this.currentSession.lastWeights.item,
+        selectedAction: this.currentSession.lastAction,
+        moveDir: this.currentSession.lastMoveDir,
+        wasDodging: this.currentSession.wasDodging,
+      },
+      surroundings: {
+        enemyCount: enemyTanks.length,
+        nearbyEnemies,
+        bulletCount: liveBullets.length,
+        threatBullets,
+      },
+      decisionLog: this.currentSession.decisions.slice(-20),
+      context: context || {},
+    };
+
+    this.deathRecords.unshift(record);
+    if (this.deathRecords.length > this.maxRecords) {
+      this.deathRecords.pop();
+    }
+
+    this.startSession();
+    return record;
+  },
+
+  updateWeights(survival, kill, item) {
+    if (!this.currentSession) return;
+    this.currentSession.lastWeights = { survival, kill, item };
+  },
+
+  updateAction(action) {
+    if (!this.currentSession) return;
+    this.currentSession.lastAction = action;
+  },
+
+  updateMoveDir(dir) {
+    if (!this.currentSession) return;
+    this.currentSession.lastMoveDir = dir;
+  },
+
+  updateDodging(dodging, dodgeDir) {
+    if (!this.currentSession) return;
+    this.currentSession.wasDodging = dodging;
+    if (dodgeDir) {
+      this.currentSession.lastMoveDir = dodgeDir;
+    }
+  },
+
+  getRecords() {
+    return this.deathRecords;
+  },
+
+  getRecordCount() {
+    return this.deathRecords.length;
+  },
+
+  exportJSON() {
+    return JSON.stringify(this.deathRecords, null, 2);
+  },
+
+  clear() {
+    this.deathRecords = [];
+    this.currentSession = null;
+  },
+};
+
 // ====================== AI 玩家控制器（权重决策系统） ======================
 
 const AIPlayer = {
@@ -39,11 +177,14 @@ const AIPlayer = {
     this.dodging = false;
     this.lastBlockedDir = null;
     this.blockedTimer = 0;
+    AILogger.startSession();
   },
 
   toggle() {
     this.enabled = !this.enabled;
-    if (!this.enabled) {
+    if (this.enabled) {
+      AILogger.startSession();
+    } else {
       this.clearKeys();
     }
     return this.enabled;
@@ -75,9 +216,12 @@ const AIPlayer = {
     }
 
     if (this.dodging) {
+      AILogger.updateDodging(true, this.dodgeDir);
       this.handleDodge(dt);
       return;
     }
+
+    AILogger.updateDodging(false, null);
 
     if (now - this.lastThink < this.thinkInterval) {
       this.executeMove();
@@ -86,9 +230,9 @@ const AIPlayer = {
     this.lastThink = now;
 
     const playerPos = GameUtils.getPlayerPosition();
-    const enemies = GameUtils.getEnemyPositions();
-    const bullets = GameUtils.getBulletPositions();
-    const items = GameUtils.getItemPositions();
+    const enemiesList = GameUtils.getEnemyPositions();
+    const bulletsList = GameUtils.getBulletPositions();
+    const itemsList = GameUtils.getItemPositions();
 
     if (!playerPos || !player.alive) {
       this.clearKeys();
@@ -98,30 +242,60 @@ const AIPlayer = {
     const px = playerPos.x + 15;
     const py = playerPos.y + 15;
 
-    const survivalWeight = this.calcSurvivalWeight(px, py, bullets, enemies);
-    const killWeight = this.calcKillWeight(px, py, enemies);
-    const itemWeight = this.calcItemWeight(px, py, items);
+    const survivalWeight = this.calcSurvivalWeight(
+      px,
+      py,
+      bulletsList,
+      enemiesList,
+    );
+    const killWeight = this.calcKillWeight(px, py, enemiesList);
+    const itemWeight = this.calcItemWeight(px, py, itemsList);
+
+    AILogger.updateWeights(survivalWeight, killWeight, itemWeight);
 
     if (survivalWeight > 60) {
-      const threat = this.findThreateningBullets(playerPos, bullets);
+      const threat = this.findThreateningBullets(playerPos, bulletsList);
       if (threat) {
+        AILogger.logDecision({
+          action: "dodge",
+          weights: {
+            survival: survivalWeight,
+            kill: killWeight,
+            item: itemWeight,
+          },
+          threat: { x: threat.x, y: threat.y, dist: threat.dist },
+        });
+        AILogger.updateAction("dodge");
         this.startDodge(threat, playerPos);
         return;
       }
     }
 
     let target;
+    let selectedAction;
+
     if (survivalWeight > killWeight && survivalWeight > itemWeight) {
-      target = this.findSafePosition(px, py, enemies, bullets);
+      target = this.findSafePosition(px, py, enemiesList, bulletsList);
+      selectedAction = "survival";
     } else if (killWeight > itemWeight) {
-      target = this.findBestEnemy(px, py, enemies);
+      target = this.findBestEnemy(px, py, enemiesList);
+      selectedAction = "kill";
     } else {
-      target = this.findBestItem(px, py, items);
+      target = this.findBestItem(px, py, itemsList);
+      selectedAction = "item";
     }
 
+    AILogger.logDecision({
+      action: selectedAction,
+      weights: { survival: survivalWeight, kill: killWeight, item: itemWeight },
+      target,
+    });
+    AILogger.updateAction(selectedAction);
+
     this.computeMoveDir(playerPos, target);
+    AILogger.updateMoveDir(this.moveDir);
     this.executeMove();
-    this.executeShoot(playerPos, enemies);
+    this.executeShoot(playerPos, enemiesList);
   },
 
   // ====================== 权重计算 ======================
@@ -130,28 +304,30 @@ const AIPlayer = {
     let weight = 0;
 
     const threatBullets = this.findThreateningBulletsList(px, py, bullets);
-    weight += threatBullets.length * 30;
+    weight += threatBullets.length * 35;
 
     for (const b of threatBullets) {
       const dist = Math.hypot(b.x - px, b.y - py);
-      if (dist < 40) weight += 40;
-      else if (dist < 60) weight += 30;
-      else if (dist < 90) weight += 20;
-      else if (dist < 120) weight += 10;
+      if (dist < 30) weight += 60;
+      else if (dist < 50) weight += 45;
+      else if (dist < 70) weight += 30;
+      else if (dist < 100) weight += 15;
     }
 
     if (player) {
       const hpRatio = player.hp / (player.maxHp || 5);
-      if (hpRatio < 0.3) weight += 40;
-      else if (hpRatio < 0.5) weight += 20;
-      else if (hpRatio < 0.7) weight += 10;
+      if (hpRatio < 0.3) weight += 50;
+      else if (hpRatio < 0.5) weight += 30;
+      else if (hpRatio < 0.7) weight += 15;
     }
 
-    const nearEnemies = enemies.filter((e) => {
+    for (const e of enemies) {
       const dist = Math.hypot(e.x + 15 - px, e.y + 15 - py);
-      return dist < 120;
-    });
-    weight += nearEnemies.length * 20;
+      if (dist < 40) weight += 60;
+      else if (dist < 60) weight += 40;
+      else if (dist < 90) weight += 25;
+      else if (dist < 120) weight += 15;
+    }
 
     return Math.min(weight, 100);
   },
@@ -160,6 +336,8 @@ const AIPlayer = {
     if (enemies.length === 0) return 0;
 
     let totalScore = 0;
+
+    const enemyTanks = tanks.filter((t) => t.alive && !t.isPlayer);
 
     for (const e of enemies) {
       const ex = e.x + 15;
@@ -179,7 +357,14 @@ const AIPlayer = {
       const clearScore = this.isPathClear(px, py, ex, ey) ? 15 : 0;
       const facingScore = this.isPlayerFacingEnemy(px, py, ex, ey) ? 15 : 0;
 
-      totalScore += distScore + alignScore + clearScore + facingScore;
+      let hpBonus = 0;
+      const tank = enemyTanks.find((t) => t.x === e.x && t.y === e.y);
+      if (tank) {
+        if (tank.hp <= 1) hpBonus = 15;
+        else if (tank.hp <= 2) hpBonus = 5;
+      }
+
+      totalScore += distScore + alignScore + clearScore + facingScore + hpBonus;
     }
 
     const avgScore = totalScore / enemies.length;
@@ -313,7 +498,7 @@ const AIPlayer = {
 
   findThreateningBulletsList(px, py, bullets) {
     const threats = [];
-    const dangerRange = 150;
+    const dangerRange = 180;
 
     for (const b of bullets) {
       if (b.isPlayerBullet) continue;
@@ -329,10 +514,10 @@ const AIPlayer = {
       let angleDiff = Math.abs(angle - bulletAngle);
       if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
 
-      const maxAngle = dist < 60 ? 0.8 : 0.5;
+      const maxAngle = dist < 40 ? 1.2 : dist < 80 ? 0.9 : 0.6;
       if (angleDiff < maxAngle) {
-        const ttx = bx + (b.vx || 0) * 0.5;
-        const tty = by + (b.vy || 0) * 0.5;
+        const ttx = bx + (b.vx || 0) * 0.4;
+        const tty = by + (b.vy || 0) * 0.4;
         const predictDist = Math.hypot(ttx - px, tty - py);
         threats.push({ x: bx, y: by, dist, vx: b.vx, vy: b.vy, predictDist });
       }

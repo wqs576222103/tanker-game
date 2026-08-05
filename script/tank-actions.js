@@ -100,6 +100,10 @@ const TankActions = {
             player.flash = 300;
             damageFlash = 350;
             deathReason = "被敌人坦克撞击";
+            AILogger.logDeath(deathReason, {
+              trigger: "tankCollision_headOn",
+              attacker: { x: attacker.x, y: attacker.y, hp: attacker.hp },
+            });
             gameOver();
           } else killEnemy(defender);
         }
@@ -120,6 +124,10 @@ const TankActions = {
             player.flash = 300;
             damageFlash = 350;
             deathReason = "被敌人坦克撞击";
+            AILogger.logDeath(deathReason, {
+              trigger: "tankCollision_headOn",
+              defender: { x: defender.x, y: defender.y, hp: defender.hp },
+            });
             gameOver();
           } else killEnemy(attacker);
         }
@@ -142,6 +150,10 @@ const TankActions = {
           player.flash = 300;
           damageFlash = 350;
           deathReason = "被敌人坦克撞击";
+          AILogger.logDeath(deathReason, {
+            trigger: "tankCollision_side",
+            attacker: { x: attacker.x, y: attacker.y, hp: attacker.hp },
+          });
           gameOver();
         } else killEnemy(defender);
       }
@@ -527,6 +539,12 @@ const TankActions = {
     sfx("boom");
     if (player.hp <= 0) {
       deathReason = reason || "不明原因";
+      AILogger.logDeath(deathReason, {
+        trigger: "damagePlayer",
+        bullet: bullet
+          ? { x: bullet.x, y: bullet.y, vx: bullet.vx, vy: bullet.vy }
+          : null,
+      });
       gameOver();
     }
     updateHud();

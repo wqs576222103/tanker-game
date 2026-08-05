@@ -1178,6 +1178,14 @@ function gameOver() {
     "得分：" + score + "　最高：" + hiScore;
   document.getElementById("ov-over-reason").textContent =
     "死因：" + (deathReason || "不明原因");
+
+  const logCount = AILogger.getRecordCount();
+  const logBtn = document.getElementById("btn-ai-log");
+  if (logBtn) {
+    logBtn.textContent = `AI日志 (${logCount})`;
+    logBtn.style.display = AIPlayer.enabled ? "inline-block" : "none";
+  }
+
   document.getElementById("ov-over").classList.remove("hidden");
 }
 
@@ -1295,6 +1303,83 @@ function toggleAI() {
   btnAI.textContent = enabled ? "🤖 AI: 开" : "🤖 AI: 关";
   btnAI.classList.toggle("active", enabled);
 }
+
+// ====================== AI 日志面板 ======================
+function showAILog() {
+  const records = AILogger.getRecords();
+  const content = document.getElementById("ai-log-content");
+
+  if (records.length === 0) {
+    content.innerHTML =
+      '<p style="color:#9fb6a6;text-align:center">暂无AI死亡日志</p>';
+  } else {
+    content.innerHTML = records
+      .map(
+        (r, i) => `
+      <div class="log-item">
+        <div class="log-header">死亡 #${i + 1} - ${r.deathReason}</div>
+        <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
+        <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
+        <div class="log-detail">血量: <span>${r.playerState.hp}/${r.playerState.maxHp}</span> | 护盾: <span>${r.playerState.hasShield ? "有" : "无"}</span></div>
+        <div class="log-detail">权重 - 生存: <span>${Math.round(r.aiState.survivalWeight)}</span> | 击杀: <span>${Math.round(r.aiState.killWeight)}</span> | 物品: <span>${Math.round(r.aiState.itemWeight)}</span></div>
+        <div class="log-detail">决策: <span>${r.aiState.selectedAction || "N/A"}</span> | 躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>
+        <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
+        ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
+        ${
+          r.decisionLog.length > 0
+            ? `
+          <div class="log-decisions">
+            <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
+            ${r.decisionLog
+              .slice(-5)
+              .map(
+                (d) => `
+              <div>[${d.time.toFixed(1)}s] ${d.action} - 权重(S:${Math.round(d.weights.survival)} K:${Math.round(d.weights.kill)} I:${Math.round(d.weights.item)})</div>
+            `,
+              )
+              .join("")}
+          </div>
+        `
+            : ""
+        }
+      </div>
+    `,
+      )
+      .join("");
+  }
+
+  document.getElementById("ov-ai-log").classList.remove("hidden");
+}
+
+function hideAILog() {
+  document.getElementById("ov-ai-log").classList.add("hidden");
+}
+
+function exportAILog() {
+  const json = AILogger.exportJSON();
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ai-death-log-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAILog() {
+  AILogger.clear();
+  document.getElementById("ai-log-content").innerHTML =
+    '<p style="color:#9fb6a6;text-align:center">日志已清除</p>';
+  const logBtn = document.getElementById("btn-ai-log");
+  if (logBtn) logBtn.textContent = "AI日志 (0)";
+}
+
+document.getElementById("btn-ai-log").addEventListener("click", showAILog);
+document.getElementById("btn-close-log").addEventListener("click", hideAILog);
+document
+  .getElementById("btn-export-log")
+  .addEventListener("click", exportAILog);
+document.getElementById("btn-clear-log").addEventListener("click", clearAILog);
 
 // ====================== 画面缩放 / 全屏 ======================
 function isFullscreen() {
