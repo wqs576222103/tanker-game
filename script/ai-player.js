@@ -18,9 +18,9 @@ const AIPlayer = {
   blockedTimer: 0,
 
   weights: {
-    kill: 0.6,
-    item: 0.4,
-    survival: 0.8,
+    kill: 0.9,
+    item: 0.3,
+    survival: 0.7,
   },
 
   itemPriority: {
@@ -136,10 +136,10 @@ const AIPlayer = {
     let target;
     let selectedAction;
 
-    if (survivalWeight > killWeight && survivalWeight > itemWeight) {
+    if (survivalWeight > 80) {
       target = this.findSafePosition(px, py, enemiesList, bulletsList);
       selectedAction = "survival";
-    } else if (killWeight > itemWeight) {
+    } else if (enemiesList.length > 0) {
       target = this.findBestEnemy(px, py, enemiesList);
       selectedAction = "kill";
     } else {
@@ -555,37 +555,20 @@ const AIPlayer = {
       this.lastBlockedDir === primaryDir && this.blockedTimer > 0;
 
     if (!isBlockedPrimary && !this.isBlocked(primaryDir)) {
-      if (!this.isTankNearDir(primaryDir, px, py)) {
-        this.moveDir = primaryDir;
-        this.lastBlockedDir = null;
-        return;
-      }
+      this.moveDir = primaryDir;
+      this.lastBlockedDir = null;
+      return;
     }
 
     for (const alt of secondaryDirs) {
       if (this.lastBlockedDir === alt && this.blockedTimer > 0) continue;
-      if (!this.isBlocked(alt) && !this.isTankNearDir(alt, px, py)) {
+      if (!this.isBlocked(alt)) {
         this.moveDir = alt;
         return;
       }
     }
 
     this.moveDir = this.getBestEscapeDir();
-  },
-
-  isTankNearDir(dir, px, py) {
-    const tanks = GameUtils.getEnemyPositions();
-    for (const t of tanks) {
-      const ex = t.x + 15;
-      const ey = t.y + 15;
-      const dist = Math.hypot(ex - px, ey - py);
-      if (dist > 50) continue;
-      const toTx = ex - px;
-      const toTy = ey - py;
-      const dot = dir.x * toTx + dir.y * toTy;
-      if (dot > 0) return true;
-    }
-    return false;
   },
 
   getBestEscapeDir() {
@@ -601,7 +584,6 @@ const AIPlayer = {
       if (this.lastBlockedDir === dir && this.blockedTimer > 0) continue;
 
       let score = this.getFreeDistance(dir);
-      if (this.isTankNearDir(dir, px, py)) score -= 30;
       score += Math.random() * 5;
 
       if (score > maxScore) {
@@ -662,7 +644,6 @@ const AIPlayer = {
     for (const dir of dirs) {
       if (this.isBlocked(dir)) continue;
       let free = this.getFreeDistance(dir);
-      if (this.isTankNearDir(dir, px, py)) free -= 30;
       if (free > maxFree) {
         maxFree = free;
         best = dir;
@@ -714,7 +695,6 @@ const AIPlayer = {
   executeShoot(playerPos, enemies) {
     const px = playerPos.x + 15;
     const py = playerPos.y + 15;
-    const playerDir = player.dir;
 
     for (const e of enemies) {
       const ex = e.x + 15;
@@ -724,15 +704,27 @@ const AIPlayer = {
       const sameCol = Math.abs(px - ex) < CELL;
 
       if (sameRow || sameCol) {
-        if (this.isFacingTarget(px, py, ex, ey, playerDir)) {
-          if (this.isPathClear(px, py, ex, ey)) {
-            keys.fire = true;
-            return;
+        if (this.isPathClear(px, py, ex, ey)) {
+          if (!this.isFacingTarget(px, py, ex, ey, player.dir)) {
+            this.turnToTarget(px, py, ex, ey);
           }
+          keys.fire = true;
+          return;
         }
       }
     }
     keys.fire = false;
+  },
+
+  turnToTarget(px, py, tx, ty) {
+    const dx = tx - px;
+    const dy = ty - py;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      player.dir = dx > 0 ? DIRS.right : DIRS.left;
+    } else {
+      player.dir = dy > 0 ? DIRS.down : DIRS.up;
+    }
   },
 
   isFacingTarget(px, py, tx, ty, dir) {
