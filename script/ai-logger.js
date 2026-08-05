@@ -1,11 +1,28 @@
 "use strict";
 
-// ====================== AI 死亡日志系统 ======================
+// ====================== 死亡日志系统（AI + 玩家，localStorage 持久化） ======================
 
 const AILogger = {
   maxRecords: 50,
   currentSession: null,
   deathRecords: [],
+  storageKey: "tank-death-log",
+
+  init() {
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      this.deathRecords = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      this.deathRecords = [];
+    }
+    if (!Array.isArray(this.deathRecords)) this.deathRecords = [];
+  },
+
+  save() {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(this.deathRecords));
+    } catch (e) {}
+  },
 
   startSession() {
     this.currentSession = {
@@ -32,7 +49,8 @@ const AILogger = {
   },
 
   logDeath(reason, context) {
-    if (!this.currentSession || !player) return;
+    if (!player) return;
+    if (!this.currentSession) this.startSession();
 
     const px = player.x + 15;
     const py = player.y + 15;
@@ -61,6 +79,12 @@ const AILogger = {
 
     const record = {
       timestamp: Date.now(),
+      type: typeof AIPlayer !== "undefined" && AIPlayer.enabled ? "ai" : "player",
+      aiName:
+        typeof AIPlayer !== "undefined" && AIPlayer.enabled
+          ? AIPlayer.aiName
+          : null,
+      score: typeof score !== "undefined" ? score : 0,
       deathReason: reason,
       playerState: {
         hp: player.hp,
@@ -92,6 +116,7 @@ const AILogger = {
     if (this.deathRecords.length > this.maxRecords) {
       this.deathRecords.pop();
     }
+    this.save();
 
     this.startSession();
     return record;
@@ -135,5 +160,8 @@ const AILogger = {
   clear() {
     this.deathRecords = [];
     this.currentSession = null;
+    this.save();
   },
 };
+
+AILogger.init();
