@@ -420,20 +420,27 @@ const TankActions = {
       this.tryTeleport(t);
       t.fireCd -= dt;
       if (t.fireCd <= 0 && player.alive) {
-        t.fireCd = 2.2 + Math.random() * 2.0 - Math.min(0.6, gtMs / 60000);
+        // 转向玩家方向
         const dx = player.x + player.w / 2 - (t.x + t.w / 2);
         const dy = player.y + player.h / 2 - (t.y + t.h / 2);
-        // 转向玩家方向
         let targetDir;
         if (Math.abs(dx) > Math.abs(dy)) {
           targetDir = dx > 0 ? "right" : "left";
         } else {
           targetDir = dy > 0 ? "down" : "up";
         }
-        this.setDirName(t, targetDir);
-        // 向玩家发射子弹（基于当前朝向）
-        const ang = Math.atan2(t.dir.y, t.dir.x) + (Math.random() - 0.5) * 0.22;
-        this.fireDir(t.x + t.w / 2, t.y + t.h / 2, ang, "enemy", 1);
+        const dirChanged = t.dirName !== targetDir;
+        if (dirChanged) {
+          // 转向玩家后需等待一小段冷却才能开火
+          this.setDirName(t, targetDir);
+          t.fireCd = 0.6 + Math.random() * 0.4;
+        } else {
+          t.fireCd = 2.2 + Math.random() * 2.0 - Math.min(0.6, gtMs / 60000);
+          // 向玩家发射子弹（基于当前朝向）
+          const ang =
+            Math.atan2(t.dir.y, t.dir.x) + (Math.random() - 0.5) * 0.22;
+          this.fireDir(t.x + t.w / 2, t.y + t.h / 2, ang, "enemy", 1);
+        }
       }
     }
     tanks = tanks.filter((t) => t.alive);

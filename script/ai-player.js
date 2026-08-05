@@ -361,6 +361,9 @@ const DefaultAI = {
   bulletLookahead: 0.85, // 子弹躲避提前量（秒）
   bulletSpeed: 210, // 敌方子弹速度（像素/秒）
   dodgePredict: 0.7, // 躲避时预测自身/子弹未来位置的时长（秒）
+  lowHpRatio: 0.5, // 血线比例 <= 此值 => 视为残血，生命道具权重提升（仍低于回避子弹/碰撞）
+  lowHpRange: 420, // 残血时拾取生命道具的最远触发范围（像素）
+  criticalHpRatio: 0.25, // 血线比例 <= 此值 => 定义为濒死，可全图去捡生命道具
 
   // ---- 运行时状态 ----
   moveDir: { x: 0, y: 0 },
@@ -406,7 +409,21 @@ const DefaultAI = {
       return this.keys(dir);
     }
 
-    // ---------- 3) 此刻已对齐且直线畅通且安全（无墙/无传送门/无推进坦克）：站桩射击 ----------
+    // ---------- 3) 残血且有生命道具：优先拾取（仍低于躲避子弹/避免碰撞） ----------
+    if (this.isLowHp(p) && ctx.items.length > 0) {
+      const range = this.lowHpPickupRange(p);
+      const heal = this.findItem(ctx, px, py, "heal", range);
+      if (heal) {
+        this.mode = "item";
+        const dir = this.moveToward(ctx, px, py, heal.x, heal.y);
+        this.moveDir = dir;
+        const aim = this.nearestEnemy(px, py, ctx);
+        if (aim) this.turnToward(px, py, aim.x, aim.y);
+        return this.keys(dir);
+      }
+    }
+
+    // ---------- 4) 此刻已对齐且直线畅通且安全（无墙/无传送门/无推进坦克）：站桩射击 ----------
     const lane = this.currentLane(ctx, px, py);
     if (lane) {
       this.mode = "combat";
@@ -807,17 +824,50 @@ const DefaultAI = {
 
   // ====================== 道具选择 ======================
 
+  // 是否残血（血线比例 <= lowHpRatio），残血时生命道具权重提升
+  isLowHp(p) {
+    return p.hp / p.maxHp <= this.lowHpRatio;
+  },
+
+  // 残血时拾取生命的最大触发范围：越残血范围越大，濒死（<= criticalHpRatio）可全图去捡
+  lowHpPickupRange(p) {
+    const ratio = p.hp / p.maxHp;
+    if (ratio <= this.criticalHpRatio) return Infinity;
+    return this.lowHpRange;
+  },
+
+  // 查找指定类型、距离最近（且在最远范围内）的道具
+  findItem(ctx, px, py, type, maxRange) {
+    let best = null,
+      bestD = maxRange === undefined ? Infinity : maxRange;
+    for (const it of ctx.items) {
+      if (it.type !== type) continue;
+      const ix = it.x + 15,
+        iy = it.y + 15;
+      const d = Math.hypot(ix - px, iy - py);
+      if (d < bestD) {
+        bestD = d;
+        best = { x: ix, y: iy };
+      }
+    }
+    return best;
+  },
+
   pickBestItem(ctx, px, py, p) {
     let best = null,
       bestS = -1;
+    const low = this.isLowHp(p);
     for (const it of ctx.items) {
       const ix = it.x + 15,
         iy = it.y + 15;
       const dist = Math.hypot(ix - px, iy - py);
       let type = 1.0; // 基础
       if (it.type === "spread") type = 3.0; // 散弹优先
-      else if (it.type === "heal") type = p.hp <= 1 ? 4.0 : 2.0; // 生命（残血更优先）
-      else if (it.type === "drone" || it.type === "shield") type = 1.5;
+      else if (it.type === "heal") {
+        // 生命：残血时权重显著提升（超过散弹），且越残血越高
+        if (low) type = p.hp / p.maxHp <= this.criticalHpRatio ? 5.0 : 4.0;
+        else type = 2.0;
+      } else if (it.type === "drone" || it.type === "shield") type = 1.5;
       const score = (300 - dist) * 0.1 + type * 25;
       if (score > bestS) {
         bestS = score;
