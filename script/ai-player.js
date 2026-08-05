@@ -345,7 +345,7 @@ const AIPlayer = {
 //   1. 躲避敌方坦克正面撞击 + 躲避敌方子弹（最高优先级）
 //   2. 主动进攻：移动到「最近的可直线射击且不会被正面撞击」的站位，
 //      转向敌方并持续射击（子弹无限，一直开火）
-//   3. 无敌人时拾取道具（散弹 ✨、生命 ❤️ 优先级最高）
+//   3. 无敌人时拾取道具（散弹 ✨、无人机 🚁 优先，仍低于回避子弹/碰撞）
 //   4. 漫游
 
 const DefaultAI = {
@@ -862,12 +862,13 @@ const DefaultAI = {
         iy = it.y + 15;
       const dist = Math.hypot(ix - px, iy - py);
       let type = 1.0; // 基础
-      if (it.type === "spread") type = 3.0; // 散弹优先
+      if (it.type === "spread") type = 4.0; // 散弹优先（仍低于躲避子弹/避免碰撞）
       else if (it.type === "heal") {
         // 生命：残血时权重显著提升（超过散弹），且越残血越高
         if (low) type = p.hp / p.maxHp <= this.criticalHpRatio ? 5.0 : 4.0;
         else type = 2.0;
-      } else if (it.type === "drone" || it.type === "shield") type = 1.5;
+      } else if (it.type === "drone") type = 3.0; // 无人机优先（仍低于躲避子弹/避免碰撞）
+      else if (it.type === "shield") type = 1.5;
       const score = (300 - dist) * 0.1 + type * 25;
       if (score > bestS) {
         bestS = score;
