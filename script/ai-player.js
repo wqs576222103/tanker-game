@@ -175,7 +175,13 @@ const AIPlayer = {
   },
 
   clearKeys() {
-    keys.up = keys.down = keys.left = keys.right = keys.fire = keys.mine = false;
+    keys.up =
+      keys.down =
+      keys.left =
+      keys.right =
+      keys.fire =
+      keys.mine =
+        false;
   },
 
   notifyDeath(reason) {
@@ -358,9 +364,9 @@ const DefaultAI = {
   ramThreatRange: 120, // 敌方正在朝我推进 => 预测撞击威胁，提前规避
   shootMinCells: 5, // 与敌方保持的最小格子距离（防止被贴脸撞击）
   shootMaxCells: 11, // 最大有效射击距离（格子数）
-  bulletLookahead: 0.85, // 子弹躲避提前量（秒）
+  bulletLookahead: 1.2, // 子弹躲避提前量（秒）
   bulletSpeed: 210, // 敌方子弹速度（像素/秒）
-  dodgePredict: 0.7, // 躲避时预测自身/子弹未来位置的时长（秒）
+  dodgePredict: 0.85, // 躲避时预测自身/子弹未来位置的时长（秒）
   lowHpRatio: 0.5, // 血线比例 <= 此值 => 视为残血，生命道具权重提升（仍低于回避子弹/碰撞）
   lowHpRange: 420, // 残血时拾取生命道具的最远触发范围（像素）
   criticalHpRatio: 0.25, // 血线比例 <= 此值 => 定义为濒死，可全图去捡生命道具
@@ -438,8 +444,18 @@ const DefaultAI = {
     const doThink = now - this.lastThink > this.thinkInterval;
     if (doThink) this.lastThink = now;
 
-    // ---------- 4) 主动进攻：走到最近的安全射击站位 ----------
+    // ---------- 4) 主动进攻：子弹已能直线命中则原地射击，否则走位 ----------
     if (ctx.enemies.length > 0 || ctx.boss) {
+      // 再次检查当前是否已可直线命中敌方坦克，若可则原地射击，不追击站位
+      const curLane = this.currentLane(ctx, px, py);
+      if (curLane) {
+        this.mode = "combat";
+        this.moveDir = { x: 0, y: 0 };
+        this.turnTarget = { x: curLane.ex, y: curLane.ey };
+        this.turnToward(px, py, curLane.ex, curLane.ey);
+        return this.keys({ x: 0, y: 0 });
+      }
+
       this.mode = "combat";
 
       let spot = this.posTarget;
@@ -452,7 +468,8 @@ const DefaultAI = {
       if (spot) {
         aim = { x: spot.ex, y: spot.ey };
       } else {
-        aim = this.nearestEnemy(px, py, ctx) || this.turnTarget || { x: px, y: py };
+        aim = this.nearestEnemy(px, py, ctx) ||
+          this.turnTarget || { x: px, y: py };
       }
 
       this.turnTarget = aim;
@@ -508,7 +525,8 @@ const DefaultAI = {
       }
     };
     for (const e of ctx.enemies) push(e.x + e.w / 2, e.y + e.h / 2);
-    if (ctx.boss) push(ctx.boss.x + ctx.boss.w / 2, ctx.boss.y + ctx.boss.h / 2);
+    if (ctx.boss)
+      push(ctx.boss.x + ctx.boss.w / 2, ctx.boss.y + ctx.boss.h / 2);
     return best;
   },
 
@@ -569,7 +587,7 @@ const DefaultAI = {
   findLiveThreat(ctx, px, py) {
     let best = null;
     let bestTime = Infinity;
-    const danger = 20; // 弹道与坦克中心的垂直容差（像素）
+    const danger = 30; // 弹道与坦克中心的垂直容差（像素）
     const cw = ctx.player.w;
 
     for (const b of ctx.bullets) {
@@ -587,7 +605,7 @@ const DefaultAI = {
       const dx = px - bx,
         dy = py - by;
       const dist = Math.hypot(dx, dy);
-      if (dist > 300) continue;
+      if (dist > 420) continue;
 
       const along = dx * ux + dy * uy; // 沿弹道方向的分量（像素）
       if (along < -8) continue; // 已从坦克身边越过
@@ -754,7 +772,9 @@ const DefaultAI = {
       occ.add(this.cellKey(this.cell(e.x + e.w / 2, e.y + e.h / 2)));
     if (ctx.boss)
       occ.add(
-        this.cellKey(this.cell(ctx.boss.x + ctx.boss.w / 2, ctx.boss.y + ctx.boss.h / 2)),
+        this.cellKey(
+          this.cell(ctx.boss.x + ctx.boss.w / 2, ctx.boss.y + ctx.boss.h / 2),
+        ),
       );
 
     let best = null;
@@ -765,7 +785,8 @@ const DefaultAI = {
         for (let k = this.shootMinCells; k <= this.shootMaxCells; k++) {
           const c = t.c.c + d.x * k,
             r = t.c.r + d.y * k;
-          if (c < 1 || c >= ctx.COLS - 1 || r < 1 || r >= ctx.ROWS - 1) continue;
+          if (c < 1 || c >= ctx.COLS - 1 || r < 1 || r >= ctx.ROWS - 1)
+            continue;
           const v = ctx.mapAt(c, r);
           if (v !== ctx.TILE.EMPTY && v !== ctx.TILE.GRASS) continue;
           if (occ.has(c + "," + r)) continue;
@@ -862,12 +883,14 @@ const DefaultAI = {
         iy = it.y + 15;
       const dist = Math.hypot(ix - px, iy - py);
       let type = 1.0; // 基础
-      if (it.type === "spread") type = 4.0; // 散弹优先（仍低于躲避子弹/避免碰撞）
+      if (it.type === "spread")
+        type = 5.0; // 散弹高优先（仍低于躲避子弹/避免碰撞）
       else if (it.type === "heal") {
         // 生命：残血时权重显著提升（超过散弹），且越残血越高
-        if (low) type = p.hp / p.maxHp <= this.criticalHpRatio ? 5.0 : 4.0;
+        if (low) type = p.hp / p.maxHp <= this.criticalHpRatio ? 5.5 : 4.5;
         else type = 2.0;
-      } else if (it.type === "drone") type = 3.0; // 无人机优先（仍低于躲避子弹/避免碰撞）
+      } else if (it.type === "drone")
+        type = 4.0; // 无人机高优先（仍低于躲避子弹/避免碰撞）
       else if (it.type === "shield") type = 1.5;
       const score = (300 - dist) * 0.1 + type * 25;
       if (score > bestS) {
@@ -878,7 +901,7 @@ const DefaultAI = {
     return best || { x: px, y: py };
   },
 
-    // ====================== 移动系统 ======================
+  // ====================== 移动系统 ======================
 
   // 朝目标移动：优先 BFS 寻路，失败则贪心
   moveToward(ctx, px, py, tx, ty) {
@@ -901,12 +924,20 @@ const DefaultAI = {
     for (const e of ctx.enemies)
       occ.add(this.cellKey(this.cell(e.x + e.w / 2, e.y + e.h / 2)));
     if (ctx.boss)
-      occ.add(this.cellKey(this.cell(ctx.boss.x + ctx.boss.w / 2, ctx.boss.y + ctx.boss.h / 2)));
+      occ.add(
+        this.cellKey(
+          this.cell(ctx.boss.x + ctx.boss.w / 2, ctx.boss.y + ctx.boss.h / 2),
+        ),
+      );
 
     const E = ctx.TILE.EMPTY,
       G = ctx.TILE.GRASS;
     const walk = (c, r) =>
-      c >= 1 && c < C - 1 && r >= 1 && r < R - 1 && (ctx.mapAt(c, r) === E || ctx.mapAt(c, r) === G);
+      c >= 1 &&
+      c < C - 1 &&
+      r >= 1 &&
+      r < R - 1 &&
+      (ctx.mapAt(c, r) === E || ctx.mapAt(c, r) === G);
 
     const dirs = [
       [0, -1],
@@ -951,10 +982,28 @@ const DefaultAI = {
     let primary, alts;
     if (Math.abs(dx) >= Math.abs(dy)) {
       primary = dx >= 0 ? { x: 1, y: 0 } : { x: -1, y: 0 };
-      alts = dy >= 0 ? [{ x: 0, y: 1 }, { x: 0, y: -1 }] : [{ x: 0, y: -1 }, { x: 0, y: 1 }];
+      alts =
+        dy >= 0
+          ? [
+              { x: 0, y: 1 },
+              { x: 0, y: -1 },
+            ]
+          : [
+              { x: 0, y: -1 },
+              { x: 0, y: 1 },
+            ];
     } else {
       primary = dy >= 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
-      alts = dx >= 0 ? [{ x: 1, y: 0 }, { x: -1, y: 0 }] : [{ x: -1, y: 0 }, { x: 1, y: 0 }];
+      alts =
+        dx >= 0
+          ? [
+              { x: 1, y: 0 },
+              { x: -1, y: 0 },
+            ]
+          : [
+              { x: -1, y: 0 },
+              { x: 1, y: 0 },
+            ];
     }
     if (this.isClearDir(ctx, px, py, primary)) return primary;
     for (const alt of alts) {
@@ -974,7 +1023,10 @@ const DefaultAI = {
       if (ec.c === pc && ec.r === pr) return false;
     }
     if (ctx.boss) {
-      const bc = this.cell(ctx.boss.x + ctx.boss.w / 2, ctx.boss.y + ctx.boss.h / 2);
+      const bc = this.cell(
+        ctx.boss.x + ctx.boss.w / 2,
+        ctx.boss.y + ctx.boss.h / 2,
+      );
       if (bc.c === pc && bc.r === pr) return false;
     }
     return true;
@@ -1029,7 +1081,8 @@ const DefaultAI = {
   roam(ctx, px, py) {
     this.roamTimer -= 16;
     if (this.roamTimer <= 0) {
-      const card = this.cardinals[Math.floor(Math.random() * this.cardinals.length)];
+      const card =
+        this.cardinals[Math.floor(Math.random() * this.cardinals.length)];
       this.roamDir = this.isClearDir(ctx, px, py, card)
         ? card
         : this.getBestFreeDir(ctx, px, py);

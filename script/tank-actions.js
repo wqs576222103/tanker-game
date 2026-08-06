@@ -594,7 +594,7 @@ const TankActions = {
     // 放雷
     if (k.mine && player.mines > 0) {
       const cc = cellOf(player.x + player.w / 2, player.y + player.h / 2);
-      if (map[cc.c][cc.r] === EMPTY) {
+      if (map[cc.r][cc.c] === EMPTY) {
         player.mines--;
         mines.push({
           x: cc.c * CELL + 3,
