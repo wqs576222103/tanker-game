@@ -32,7 +32,7 @@ const DIRS = {
 };
 const DIR_NAMES = ["up", "left", "down", "right"];
 
-const PLAYER_SPAWN = { c: 5, r: 15 };
+const PLAYER_SPAWN = { c: 14, r: 15 };
 const ENEMY_SPAWNS = [
   { c: 1, r: 1 },
   { c: COLS - 2, r: 1 },
@@ -145,6 +145,7 @@ function protectedKey(c, r) {
 function isProtectedCell(c, r) {
   if (r >= 1 && r <= 2 && c >= 1 && c <= COLS - 2) return true; // 敌人出生车道
   if (c >= 4 && c <= 6 && r >= 14 && r <= 16) return true; // 玩家出生区
+  if (c >= 13 && c <= 15 && r >= 14 && r <= 16) return true; // 传送门上方出生区
   if (c >= 1 && c <= 3 && r >= 3 && r <= 4) return true; // 左上传送门入口
   if (c >= COLS - 3 && c <= COLS - 2 && r >= 3 && r <= 4) return true;
   if (c >= 1 && c <= 3 && r >= 8 && r <= 11) return true; // 左右传送门入口
@@ -1345,9 +1346,7 @@ function showAILog() {
         (r, i) => `
       <div class="log-item">
         <div class="log-header">死亡 #${i + 1} - ${
-          r.type === "ai"
-            ? `🤖 ${r.aiName || "AI"}`
-            : "🎮 玩家"
+          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
         } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">得分: <span>${r.score ?? 0}</span></div>
