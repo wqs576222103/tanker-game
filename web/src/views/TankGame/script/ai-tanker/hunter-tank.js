@@ -40,6 +40,7 @@ export default {
     ],
 
     decide(ctx, dt) {
+        this.ctx = ctx;
         if (!ctx.player) return { fire: true };
         const p = ctx.player;
         const px = p.x + p.w / 2,
@@ -748,7 +749,10 @@ export default {
     // ====================== 工具函数 ======================
 
     cell(x, y) {
-        return { c: Math.floor(x / CELL), r: Math.floor(y / CELL) };
+        return {
+            c: Math.floor(x / this.ctx.CELL),
+            r: Math.floor(y / this.ctx.CELL),
+        };
     },
 
     cellKey(cell) {
@@ -760,8 +764,8 @@ export default {
     isPathClear(x1, y1, x2, y2) {
         const s = this.cell(x1, y1),
             e = this.cell(x2, y2);
-        const E = EMPTY,
-            G = GRASS;
+        const E = this.ctx.TILE.EMPTY,
+            G = this.ctx.TILE.GRASS;
         if (s.r === e.r) {
             for (let c = Math.min(s.c, e.c) + 1; c < Math.max(s.c, e.c); c++) {
                 const v = map[s.r][c];
@@ -784,8 +788,8 @@ export default {
         const c = this.cell(player.x + player.w / 2, player.y + player.h / 2);
         const nc = c.c + (dir.x || 0),
             nr = c.r + (dir.y || 0);
-        const v = map[nr] ? map[nr][nc] : BORDER;
-        return v !== EMPTY && v !== GRASS;
+        const v = map[nr] ? map[nr][nc] : this.ctx.TILE.BORDER;
+        return v !== this.ctx.TILE.EMPTY && v !== this.ctx.TILE.GRASS;
     },
 
     getFreeDistance(dir) {
@@ -794,8 +798,12 @@ export default {
         let c = s.c + (dir.x || 0),
             r = s.r + (dir.y || 0),
             dist = 0;
-        while (map[r] && (map[r][c] === EMPTY || map[r][c] === GRASS)) {
-            dist += CELL;
+        while (
+            map[r] &&
+            (map[r][c] === this.ctx.TILE.EMPTY ||
+                map[r][c] === this.ctx.TILE.GRASS)
+        ) {
+            dist += this.ctx.CELL;
             c += dir.x || 0;
             r += dir.y || 0;
         }

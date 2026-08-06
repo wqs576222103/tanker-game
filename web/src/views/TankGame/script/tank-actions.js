@@ -1,8 +1,36 @@
-"use strict";
 
 // ====================== 坦克移动、攻击、碰撞方法 ======================
 
-const TankActions = {
+import { AILogger } from './ai-logger.js'
+import {
+    CELL,
+    COLS,
+    ROWS,
+    W,
+    H,
+    EMPTY,
+    WALL,
+    BORDER,
+    CRACK,
+    keys,    DIRS,
+    DIR_NAMES,
+    cellOf,
+    centerOf,
+    gateAt,
+    spawnEnemy,
+    maxEnemies,
+    spawnExplosion,
+    damageCrack,
+    addFloat,
+    killEnemy,
+    killBoss,
+    gameOver,
+    updateHud,
+    sfx,
+
+} from './base.js'
+
+export const TankActions = {
   // 移动坦克
   moveTank(t, dx, dy, dt) {
     let sp = t.speed * dt;

@@ -1,8 +1,18 @@
-"use strict";
+
 
 // ====================== 通用工具方法 ======================
+import {
+    CELL,
+    COLS,
+    ROWS,
+    WALL,
+    CRACK,
+    GRASS,
+    BORDER,
+    protectedKey,
+} from './base.js'
 
-const GameUtils = {
+export const GameUtils = {
   // 获取所有存活坦克的位置
   getTankPositions() {
     return tanks
@@ -302,7 +312,7 @@ const GameUtils = {
 };
 
 // 辅助函数：检查坦克是否在草丛中
-function isInGrass(tank) {
+export function isInGrass(tank) {
   const cx = Math.floor((tank.x + tank.w / 2) / CELL);
   const cy = Math.floor((tank.y + tank.h / 2) / CELL);
   return cy >= 0 && cy < ROWS && cx >= 0 && cx < COLS && map[cy][cx] === GRASS;

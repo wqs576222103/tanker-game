@@ -1,8 +1,9 @@
-"use strict";
 
 // ====================== 死亡日志系统（AI + 玩家，localStorage 持久化） ======================
 
-const AILogger = {
+import { AIPlayer } from './ai-player.js'
+
+export const AILogger = {
   maxRecords: 50,
   currentSession: null,
   deathRecords: [],
@@ -79,12 +80,9 @@ const AILogger = {
 
     const record = {
       timestamp: Date.now(),
-      type: typeof AIPlayer !== "undefined" && AIPlayer.enabled ? "ai" : "player",
-      aiName:
-        typeof AIPlayer !== "undefined" && AIPlayer.enabled
-          ? AIPlayer.aiName
-          : null,
-      score: typeof score !== "undefined" ? score : 0,
+      type: AIPlayer.enabled ? "ai" : "player",
+      aiName: AIPlayer.enabled ? AIPlayer.aiName : null,
+      score,
       deathReason: reason,
       playerState: {
         hp: player.hp,
