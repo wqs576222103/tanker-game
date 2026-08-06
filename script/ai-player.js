@@ -81,7 +81,7 @@ const AIPlayer = {
     if (this.ai && this.ai !== moduleObj && this.ai.onUnload) {
       try {
         this.ai.onUnload();
-      } catch (e) {}
+      } catch (e) { }
     }
     this.ai = moduleObj;
     this.aiName = moduleObj.name || "自定义AI";
@@ -181,7 +181,7 @@ const AIPlayer = {
       keys.right =
       keys.fire =
       keys.mine =
-        false;
+      false;
   },
 
   notifyDeath(reason) {
@@ -229,22 +229,22 @@ const AIPlayer = {
       player:
         player && player.alive
           ? {
-              x: player.x,
-              y: player.y,
-              w: player.w,
-              h: player.h,
-              dirName: player.dirName,
-              dir: { x: player.dir.x, y: player.dir.y },
-              hp: player.hp,
-              maxHp: player.maxHp,
-              shieldT: player.shieldT,
-              fireT: player.fireT,
-              speedT: player.speedT,
-              spreadT: player.spreadT,
-              drones: player.drones,
-              mines: player.mines,
-              inGrass: isInGrass(player),
-            }
+            x: player.x,
+            y: player.y,
+            w: player.w,
+            h: player.h,
+            dirName: player.dirName,
+            dir: { x: player.dir.x, y: player.dir.y },
+            hp: player.hp,
+            maxHp: player.maxHp,
+            shieldT: player.shieldT,
+            fireT: player.fireT,
+            speedT: player.speedT,
+            spreadT: player.spreadT,
+            drones: player.drones,
+            mines: player.mines,
+            inGrass: isInGrass(player),
+          }
           : null,
 
       enemies: tanks
@@ -295,16 +295,16 @@ const AIPlayer = {
       boss:
         boss && boss.alive
           ? {
-              x: boss.x,
-              y: boss.y,
-              w: boss.w,
-              h: boss.h,
-              dirName: boss.dirName,
-              dir: { x: boss.dir.x, y: boss.dir.y },
-              speed: boss.speed,
-              hp: boss.hp,
-              maxHp: boss.maxHp,
-            }
+            x: boss.x,
+            y: boss.y,
+            w: boss.w,
+            h: boss.h,
+            dirName: boss.dirName,
+            dir: { x: boss.dir.x, y: boss.dir.y },
+            speed: boss.speed,
+            hp: boss.hp,
+            maxHp: boss.maxHp,
+          }
           : null,
 
       gates: gates.map((g) => ({
@@ -345,14 +345,6 @@ const AIPlayer = {
   },
 };
 
-// ====================== 内置 AI（默认，猎手式自动玩家） ======================
-//
-// 决策优先级（从高到低）：
-//   1. 躲避敌方坦克正面撞击 + 躲避敌方子弹（最高优先级）
-//   2. 主动进攻：移动到「最近的可直线射击且不会被正面撞击」的站位，
-//      转向敌方并持续射击（子弹无限，一直开火）
-//   3. 无敌人时拾取道具（散弹 ✨、无人机 🚁 优先，仍低于回避子弹/碰撞）
-//   4. 漫游
 
 const DefaultAI = {
   name: "猎手AI",
@@ -985,25 +977,25 @@ const DefaultAI = {
       alts =
         dy >= 0
           ? [
-              { x: 0, y: 1 },
-              { x: 0, y: -1 },
-            ]
+            { x: 0, y: 1 },
+            { x: 0, y: -1 },
+          ]
           : [
-              { x: 0, y: -1 },
-              { x: 0, y: 1 },
-            ];
+            { x: 0, y: -1 },
+            { x: 0, y: 1 },
+          ];
     } else {
       primary = dy >= 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
       alts =
         dx >= 0
           ? [
-              { x: 1, y: 0 },
-              { x: -1, y: 0 },
-            ]
+            { x: 1, y: 0 },
+            { x: -1, y: 0 },
+          ]
           : [
-              { x: -1, y: 0 },
-              { x: 1, y: 0 },
-            ];
+            { x: -1, y: 0 },
+            { x: 1, y: 0 },
+          ];
     }
     if (this.isClearDir(ctx, px, py, primary)) return primary;
     for (const alt of alts) {
@@ -1149,6 +1141,7 @@ const DefaultAI = {
     return dist;
   },
 };
+
 
 // ====================== 默认启用内置 AI ======================
 AIPlayer.setDefault(DefaultAI);
