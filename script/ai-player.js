@@ -81,7 +81,7 @@ const AIPlayer = {
     if (this.ai && this.ai !== moduleObj && this.ai.onUnload) {
       try {
         this.ai.onUnload();
-      } catch (e) { }
+      } catch (e) {}
     }
     this.ai = moduleObj;
     this.aiName = moduleObj.name || "自定义AI";
@@ -181,7 +181,7 @@ const AIPlayer = {
       keys.right =
       keys.fire =
       keys.mine =
-      false;
+        false;
   },
 
   notifyDeath(reason) {
@@ -229,22 +229,22 @@ const AIPlayer = {
       player:
         player && player.alive
           ? {
-            x: player.x,
-            y: player.y,
-            w: player.w,
-            h: player.h,
-            dirName: player.dirName,
-            dir: { x: player.dir.x, y: player.dir.y },
-            hp: player.hp,
-            maxHp: player.maxHp,
-            shieldT: player.shieldT,
-            fireT: player.fireT,
-            speedT: player.speedT,
-            spreadT: player.spreadT,
-            drones: player.drones,
-            mines: player.mines,
-            inGrass: isInGrass(player),
-          }
+              x: player.x,
+              y: player.y,
+              w: player.w,
+              h: player.h,
+              dirName: player.dirName,
+              dir: { x: player.dir.x, y: player.dir.y },
+              hp: player.hp,
+              maxHp: player.maxHp,
+              shieldT: player.shieldT,
+              fireT: player.fireT,
+              speedT: player.speedT,
+              spreadT: player.spreadT,
+              drones: player.drones,
+              mines: player.mines,
+              inGrass: isInGrass(player),
+            }
           : null,
 
       enemies: tanks
@@ -295,16 +295,16 @@ const AIPlayer = {
       boss:
         boss && boss.alive
           ? {
-            x: boss.x,
-            y: boss.y,
-            w: boss.w,
-            h: boss.h,
-            dirName: boss.dirName,
-            dir: { x: boss.dir.x, y: boss.dir.y },
-            speed: boss.speed,
-            hp: boss.hp,
-            maxHp: boss.maxHp,
-          }
+              x: boss.x,
+              y: boss.y,
+              w: boss.w,
+              h: boss.h,
+              dirName: boss.dirName,
+              dir: { x: boss.dir.x, y: boss.dir.y },
+              speed: boss.speed,
+              hp: boss.hp,
+              maxHp: boss.maxHp,
+            }
           : null,
 
       gates: gates.map((g) => ({
@@ -345,7 +345,6 @@ const AIPlayer = {
   },
 };
 
-
 const DefaultAI = {
   name: "猎手AI",
 
@@ -384,18 +383,7 @@ const DefaultAI = {
     const px = p.x + p.w / 2,
       py = p.y + p.h / 2;
 
-    // ---------- 1) 预测并躲避敌方子弹：最高优先级，每帧检测 ----------
-    const threat = this.findLiveThreat(ctx, px, py);
-    if (threat) {
-      this.mode = "dodge";
-      this.posTarget = null;
-      const dir = this.dodgeDirection(ctx, px, py, threat);
-      this.moveDir = dir || { x: 0, y: 0 };
-      this.turnToward(px, py, threat.bx + threat.vx, threat.by + threat.vy);
-      return this.keys(this.moveDir);
-    }
-
-    // ---------- 2) 避免敌方坦克碰撞（立即贴脸 + 预测其向前推进）：最高优先级 ----------
+    // ---------- 1) 避免敌方坦克碰撞：绝对最高优先级（被撞秒杀） ----------
     const ram = this.findRammer(ctx, px, py);
     if (ram) {
       this.mode = "escape";
@@ -405,6 +393,17 @@ const DefaultAI = {
       this.moveDir = dir;
       this.turnToward(px, py, ram.x, ram.y);
       return this.keys(dir);
+    }
+
+    // ---------- 2) 预测并躲避敌方子弹：次高优先级，每帧检测 ----------
+    const threat = this.findLiveThreat(ctx, px, py);
+    if (threat) {
+      this.mode = "dodge";
+      this.posTarget = null;
+      const dir = this.dodgeDirection(ctx, px, py, threat);
+      this.moveDir = dir || { x: 0, y: 0 };
+      this.turnToward(px, py, threat.bx + threat.vx, threat.by + threat.vy);
+      return this.keys(this.moveDir);
     }
 
     // ---------- 3) 残血且有生命道具：优先拾取（仍低于躲避子弹/避免碰撞） ----------
@@ -977,25 +976,25 @@ const DefaultAI = {
       alts =
         dy >= 0
           ? [
-            { x: 0, y: 1 },
-            { x: 0, y: -1 },
-          ]
+              { x: 0, y: 1 },
+              { x: 0, y: -1 },
+            ]
           : [
-            { x: 0, y: -1 },
-            { x: 0, y: 1 },
-          ];
+              { x: 0, y: -1 },
+              { x: 0, y: 1 },
+            ];
     } else {
       primary = dy >= 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
       alts =
         dx >= 0
           ? [
-            { x: 1, y: 0 },
-            { x: -1, y: 0 },
-          ]
+              { x: 1, y: 0 },
+              { x: -1, y: 0 },
+            ]
           : [
-            { x: -1, y: 0 },
-            { x: 1, y: 0 },
-          ];
+              { x: -1, y: 0 },
+              { x: 1, y: 0 },
+            ];
     }
     if (this.isClearDir(ctx, px, py, primary)) return primary;
     for (const alt of alts) {
@@ -1141,7 +1140,6 @@ const DefaultAI = {
     return dist;
   },
 };
-
 
 // ====================== 默认启用内置 AI ======================
 AIPlayer.setDefault(DefaultAI);
