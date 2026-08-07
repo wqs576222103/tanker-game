@@ -172,7 +172,7 @@ export const AIPlayer = {
       const url = URL.createObjectURL(blob);
       let mod = null;
       try {
-        mod = await import(url);
+        mod = await import(/* @vite-ignore */ url);
       } finally {
         URL.revokeObjectURL(url);
       }
