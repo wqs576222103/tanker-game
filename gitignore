@@ -29,13 +29,12 @@ lingma/
 .codebuddy
 .agents
 
-server/node_modules
-
 # Java / Maven
+
 target/
-*.class
-*.jar
+_.class
+_.jar
 !.mvn/wrapper/maven-wrapper.jar
 .mvn/timing.properties
 .idea/
-*.iml
+\*.iml
