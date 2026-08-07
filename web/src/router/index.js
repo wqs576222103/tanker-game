@@ -3,8 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    name: 'TankGame',
-    component: () => import('../views/TankGame/index.vue'),
+    redirect: '/tank-game',
   },
   {
     path: '/tank-game',
