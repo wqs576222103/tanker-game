@@ -1,5 +1,3 @@
-
-
 // ====================== AI 运行时（即插即用） ======================
 //
 // 玩家可以在页面中导入自定义 AI 脚本文件（.js / .mjs / .txt），
@@ -28,26 +26,74 @@
 // ctx（沙箱）是游戏状态的只读快照，结构见 buildContext()。
 // ---------------------------------------------------------------
 
-import { GameUtils, isInGrass } from './utils.js'
-import { AILogger } from './ai-logger.js'
-import DefaultAI from './ai-tanker/default-tank.js'
+import { GameUtils, isInGrass } from "./utils.js";
+import { AILogger } from "./ai-logger.js";
+import DefaultAI from "./ai-tanker/default-tank.js";
 import {
-    keys,
-       CELL,
-    COLS,
-    ROWS,
-    W,
-    H,
-    DIRS,
-    EMPTY,
-    WALL,
-    GATE,
-    BORDER,
-    CRACK,
-    GRASS,
-    cellOf,
-    centerOf,
-} from './base.js'
+  keys,
+  CELL,
+  COLS,
+  ROWS,
+  W,
+  H,
+  DIRS,
+  EMPTY,
+  WALL,
+  GATE,
+  BORDER,
+  CRACK,
+  GRASS,
+  cellOf,
+  centerOf,
+} from "./base.js";
+
+// ---------------- 本地实现的路径/判定工具（不依赖 DefaultAI） ----------------
+const ctxCellOf = (x, y) => ({
+  c: Math.floor(x / CELL),
+  r: Math.floor(y / CELL),
+});
+const ctxBlocked = (v) => v !== EMPTY && v !== GRASS;
+
+function ctxIsPathClear(x1, y1, x2, y2) {
+  const s = ctxCellOf(x1, y1);
+  const e = ctxCellOf(x2, y2);
+  if (s.r === e.r) {
+    for (let c = Math.min(s.c, e.c) + 1; c < Math.max(s.c, e.c); c++) {
+      if (ctxBlocked(map[s.r][c])) return false;
+    }
+    return true;
+  }
+  if (s.c === e.c) {
+    for (let r = Math.min(s.r, e.r) + 1; r < Math.max(s.r, e.r); r++) {
+      if (ctxBlocked(map[r][s.c])) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+function ctxIsBlocked(dir) {
+  if (!player) return true;
+  const c = ctxCellOf(player.x + player.w / 2, player.y + player.h / 2);
+  const nc = c.c + (dir.x || 0);
+  const nr = c.r + (dir.y || 0);
+  const v = map[nr] ? map[nr][nc] : BORDER;
+  return ctxBlocked(v);
+}
+
+function ctxGetFreeDistance(dir) {
+  if (!player) return 0;
+  const s = ctxCellOf(player.x + player.w / 2, player.y + player.h / 2);
+  let c = s.c + (dir.x || 0);
+  let r = s.r + (dir.y || 0);
+  let dist = 0;
+  while (map[r] && (map[r][c] === EMPTY || map[r][c] === GRASS)) {
+    dist += CELL;
+    c += dir.x || 0;
+    r += dir.y || 0;
+  }
+  return dist;
+}
 
 export const AIPlayer = {
   enabled: false,
@@ -358,13 +404,10 @@ export const AIPlayer = {
         const v = map[row][column];
         return v === WALL || v === BORDER || v === CRACK;
       },
-      isPathClear: (x1, y1, x2, y2) => DefaultAI.isPathClear(x1, y1, x2, y2),
-      isBlocked: (dir) => DefaultAI.isBlocked(dir),
-      getFreeDistance: (dir) => DefaultAI.getFreeDistance(dir),
+      isPathClear: (x1, y1, x2, y2) => ctxIsPathClear(x1, y1, x2, y2),
+      isBlocked: (dir) => ctxIsBlocked(dir),
+      getFreeDistance: (dir) => ctxGetFreeDistance(dir),
     };
     return ctx;
   },
 };
-
-
-
