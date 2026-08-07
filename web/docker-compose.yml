@@ -1,0 +1,10 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tank-game-web
+    container_name: tank-game-web
+    restart: unless-stopped
+    ports:
+      - "8081:80"
