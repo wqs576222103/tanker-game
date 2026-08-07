@@ -1,34 +1,33 @@
-
 // ====================== 坦克移动、攻击、碰撞方法 ======================
 
-import { AILogger } from './ai-logger.js'
+import { AILogger } from "./ai-logger.js";
 import {
-    CELL,
-    COLS,
-    ROWS,
-    W,
-    H,
-    EMPTY,
-    WALL,
-    BORDER,
-    CRACK,
-    keys,    DIRS,
-    DIR_NAMES,
-    cellOf,
-    centerOf,
-    gateAt,
-    spawnEnemy,
-    maxEnemies,
-    spawnExplosion,
-    damageCrack,
-    addFloat,
-    killEnemy,
-    killBoss,
-    gameOver,
-    updateHud,
-    sfx,
-
-} from './base.js'
+  CELL,
+  COLS,
+  ROWS,
+  W,
+  H,
+  EMPTY,
+  WALL,
+  BORDER,
+  CRACK,
+  keys,
+  DIRS,
+  DIR_NAMES,
+  cellOf,
+  centerOf,
+  gateAt,
+  spawnEnemy,
+  maxEnemies,
+  spawnExplosion,
+  damageCrack,
+  addFloat,
+  killEnemy,
+  killBoss,
+  gameOver,
+  updateHud,
+  sfx,
+} from "./base.js";
 
 export const TankActions = {
   // 移动坦克
@@ -467,7 +466,13 @@ export const TankActions = {
           // 向玩家发射子弹（基于当前朝向）
           const ang =
             Math.atan2(t.dir.y, t.dir.x) + (Math.random() - 0.5) * 0.22;
-          this.fireDir(t.x + t.w / 2, t.y + t.h / 2, ang, "enemy", 1);
+          this.fireDir(
+            t.x + t.w / 2 + t.dir.x * (t.w / 2),
+            t.y + t.h / 2 + t.dir.y * (t.h / 2),
+            ang,
+            "enemy",
+            1,
+          );
         }
       }
     }
@@ -611,11 +616,13 @@ export const TankActions = {
       const cx = player.x + player.w / 2,
         cy = player.y + player.h / 2;
       const ang = Math.atan2(player.dir.y, player.dir.x);
+      const mx = cx + player.dir.x * (player.w / 2),
+        my = cy + player.dir.y * (player.h / 2);
       if (player.spreadT > gtMs) {
         for (let i = -1; i <= 1; i++)
-          this.fireDir(cx, cy, ang + i * 0.18, "player", 1);
+          this.fireDir(mx, my, ang + i * 0.18, "player", 1);
       } else {
-        this.fireDir(cx, cy, ang, "player", 1);
+        this.fireDir(mx, my, ang, "player", 1);
       }
     }
 
