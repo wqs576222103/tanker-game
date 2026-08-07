@@ -379,6 +379,7 @@ export function makeTank(x, y, dirName, isPlayer) {
     invincible: 0,
     dirTimer: Math.random() * 1.2,
     fireCd: 0,
+    name: isPlayer ? "玩家" : "",
     // buffs
     shieldT: 0,
     speedT: 0,
@@ -951,6 +952,17 @@ export function drawTank(t) {
     ctx.fillRect(-t.w / 2, -t.h / 2, t.w, t.h);
   }
   ctx.restore();
+  // 玩家名称（随坦克移动）
+  if (t.isPlayer) {
+    const label = AIPlayer.enabled ? AIPlayer.aiName : "玩家";
+    ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "rgba(0,0,0,.8)";
+    ctx.fillText(label, cx + 1, cy - t.h / 2 - 5);
+    ctx.fillStyle = "#e8ffcf";
+    ctx.fillText(label, cx, cy - t.h / 2 - 6);
+  }
   // 血条(敌人)
   if (!t.isPlayer) {
     const pct = Math.max(0, t.hp / t.maxHp);

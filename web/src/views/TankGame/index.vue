@@ -14,17 +14,17 @@
     <div id="canvas-wrap">
       <canvas id="game"></canvas>
       <div class="overlay" id="ov-start">
-        <h1>坦 克 大 战</h1>
+        <h1>坦 克 训 练 师</h1>
         <p>
-          方向键 / WASD 移动，空格 / J 射击，K 放置地雷<br>
+          方向键 / WASD 移动，空格 / J 射击，K 放置地雷<br />
           敌人从左上、右上角不断进攻，击杀得分
         </p>
         <div class="items">
-          🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br>
+          🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />
           🛡️ 护盾 &nbsp;💣 地雷 &nbsp;❤️ 生命恢复
         </div>
         <p>
-          ⬜ 银色砖墙：反弹一次子弹（不可摧毁）　🟨 黄色砖墙：可被子弹击碎<br>
+          ⬜ 银色砖墙：反弹一次子弹（不可摧毁）　🟨 黄色砖墙：可被子弹击碎<br />
           🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成
         </p>
         <button id="btn-start">开 始 游 戏</button>
@@ -32,14 +32,16 @@
       <div class="overlay hidden" id="ov-over">
         <h2>游 戏 结 束</h2>
         <p id="ov-over-score"></p>
-        <p id="ov-over-reason" style="font-size:14px;opacity:.85"></p>
-        <button id="btn-ai-log" style="display:none;margin-bottom:10px">死亡日志 (0)</button>
+        <p id="ov-over-reason" style="font-size: 14px; opacity: 0.85"></p>
+        <button id="btn-ai-log" style="display: none; margin-bottom: 10px">
+          死亡日志 (0)
+        </button>
         <button id="btn-restart">再 来 一 局</button>
       </div>
       <div class="overlay hidden" id="ov-ai-log">
         <h2>死亡日志</h2>
         <div id="ai-log-content"></div>
-        <div style="margin-top:10px">
+        <div style="margin-top: 10px">
           <button id="btn-export-log">导出JSON</button>
           <button id="btn-clear-log">清除日志</button>
           <button id="btn-close-log">关闭</button>
@@ -59,8 +61,8 @@
         <button class="down" data-key="down">▼</button>
       </div>
       <div class="act">
-        <button data-key="mine">💣<br>放雷</button>
-        <button data-key="fire">🔥<br>射击</button>
+        <button data-key="mine">💣<br />放雷</button>
+        <button data-key="fire">🔥<br />射击</button>
       </div>
     </div>
     <div id="btn-group">
@@ -72,23 +74,26 @@
       <button id="btn-export-death-log">📋 死亡日志</button>
     </div>
     <div class="ai-status" id="ai-status">当前AI：内置AI</div>
-    <input type="file" id="ai-file" accept=".js,.mjs,.txt" style="display:none">
+    <input
+      type="file"
+      id="ai-file"
+      accept=".js,.mjs,.txt"
+      style="display: none"
+    />
   </div>
-
 </template>
 <script setup>
 import { onMounted } from "vue";
-import { initGame } from './script/base.js'
-import { AIPlayer } from './script/ai-player.js'
-import DefaultAI from './script/ai-tanker/default-tank.js'
-import HunterAI from './script/ai-tanker/hunter-tank.js'
+import { initGame } from "./script/base.js";
+import { AIPlayer } from "./script/ai-player.js";
+import DefaultAI from "./script/ai-tanker/default-tank.js";
+import HunterAI from "./script/ai-tanker/hunter-tank.js";
 // ====================== 默认启用内置 AI ======================
 AIPlayer.setDefault(HunterAI);
 
 onMounted(() => {
   initGame();
-})
-
+});
 </script>
 
 <style scoped>
