@@ -1,89 +1,9 @@
 <template>
-  <div id="wrap">
-    <div id="hud">
-      <div class="l">
-        <span class="bar" id="hud-heart"></span>
-        <span class="bar">得分 <b id="hud-score">0</b></span>
-        <span class="bar">最高 <b id="hud-hi">0</b></span>
-      </div>
-      <div class="r">
-        <span class="bar" id="hud-buff"></span>
-        <span class="bar">雷 <b id="hud-mine">0</b></span>
-      </div>
-    </div>
-    <div id="canvas-wrap">
-      <canvas id="game"></canvas>
-      <div class="overlay" id="ov-start">
-        <h1>坦 克 训 练 师</h1>
-        <p>
-          方向键 / WASD 移动，空格 / J 射击，K 放置地雷<br />
-          敌人从左上、右上角不断进攻，击杀得分
-        </p>
-        <div class="items">
-          🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />
-          🛡️ 护盾 &nbsp;💣 地雷 &nbsp;❤️ 生命恢复
-        </div>
-        <p>
-          ⬜ 银色砖墙：反弹一次子弹（不可摧毁）　🟨 黄色砖墙：可被子弹击碎<br />
-          🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成
-        </p>
-        <button id="btn-start">开 始 游 戏</button>
-      </div>
-      <div class="overlay hidden" id="ov-over">
-        <h2>游 戏 结 束</h2>
-        <p id="ov-over-score"></p>
-        <p id="ov-over-reason" style="font-size: 14px; opacity: 0.85"></p>
-        <button id="btn-ai-log" style="display: none; margin-bottom: 10px">
-          死亡日志 (0)
-        </button>
-        <button id="btn-restart">再 来 一 局</button>
-      </div>
-      <div class="overlay hidden" id="ov-ai-log">
-        <h2>死亡日志</h2>
-        <div id="ai-log-content"></div>
-        <div style="margin-top: 10px">
-          <button id="btn-export-log">导出JSON</button>
-          <button id="btn-clear-log">清除日志</button>
-          <button id="btn-close-log">关闭</button>
-        </div>
-      </div>
-      <div class="overlay hidden" id="ov-pause">
-        <h1>暂 停</h1>
-        <p>按 P 或点击继续</p>
-        <button id="btn-resume">继 续</button>
-      </div>
-    </div>
-    <div id="controls">
-      <div class="pad">
-        <button class="up" data-key="up">▲</button>
-        <button class="left" data-key="left">◀</button>
-        <button class="right" data-key="right">▶</button>
-        <button class="down" data-key="down">▼</button>
-      </div>
-      <div class="act">
-        <button data-key="mine">💣<br />放雷</button>
-        <button data-key="fire">🔥<br />射击</button>
-      </div>
-    </div>
-    <div id="btn-group">
-      <button id="btn-pause">暂停 P</button>
-      <button id="btn-restart2">重新开始 R</button>
-      <button id="btn-ai">🤖 AI: 关</button>
-      <button id="btn-import-ai">📥 导入AI</button>
-      <button id="btn-fullscreen">⛶ 全屏 F</button>
-      <button id="btn-export-death-log">📋 死亡日志</button>
-    </div>
-    <div class="ai-status" id="ai-status">当前AI：内置AI</div>
-    <input
-      type="file"
-      id="ai-file"
-      accept=".js,.mjs,.txt"
-      style="display: none"
-    />
-  </div>
+  <Map></Map>
 </template>
 <script setup>
 import { onMounted } from "vue";
+import Map from "./components/Map/index.vue";
 import { initGame } from "./script/base.js";
 import { AIPlayer } from "./script/ai-player.js";
 import DefaultAI from "./script/ai-tanker/default-tank.js";
@@ -96,9 +16,3 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.test {
-  text-align: center;
-  padding: 40px;
-}
-</style>
