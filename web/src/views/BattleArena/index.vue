@@ -38,11 +38,26 @@
       </div>
     </div>
     <div id="tank-panel">
-      <div class="panel-title">AI 战队配置</div>
-      <div id="tank-list"></div>
+      <div class="panel-title">AI玩家列表</div>
+      <div id="tank-list">
+        <div
+          v-for="(ai, i) in aiTanks"
+          :key="ai.id"
+          class="tank-item"
+          :style="{ borderLeftColor: ai.color }"
+        >
+          <span class="tank-color" :style="{ background: ai.color }"></span>
+          <span class="tank-name">{{ ai.name.length > 8 ? ai.name.slice(0, 8) + '...' : ai.name }}</span>
+          <span class="tank-status" :class="ai.tank ? (ai.tank.alive ? 'status-alive' : 'status-dead') : 'status-waiting'">
+            {{ ai.tank ? (ai.tank.alive ? '存活' : '阵亡') : '准备' }}
+          </span>
+          <span class="tank-stats">{{ ai.kills }}杀/{{ ai.deaths }}死</span>
+          <button class="btn-remove" @click="removeAITank(i)">✕</button>
+        </div>
+      </div>
       <div id="tank-actions">
-        <button id="btn-import-ai">📥 导入 AI</button>
-        <button id="btn-clear-all">🗑️ 清空</button>
+        <button id="btn-import-ai" :disabled="gameState === 'playing' || gameState === 'paused'">📥 导入 AI</button>
+        <button id="btn-clear-all" :disabled="gameState === 'playing' || gameState === 'paused'" @click="clearAllAITanks">🗑️ 清空</button>
         <input type="file" id="ai-file" accept=".js" multiple style="display:none" />
       </div>
     </div>
@@ -57,7 +72,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import playerSvg from "@/assets/player.svg";
 import {
   genMap,
@@ -78,13 +93,15 @@ const AI_COLORS = [
   "#ffeaa7", "#dfe6e9", "#a29bfe", "#fd79a8",
 ];
 
-let aiTanks = []; // { id, name, color, aiModule, tank }
+const aiTanks = ref([]); // { id, name, color, aiModule, tank }
+const gameState = ref("start"); // 同步 window.state 用于模板绑定
 let killLog = [];
 let gameLoopId = null;
 let lastTime = 0;
 let ovPause = null;
 const battleTankImg = new Image();
 battleTankImg.src = playerSvg;
+
 
 // ====================== AI 加载管理 ======================
 function loadAIFile(file) {
@@ -130,9 +147,9 @@ function loadAIFile(file) {
 }
 
 async function importAIFiles(files) {
-  const imports = Array.from(files).slice(0, 8 - aiTanks.length);
+  const imports = Array.from(files).slice(0, 8 - aiTanks.value.length);
   for (const file of imports) {
-    if (aiTanks.length >= 8) break;
+    if (aiTanks.value.length >= 8) break;
     try {
       const aiModule = await loadAIFile(file);
       const name = aiModule.name || file.name.replace(/\.[^.]+$/, "");
@@ -141,13 +158,12 @@ async function importAIFiles(files) {
       alert(`导入 ${file.name} 失败: ${err.message}`);
     }
   }
-  renderTankList();
 }
 
 function addAITank(name, aiModule) {
-  if (aiTanks.length >= 8) return;
-  const color = AI_COLORS[aiTanks.length];
-  aiTanks.push({
+  if (aiTanks.value.length >= 8) return;
+  const color = AI_COLORS[aiTanks.value.length];
+  aiTanks.value.push({
     id: Math.random().toString(36).slice(2),
     name,
     color,
@@ -158,36 +174,16 @@ function addAITank(name, aiModule) {
   });
 }
 
+function removeAITank(idx) {
+  aiTanks.value.splice(idx, 1);
+}
+
 function clearAllAITanks() {
-  aiTanks = [];
-  renderTankList();
+  aiTanks.value = [];
 }
 
 // ====================== 渲染 AI 列表 ======================
-function renderTankList() {
-  const list = document.getElementById("tank-list");
-  if (!list) return;
-  list.innerHTML = aiTanks
-    .map(
-      (ai, i) => `
-    <div class="tank-item" style="border-left-color: ${ai.color}">
-      <span class="tank-color" style="background:${ai.color}"></span>
-      <span class="tank-name">${ai.name}</span>
-      <span class="tank-stats">${ai.kills}杀/${ai.deaths}死</span>
-      <button class="btn-remove" data-idx="${i}">✕</button>
-    </div>
-  `,
-    )
-    .join("");
-
-  list.querySelectorAll(".btn-remove").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const idx = parseInt(btn.dataset.idx);
-      aiTanks.splice(idx, 1);
-      renderTankList();
-    });
-  });
-}
+// （使用 Vue v-for 渲染，无需此函数）
 
 // ====================== 游戏初始化（AI 对决模式） ======================
 function initBattleGame() {
@@ -214,7 +210,7 @@ function initBattleGame() {
     { c: COLS - 8, r: ROWS - 2 },
   ];
 
-  aiTanks.forEach((ai, i) => {
+  aiTanks.value.forEach((ai, i) => {
     const sp = spawnPoints[i] || spawnPoints[i % spawnPoints.length];
     const x = sp.c * CELL + 3;
     const y = sp.r * CELL + 3;
@@ -240,7 +236,7 @@ function initBattleGame() {
   window.floats = [];
   window.itemSpawnTimer = 3;
   window.state = "start";
-  renderTankList();
+  gameState.value = "start";
   updateBattleHud();
 
   // 初始化控件
@@ -303,12 +299,12 @@ function initBattleGame() {
   // 键盘控制
   document.addEventListener("keydown", (e) => {
     if (e.code === "Space" || e.code === "Enter") {
-      if (state === "start") {
+      if (window.state === "start") {
         startBattle();
         e.preventDefault();
       }
     } else if (e.key.toLowerCase() === "p") {
-      if (state === "playing" || state === "paused") {
+      if (window.state === "playing" || window.state === "paused") {
         toggleBattlePause();
       }
     } else if (e.key.toLowerCase() === "r") {
@@ -354,7 +350,7 @@ function initBattleGame() {
   // 启动游戏循环
   lastTime = performance.now();
   gameLoopId = requestAnimationFrame(battleLoop);
-  if (aiTanks.length === 0) {
+  if (aiTanks.value.length === 0) {
     // 没有导入 AI，显示提示并初始绘制一帧
     const ovStart = document.getElementById("ov-start");
     if (ovStart) ovStart.classList.remove("hidden");
@@ -363,6 +359,16 @@ function initBattleGame() {
 }
 
 function startBattle() {
+  if (aiTanks.value.length < 2) {
+    alert("请至少导入 2 个 AI 才能开始对决");
+    return;
+  }
+  // 锁定导入按钮
+  const importBtn = document.getElementById("btn-import-ai");
+  if (importBtn) importBtn.disabled = true;
+  const clearBtn = document.getElementById("btn-clear-all");
+  if (clearBtn) clearBtn.disabled = true;
+
   // 清理旧的 AI 坦克
   window.tanks.splice(0, window.tanks.length);
   window.bullets.splice(0, window.bullets.length);
@@ -371,7 +377,6 @@ function startBattle() {
   window.drones.splice(0, window.drones.length);
   window.particles.splice(0, window.particles.length);
   window.floats.splice(0, window.floats.length);
-
   // 重新生成地图
   genMap();
 
@@ -387,7 +392,7 @@ function startBattle() {
     { c: COLS - 8, r: ROWS - 2 },
   ];
 
-  aiTanks.forEach((ai, i) => {
+  aiTanks.value.forEach((ai, i) => {
     const sp = spawnPoints[i] || spawnPoints[i % spawnPoints.length];
     const x = sp.c * CELL + 3;
     const y = sp.r * CELL + 3;
@@ -422,9 +427,12 @@ function startBattle() {
 function toggleBattlePause() {
   if (window.state === "playing") {
     window.state = "paused";
+    gameState.value = "paused";
     if (ovPause) ovPause.classList.remove("hidden");
   } else if (window.state === "paused") {
     window.state = "playing";
+    gameState.value = "playing";
+  gameState.value = "playing";
     if (ovPause) ovPause.classList.add("hidden");
     lastTime = performance.now();
   }
@@ -435,8 +443,8 @@ function battleLoop(ts) {
   const dt = Math.min(0.033, (ts - lastTime) / 1000 || 0.016);
   lastTime = ts;
 
-  if (window.state === "playing" && aiTanks.length > 0) {
-    updateBattle(dt);
+  if (window.state === "playing" && aiTanks.value.length > 0) {
+    updateBattle(dt * (window.gameSpeed || 1));
   }
 
   drawBattle();
@@ -455,9 +463,10 @@ function updateBattle(dt) {
   }
 
   // 更新每个 AI 坦克
-  for (const ai of aiTanks) {
+  for (const ai of aiTanks.value) {
     if (!ai.tank || !ai.tank.alive) continue;
-    const action = ai.aiModule.decide(buildBattleContext(ai), dt);
+    const ctx = buildBattleContext(ai);
+    const action = ai.aiModule.decide(ctx, dt);
     applyBattleAction(ai.tank, action);
   }
 
@@ -474,6 +483,7 @@ function updateBattle(dt) {
   // 检测碰撞
   checkBulletCollisions();
   checkTankCollisions();
+  checkItemPickup();
 
   // 更新粒子效果
   for (const p of window.particles) {
@@ -569,13 +579,13 @@ function battleFire(t, dt) {
     for (let i = -1; i <= 1; i++) {
       bullets.push({
         x: fx, y: fy, dx: Math.cos(ang + i * 0.18) * 210, dy: Math.sin(ang + i * 0.18) * 210,
-        speed: 210, owner: t, dmg: 1, dead: false, bounced: false,
+        speed: 210, owner: t, dmg: 1, dead: false, bounced: false, teleported: false,
       });
     }
   } else {
     bullets.push({
       x: fx, y: fy, dx: Math.cos(ang) * 210, dy: Math.sin(ang) * 210,
-      speed: 210, owner: t, dmg: 1, dead: false, bounced: false,
+      speed: 210, owner: t, dmg: 1, dead: false, bounced: false, teleported: false,
     });
   }
   sfx("shoot");
@@ -593,22 +603,27 @@ function updateBattleBullets(dt) {
     }
       const tile = window.map[cc.r][cc.c];
     if (tile === GATE) {
-      const g = gateAt(cc.c, cc.r);
-      const partner = g && g.partner;
-      if (partner) {
-        const pc = partner.cells[0];
-        const dir = { x: b.dx / b.speed, y: b.dy / b.speed };
-        let tx, ty;
-        if (dir.y !== 0) {
-          tx = pc.c * CELL + CELL / 2;
-          ty = pc.r * CELL + (dir.y < 0 ? -4 : CELL + 1);
-        } else {
-          tx = pc.c * CELL + (dir.x < 0 ? -4 : CELL + 1);
-          ty = pc.r * CELL + CELL / 2;
+      if (!b.teleported) {
+        const g = gateAt(cc.c, cc.r);
+        const partner = g && g.partner;
+        if (partner) {
+          const pc = partner.cells[0];
+          const dir = { x: b.dx / b.speed, y: b.dy / b.speed };
+          let tx, ty;
+          if (dir.y !== 0) {
+            tx = pc.c * CELL + CELL / 2;
+            ty = pc.r * CELL + (dir.y < 0 ? -4 : CELL + 1);
+          } else {
+            tx = pc.c * CELL + (dir.x < 0 ? -4 : CELL + 1);
+            ty = pc.r * CELL + CELL / 2;
+          }
+          b.x = tx;
+          b.y = ty;
+          b.teleported = true;
+          sfx("tp");
         }
-        b.x = tx;
-        b.y = ty;
-        sfx("tp");
+      } else {
+        b.dead = true;
       }
     } else if (tile === WALL) {
       b.dead = true;
@@ -654,6 +669,7 @@ function buildBattleContext(ai) {
         dir: { x: b.dx || 0, y: b.dy || 0 },
         speed: b.speed || 210,
         owner: b.owner, dmg: b.dmg,
+        teleported: b.teleported,
       })),
       items: window.items.filter((it) => !it.dead).map((it) => ({
         x: it.x, y: it.y, type: it.def.id, name: it.def.name,
@@ -675,9 +691,9 @@ function buildBattleContext(ai) {
     CELL, COLS, ROWS, W, H,
     DIRS,
     TILE: { EMPTY, WALL, GATE, BORDER, CRACK, GRASS },
-    state,
-    kills,
-    gtMs,
+    state: window.state,
+    kills: window.kills,
+    gtMs: window.gtMs,
     player: {
       x: ownTank.x, y: ownTank.y, w: ownTank.w, h: ownTank.h,
       dirName: ownTank.dirName, dir: { x: ownTank.dir.x, y: ownTank.dir.y },
@@ -700,6 +716,7 @@ function buildBattleContext(ai) {
       speed: b.speed || 210,
       owner: b.owner, dmg: b.dmg,
       bounced: b.bounced,
+      teleported: b.teleported,
     })),
     items: window.items.filter((it) => !it.dead).map((it) => ({
       x: it.x, y: it.y, type: it.def.id, name: it.def.name,
@@ -738,6 +755,76 @@ function applyBattleAction(tank, action) {
   tank.moveRight = !!action.right;
   tank.fire = !!action.fire;
   tank.mine = !!action.mine;
+}
+
+function checkItemPickup() {
+  for (const t of window.tanks) {
+    if (!t.alive) continue;
+    for (const it of window.items) {
+      if (it.dead) continue;
+      if (
+        t.x < it.x + (it.w || it.size || 22) &&
+        t.x + t.w > it.x &&
+        t.y < it.y + (it.h || it.size || 22) &&
+        t.y + t.h > it.y
+      ) {
+        applyItemToTank(it, t);
+        it.dead = true;
+      }
+    }
+  }
+  window.items = window.items.filter((it) => !it.dead);
+}
+
+function applyItemToTank(it, tank) {
+  const now = window.gtMs;
+  sfx("pickup");
+  addFloat(it.x + CELL / 2, it.y - 8, it.def.name + " UP", it.def.color);
+  spawnExplosion(it.x + CELL / 2, it.y + CELL / 2, 20, it.def.color);
+  switch (it.def.id) {
+    case "drone":
+      if (tank.drones < (it.def.max || 5)) {
+        tank.drones++;
+        window.drones.push({
+          x: tank.x,
+          y: tank.y - 20,
+          w: 20,
+          h: 20,
+          hp: 3,
+          fireCd: 0.5,
+          age: 0,
+        });
+      }
+      break;
+    case "spread":
+      tank.spreadT = now + itemTimer("spread");
+      break;
+    case "fire":
+      tank.fireT = now + itemTimer("fire");
+      break;
+    case "speed":
+      tank.speedT = now + itemTimer("speed");
+      break;
+    case "shield":
+      tank.shieldT = now + itemTimer("shield");
+      break;
+    case "mine":
+      tank.mines += 3;
+      break;
+    case "heal":
+      if (tank.hp < tank.maxHp) {
+        tank.hp++;
+        sfx("pickup");
+      }
+      break;
+  }
+}
+
+function itemTimer(itemId) {
+  if (itemId === "drone") return 0;
+  if (itemId === "mine") return 0;
+  if (itemId === "spread") return 18000;
+  return 9000;
 }
 
 function checkBulletCollisions() {
@@ -790,10 +877,10 @@ function checkBulletCollisions() {
           t.alive = false;
           const killer = bullets.find((bb) => bb === b && bb.owner);
           if (killer && killer.owner) {
-            const killerAI = aiTanks.find((ai) => ai.tank === killer.owner);
+            const killerAI = aiTanks.value.find((ai) => ai.tank === killer.owner);
             if (killerAI) killerAI.kills++;
           }
-          const dyingAI = aiTanks.find((ai) => ai.tank === t);
+          const dyingAI = aiTanks.value.find((ai) => ai.tank === t);
           if (dyingAI) dyingAI.deaths++;
           spawnExplosion(t.x + t.w / 2, t.y + t.h / 2, 34, t.color || "#ff8a5a");
           sfx("boom");
@@ -831,20 +918,27 @@ function checkTankCollisions() {
 function checkBattleEnd() {
   const aliveTanks = window.tanks.filter((t) => t.alive);
   if (aliveTanks.length <= 1) {
-    state = "over";
+    window.state = "over";
+    gameState.value = "over";
     const winner = aliveTanks[0];
-    const winnerAI = winner ? aiTanks.find((ai) => ai.tank === winner) : null;
+    const winnerAI = winner ? aiTanks.value.find((ai) => ai.tank === winner) : null;
 
     const winnerText = winnerAI
       ? `🏆 胜利者：${winnerAI.name}！`
       : "平局！";
     document.getElementById("ov-over-winner").textContent = winnerText;
 
-    const stats = aiTanks
+    const stats = aiTanks.value
       .map((ai) => `${ai.name}: ${ai.kills}杀`)
       .join("　");
     document.getElementById("ov-over-stats").textContent = stats;
     document.getElementById("ov-over").classList.remove("hidden");
+
+    // 游戏结束后解锁导入按钮
+    const importBtn = document.getElementById("btn-import-ai");
+    if (importBtn) importBtn.disabled = false;
+    const clearBtn = document.getElementById("btn-clear-all");
+    if (clearBtn) clearBtn.disabled = false;
   }
 }
 
@@ -921,18 +1015,15 @@ function updateBattleHud() {
   const el = document.getElementById("hud-alive");
   if (el) el.textContent = alive;
   const sc = document.getElementById("hud-score");
-  if (sc) sc.textContent = kills;
+  if (sc) sc.textContent = window.kills;
 
-  const mins = Math.floor(gtMs / 60000);
-  const secs = Math.floor((gtMs % 60000) / 1000);
+  const mins = Math.floor(window.gtMs / 60000);
+  const secs = Math.floor((window.gtMs % 60000) / 1000);
   const te = document.getElementById("hud-time");
   if (te) te.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
 
   // 更新各 AI 的击杀/死亡显示
-  aiTanks.forEach((ai, i) => {
-  const el = document.getElementById(`tank-stats-${i}`);
-    if (el) el.textContent = `${ai.kills}杀/${ai.deaths}死`;
-  });
+  // （Vue 响应式自动更新，无需手动操作 DOM）
 }
 
 // ====================== Vue 生命周期 ======================
@@ -1008,7 +1099,7 @@ canvas {
   border-radius: 12px;
 }
 
-/* AI 战队配置面板 */
+/* AI玩家列表面板 */
 #tank-panel {
   margin-top: 30px;
   width: 280px;
@@ -1059,15 +1150,34 @@ canvas {
 .tank-name {
   flex: 1;
   font-size: 13px;
-  color: #cfe3cf;
+  color: #ffd76e;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .tank-stats {
   font-size: 12px;
   color: #9fb6a6;
+  flex-shrink: 0;
+}
+
+.tank-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.status-alive {
+  background: rgba(125, 224, 125, .2);
+  color: #7de07d;
+}
+
+.status-dead {
+  background: rgba(255, 107, 107, .2);
+  color: #ff6b6b;
 }
 
 .btn-remove {
@@ -1078,6 +1188,8 @@ canvas {
   font-size: 14px;
   padding: 2px 6px;
   border-radius: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .btn-remove:hover {
@@ -1102,8 +1214,18 @@ canvas {
   cursor: pointer;
 }
 
-#tank-actions button:hover {
+#tank-actions button:hover:not(:disabled) {
   background: #3a4a3a;
+}
+
+#tank-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status-waiting {
+  background: rgba(159, 182, 166, .2);
+  color: #9fb6a6;
 }
 
 #btn-group {
