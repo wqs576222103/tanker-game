@@ -1183,7 +1183,7 @@ canvas {
 .btn-remove {
   background: none;
   border: none;
-  color: #ff6b6b;
+  color: #fff;
   cursor: pointer;
   font-size: 14px;
   padding: 2px 6px;

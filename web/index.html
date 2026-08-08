@@ -11,6 +11,12 @@
 <body>
   <div id="app"></div>
   <script type="module" src="/src/main.js"></script>
+  <script>
+    window.onerror = function(msg, url, line, col, err) {
+      alert('脚本报错: ' + msg + (line ? ' (行' + line + ')' : ''));
+      return true; // 阻止默认控制台输出
+    };
+  </script>
 </body>
 
 </html>

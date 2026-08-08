@@ -3,4 +3,19 @@ import './style.css'
 import App from './App.vue'
 import router from './router'
 
-createApp(App).use(router).mount('#app')
+const app = createApp(App).use(router)
+
+app.config.errorHandler = (err, instance, info) => {
+  alert('页面错误: ' + (err instanceof Error ? err.message : String(err)))
+}
+
+window.onerror = function(msg, url, line, col, err) {
+  alert('脚本报错: ' + msg + (line ? ' (行' + line + ')' : ''))
+  return true
+}
+
+window.addEventListener('unhandledrejection', (e) => {
+  alert('Promise 错误: ' + (e.reason?.message || e.reason))
+})
+
+app.mount('#app')
