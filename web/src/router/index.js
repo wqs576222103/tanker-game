@@ -10,6 +10,11 @@ const routes = [
     name: 'TankGame',
     component: () => import('../views/TankGame/index.vue'),
   },
+  {
+    path: '/battle-arena',
+    name: 'BattleArena',
+    component: () => import('../views/BattleArena/index.vue'),
+  },
 ]
 
 const router = createRouter({

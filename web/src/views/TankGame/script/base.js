@@ -159,6 +159,9 @@ export function genMap() {
     if (connectivityOk()) break;
   }
   placeGates();
+  window.map = map;
+  window.gates = gates;
+  window.crackHp = crackHp;
 }
 
 export function protectedKey(c, r) {
@@ -421,6 +424,17 @@ export function resetGame() {
   particles = [];
   floats = [];
   lastTeleport = {};
+  window.tanks = tanks;
+  window.bullets = bullets;
+  window.items = items;
+  window.mines = mines;
+  window.drones = drones;
+  window.particles = particles;
+  window.floats = floats;
+  window.lastTeleport = lastTeleport;
+  window.map = map;
+  window.gates = gates;
+  window.crackHp = crackHp;
   const px = CELL * PLAYER_SPAWN.c + 15 - (CELL - 4) / 2;
   const py = CELL * PLAYER_SPAWN.r + 15 - (CELL - 4) / 2;
   player = makeTank(px, py, "up", true);
@@ -811,13 +825,14 @@ export function updateFloats(dt) {
 
 // ====================== 绘制 ======================
 export function drawMap() {
+  const m = window.map || map;
   ctx.fillStyle = "#202a1c";
   ctx.fillRect(0, 0, W, H);
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const x = c * CELL,
         y = r * CELL;
-      const v = map[r][c];
+      const v = m[r][c];
       if (v === EMPTY) {
         if ((r + c) % 2 === 0) {
           ctx.fillStyle = "#1d2619";
@@ -933,9 +948,10 @@ export function drawGrassCell(c, r) {
 }
 
 export function drawGrassOverlay() {
+  const m = window.map || map;
   ctx.globalAlpha = 0.8;
   for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++) if (map[r][c] === GRASS) drawGrassCell(c, r);
+    for (let c = 0; c < COLS; c++) if (m[r][c] === GRASS) drawGrassCell(c, r);
   ctx.globalAlpha = 1;
 }
 
@@ -1038,7 +1054,8 @@ export function drawPlayer() {
 }
 
 export function drawBullets() {
-  for (const b of bullets) {
+  const arr = window.bullets || bullets;
+  for (const b of arr) {
     ctx.fillStyle = b.owner === "player" ? "#ffd76e" : "#ff5a4a";
     ctx.beginPath();
     ctx.arc(b.x, b.y, 3.5, 0, Math.PI * 2);
@@ -1053,7 +1070,8 @@ export function drawBullets() {
 }
 
 export function drawItems() {
-  for (const it of items) {
+  const arr = window.items || items;
+  for (const it of arr) {
     const left = it.life - it.age * 1000;
     const blink = left < 3000 && Math.floor(gtMs / 150) % 2 === 0;
     if (blink) ctx.globalAlpha = 0.4;
@@ -1107,7 +1125,8 @@ export function drawDrones() {
 }
 
 export function drawParticles() {
-  for (const p of particles) {
+  const arr = window.particles || particles;
+  for (const p of arr) {
     const a = 1 - p.life / p.max;
     ctx.globalAlpha = a;
     if (p.ring) {
@@ -1127,10 +1146,11 @@ export function drawParticles() {
 }
 
 export function drawFloats() {
+  const arr = window.floats || floats;
   ctx.font = 'bold 15px "Microsoft YaHei", sans-serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  for (const f of floats) {
+  for (const f of arr) {
     const a = 1 - f.life / f.max;
     ctx.globalAlpha = a;
     ctx.fillStyle = "#000";

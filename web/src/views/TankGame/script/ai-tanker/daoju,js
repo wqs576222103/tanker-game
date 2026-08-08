@@ -1,0 +1,374 @@
+export default {
+  name: "拾荒坦克AI",
+
+  target: null,
+  lastDir: "up",
+
+  onLoad(ctx) {
+    this.target = null;
+  },
+
+  onRoundStart(ctx) {
+    this.target = null;
+  },
+
+  decide(ctx, dt) {
+
+    const p = ctx.player;
+
+    if (!p) {
+      return {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+        fire: false,
+        mine: false
+      };
+    }
+
+
+    let move = {
+      up:false,
+      down:false,
+      left:false,
+      right:false
+    };
+
+
+    const px = p.x + p.w / 2;
+    const py = p.y + p.h / 2;
+
+
+
+    /*
+     * ============================
+     * 1. 躲避子弹
+     * ============================
+     */
+
+    const bullets = ctx.utils.getEnemyBullets(8, dt);
+
+    let danger = null;
+
+    for (const b of bullets) {
+
+      const d = ctx.utils.distance(
+        px,
+        py,
+        b.x,
+        b.y
+      );
+
+      if (d < 120) {
+        danger = b;
+        break;
+      }
+    }
+
+
+    if (danger) {
+
+      // 优先横向躲避
+
+      if (danger.dir.y !== 0) {
+
+        if (!ctx.isBlocked({x:-1,y:0})) {
+          move.left = true;
+          this.lastDir="left";
+        }
+        else if (!ctx.isBlocked({x:1,y:0})) {
+          move.right=true;
+          this.lastDir="right";
+        }
+
+      } else {
+
+        if (!ctx.isBlocked({x:0,y:-1})) {
+          move.up=true;
+          this.lastDir="up";
+        }
+        else {
+          move.down=true;
+          this.lastDir="down";
+        }
+
+      }
+
+
+      return {
+        ...move,
+        fire:true,
+        mine:false
+      };
+    }
+
+
+
+    /*
+     * ============================
+     * 2. 优先寻找道具
+     * ============================
+     */
+
+    const items = ctx.utils.getItemPositions();
+
+
+    let bestItem=null;
+    let bestDist=Infinity;
+
+
+    for (const item of items) {
+
+      const d =
+        ctx.utils.distance(
+          px,
+          py,
+          item.x,
+          item.y
+        );
+
+
+      if (d < bestDist) {
+        bestDist=d;
+        bestItem=item;
+      }
+
+    }
+
+
+
+    if (bestItem) {
+
+      const tx=bestItem.x;
+      const ty=bestItem.y;
+
+
+      const dx=tx-px;
+      const dy=ty-py;
+
+
+      /*
+       * 横向优先移动
+       */
+
+      if (Math.abs(dx)>20) {
+
+        if(dx>0 &&
+           !ctx.isBlocked({x:1,y:0})) {
+
+          move.right=true;
+          this.lastDir="right";
+
+        }
+        else if(dx<0 &&
+          !ctx.isBlocked({x:-1,y:0})) {
+
+          move.left=true;
+          this.lastDir="left";
+
+        }
+
+      }
+      else {
+
+        if(dy>0 &&
+           !ctx.isBlocked({x:0,y:1})) {
+
+          move.down=true;
+          this.lastDir="down";
+
+        }
+        else if(dy<0 &&
+          !ctx.isBlocked({x:0,y:-1})) {
+
+          move.up=true;
+          this.lastDir="up";
+
+        }
+
+      }
+
+
+
+      return {
+        ...move,
+        fire:false,
+        mine:false
+      };
+    }
+
+
+
+
+    /*
+     * ============================
+     * 3. 没道具，攻击敌人
+     * ============================
+     */
+
+
+    let enemies =
+      ctx.utils.getEnemyPositions();
+
+
+    let target=null;
+    let dist=Infinity;
+
+
+    for(const e of enemies){
+
+      const d =
+        ctx.utils.distance(
+          px,
+          py,
+          e.x,
+          e.y
+        );
+
+      if(d<dist){
+        dist=d;
+        target=e;
+      }
+
+    }
+
+
+
+    // Boss 优先级略高
+
+    const boss =
+      ctx.utils.getBossPosition();
+
+
+    if(boss){
+
+      target=boss;
+
+    }
+
+
+
+    if(target){
+
+      const ex =
+        target.x + (target.w||30)/2;
+
+      const ey =
+        target.y + (target.h||30)/2;
+
+
+      const dx=ex-px;
+      const dy=ey-py;
+
+
+
+      // 对准方向
+
+      if(Math.abs(dx)>Math.abs(dy)){
+
+        if(dx>0){
+          move.right=true;
+          this.lastDir="right";
+        }
+        else{
+          move.left=true;
+          this.lastDir="left";
+        }
+
+      }
+      else{
+
+        if(dy>0){
+          move.down=true;
+          this.lastDir="down";
+        }
+        else{
+          move.up=true;
+          this.lastDir="up";
+        }
+
+      }
+
+
+
+      /*
+       * 靠近敌人同时射击
+       */
+
+      return {
+
+        ...move,
+
+        fire:true,
+
+        mine:
+          dist<150 &&
+          p.mines>0
+
+      };
+
+    }
+
+
+
+
+    /*
+     * ============================
+     * 4. 无目标巡逻
+     * ============================
+     */
+
+
+    const dirs={
+      up:{x:0,y:-1},
+      down:{x:0,y:1},
+      left:{x:-1,y:0},
+      right:{x:1,y:0}
+    };
+
+
+    if(ctx.isBlocked(dirs[this.lastDir])){
+
+      const keys=[
+        "up",
+        "down",
+        "left",
+        "right"
+      ];
+
+      this.lastDir =
+        keys[
+          Math.floor(
+            Math.random()*4
+          )
+        ];
+    }
+
+
+    move[this.lastDir]=true;
+
+
+    return {
+      ...move,
+      fire:true,
+      mine:false
+    };
+
+  },
+
+
+  onDeath(ctx,reason){
+
+    this.target=null;
+
+  },
+
+
+  onDisabled(ctx){
+
+    this.target=null;
+
+  }
+
+};
