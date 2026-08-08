@@ -70,6 +70,7 @@
       <button id="btn-pause">暂停 P</button>
       <button id="btn-restart2">重新开始 R</button>
       <button id="btn-ai">🤖 AI: 关</button>
+      <button id="btn-speed" disabled>⏩ 1x</button>
       <button id="btn-import-ai">📥 导入AI</button>
       <button id="btn-fullscreen">⛶ 全屏 F</button>
       <button id="btn-export-death-log">📋 死亡日志</button>

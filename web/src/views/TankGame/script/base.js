@@ -56,6 +56,7 @@ window.hiScore = +(localStorage.getItem("tank-hi") || 0);
 window.gtMs = 0; // 游戏时间
 window.spawnTimer = 2;
 window.mapGenerated = false; // 地图是否已生成
+window.gameSpeed = 1; // 游戏倍速 (仅AI模式可用)
 
 window.map = [];
 window.gates = [];
@@ -1177,7 +1178,7 @@ window.lastTime = 0;
 export function loop(ts) {
   const dt = Math.min(0.033, (ts - lastTime) / 1000 || 0.016);
   lastTime = ts;
-  if (state === "playing") update(dt);
+  if (state === "playing") update(dt * gameSpeed);
   if (damageFlash > 0) damageFlash -= dt * 1000;
 
   drawMap();
@@ -1346,6 +1347,19 @@ export function initGame() {
   const btnAI = document.getElementById("btn-ai");
   btnAI.addEventListener("click", toggleAI);
 
+  // 倍速按钮（仅AI模式可用）
+  const btnSpeed = document.getElementById("btn-speed");
+  const SPEEDS = [1, 2, 4, 8];
+  function cycleSpeed() {
+    const idx = SPEEDS.indexOf(gameSpeed);
+    gameSpeed = SPEEDS[(idx + 1) % SPEEDS.length];
+    btnSpeed.textContent = "⏩ " + gameSpeed + "x";
+  }
+  btnSpeed.addEventListener("click", () => {
+    if (!AIPlayer.enabled) return;
+    cycleSpeed();
+  });
+
   // ====================== 导入自定义 AI 脚本 ======================
   const btnImportAI = document.getElementById("btn-import-ai");
   const aiFileInput = document.getElementById("ai-file");
@@ -1374,6 +1388,11 @@ export function initGame() {
   function toggleAI() {
     const enabled = AIPlayer.toggle();
     btnAI.classList.toggle("active", enabled);
+    btnSpeed.disabled = !enabled;
+    if (!enabled) {
+      gameSpeed = 1;
+      btnSpeed.textContent = "⏩ 1x";
+    }
   }
 
   // ====================== AI 日志面板 ======================
@@ -1523,6 +1542,8 @@ export function initGame() {
   // ====================== 启动 ======================
   resetGame();
   updateHud();
+  document.getElementById("btn-speed").textContent = "⏩ 1x";
+  document.getElementById("btn-speed").disabled = true;
   requestAnimationFrame((t) => {
     lastTime = t;
     requestAnimationFrame(loop);

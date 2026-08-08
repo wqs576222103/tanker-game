@@ -269,6 +269,8 @@ export const AIPlayer = {
     }
     const st = document.getElementById("ai-status");
     if (st) st.textContent = "当前AI：" + this.aiName;
+    const btnSpeed = document.getElementById("btn-speed");
+    if (btnSpeed) btnSpeed.disabled = !this.enabled;
   },
 
   // ---------------- 游戏状态沙箱（给外部 AI 的只读上下文） ----------------
