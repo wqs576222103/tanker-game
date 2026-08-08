@@ -3,8 +3,9 @@
     <div id="hud">
       <div class="l">
         <span class="bar" id="hud-heart"></span>
-        <span class="bar">得分 <b id="hud-score">0</b></span>
+        <span class="bar">击杀 <b id="hud-score">0</b></span>
         <span class="bar">最高 <b id="hud-hi">0</b></span>
+        <span class="bar">Boss <b id="hud-boss-score">0</b></span>
       </div>
       <div class="r">
         <span class="bar" id="hud-buff"></span>
@@ -17,7 +18,7 @@
         <h1>坦 克 训 练 师</h1>
         <p>
           方向键 / WASD 移动，空格 / J 射击，K 放置地雷<br />
-          敌人从左上、右上角不断进攻，击杀得分
+          敌人从左上、右上角不断进攻，击杀敌人
         </p>
         <div class="items">
           🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />

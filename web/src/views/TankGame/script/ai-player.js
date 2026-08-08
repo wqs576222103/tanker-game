@@ -290,7 +290,7 @@ export const AIPlayer = {
 
       // 游戏即时信息
       state,
-      score,
+      kills,
       gtMs,
 
       player:

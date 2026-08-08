@@ -50,7 +50,8 @@ export const ENEMY_SPAWNS = [
 
 // ====================== 状态 ======================
 window.state = "start"; // start | playing | paused | over
-window.score = 0;
+window.kills = 0;
+window.bossKills = 0;
 window.hiScore = +(localStorage.getItem("tank-hi") || 0);
 window.gtMs = 0; // 游戏时间
 window.spawnTimer = 2;
@@ -70,7 +71,7 @@ window.floats = [];
 window.lastTeleport = {}; // tank 传送冷却
 window.boss = null; // 关卡boss
 window.baseEnemyHp = 2; // 基础怪血量（击败boss后+1）
-window.lastBossScore = 0; // 上一次出现boss的分数
+window.lastBossKills = 0; // 上一次出现boss的击杀数
 
 export const keys = {
   up: false,
@@ -393,10 +394,11 @@ export function makeTank(x, y, dirName, isPlayer) {
 
 export function resetGame() {
   gtMs = 0;
-  score = 0;
+  kills = 0;
+  bossKills = 0;
   spawnTimer = 3;
   boss = null;
-  lastBossScore = 0;
+  lastBossKills = 0;
   baseEnemyHp = 2;
   if (!mapGenerated) {
     genMap();
@@ -428,9 +430,9 @@ export function resetGame() {
   updateHud();
 }
 
-// 根据分数计算最大敌人数量：0~50分=2个，之后每增加100分加1个，最多8个
+// 根据击杀数计算最大敌人数量：0~5击杀=2个，之后每增加10击杀加1个，最多8个
 export function maxEnemies() {
-  return Math.min(8, 2 + Math.floor(Math.max(0, score - 50) / 100));
+  return Math.min(8, 2 + Math.floor(Math.max(0, kills - 5) / 10));
 }
 
 export function spawnEnemy(instant) {
@@ -508,8 +510,8 @@ export function spawnBoss() {
     h: CELL * 2,
     dirName: "down",
     dir: { ...DIRS.down },
-    hp: Math.floor(score / 10),
-    maxHp: Math.floor(score / 10),
+    hp: kills,
+    maxHp: kills,
     speed: 40,
     alive: true,
     invincible: 1000,
@@ -531,7 +533,7 @@ export function spawnBoss() {
 export function killEnemy(t) {
   t.alive = false;
   spawnExplosion(t.x + t.w / 2, t.y + t.h / 2, 34, "#ff8a5a");
-  score += 10;
+  kills += 1;
   sfx("boom");
   if (Math.random() < 0.28) spawnItemAtTank(t);
   updateHud();
@@ -543,10 +545,10 @@ export function killEnemy(t) {
 // 检查是否需要生成关卡boss
 export function checkSpawnBoss() {
   if (boss && boss.alive) return;
-  // boss出现分数为 100 200 400 800 ... 每个翻倍
-  const next = lastBossScore === 0 ? 100 : lastBossScore * 2;
-  if (score >= next) {
-    lastBossScore = next;
+  // boss出现击杀数为 10 20 40 80 ... 每个翻倍
+  const next = lastBossKills === 0 ? 10 : lastBossKills * 2;
+  if (kills >= next) {
+    lastBossKills = next;
     spawnBoss();
   }
 }
@@ -556,10 +558,13 @@ export function killBoss() {
   if (!boss || !boss.alive) return;
   boss.alive = false;
   spawnExplosion(boss.x + boss.w / 2, boss.y + boss.h / 2, 60, "#ee5253");
-  score += 25;
+  kills += 25;
+  bossKills += 1;
   baseEnemyHp += 1;
   sfx("boom");
   addFloat(boss.x + boss.w / 2, boss.y + boss.h / 2, "BOSS已击败！", "#ee5253");
+  // 防止击杀数超过阈值立即刷新下一个boss
+  lastBossKills = Math.max(lastBossKills, kills);
   // 掉落高级道具
   for (let i = 0; i < 3; i++) {
     setTimeout(() => {
@@ -1144,9 +1149,11 @@ export function updateHud() {
     heartEl.textContent = s;
   }
   const sc = document.getElementById("hud-score");
-  if (sc) sc.textContent = score;
+  if (sc) sc.textContent = kills;
+  const bsc = document.getElementById("hud-boss-score");
+  if (bsc) bsc.textContent = bossKills;
   const hi = document.getElementById("hud-hi");
-  if (hi) hi.textContent = Math.max(hiScore, score);
+  if (hi) hi.textContent = Math.max(hiScore, kills);
   const mine = document.getElementById("hud-mine");
   if (mine) mine.textContent = player.mines;
   const buff = document.getElementById("hud-buff");
@@ -1205,12 +1212,12 @@ export function gameOver() {
     "#ff4a3a",
   );
   sfx("over");
-  if (score > hiScore) {
-    hiScore = score;
+  if (kills > hiScore) {
+    hiScore = kills;
     localStorage.setItem("tank-hi", String(hiScore));
   }
   document.getElementById("ov-over-score").textContent =
-    "得分：" + score + "　最高：" + hiScore;
+    "击杀：" + kills + "　Boss击杀：" + bossKills + "　最高：" + hiScore;
   document.getElementById("ov-over-reason").textContent =
     "死因：" + (deathReason || "不明原因");
 

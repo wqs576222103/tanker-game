@@ -82,7 +82,7 @@ export const AILogger = {
       timestamp: Date.now(),
       type: AIPlayer.enabled ? "ai" : "player",
       aiName: AIPlayer.enabled ? AIPlayer.aiName : null,
-      score,
+      kills,
       deathReason: reason,
       playerState: {
         hp: player.hp,
