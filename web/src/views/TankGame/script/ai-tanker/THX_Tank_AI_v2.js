@@ -313,8 +313,7 @@ function getEnemyBullets(
     ctx.bullets || []
   ).filter(
     b =>
-      b.owner ===
-      'enemy'
+      !ctx.isEnemyBullet || ctx.isEnemyBullet(b)
   );
 }
 

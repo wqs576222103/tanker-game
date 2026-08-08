@@ -80,12 +80,16 @@ export default {
 
 ### `enemies`（敌方坦克数组）
 
-每个元素含：`id, x, y, w, h, dirName, dir:{x,y}, speed, hp, maxHp, inGrass`
+每个元素含：`id, x, y, w, h, dirName, dir:{x,y}, speed, hp, maxHp, color, isAI`
+
+> 在 AI 对决模式中，`enemies` 仅包含与其他坦克 teamId 不同的存活坦克（即所有其他 AI）。
 
 ### `bullets`（子弹数组）
 
 每个元素含：`x, y, dir:{x,y}, vx, vy, speed, owner, dmg, bounced`
-（`owner` 为 `"player"` 或 `"enemy"`）
+
+> **注意**：在单人对战 Boss 模式中，`owner` 为字符串 `"player"`；在 **AI 对决模式**（Battle Arena）中，`owner` 为坦克的 `teamId`（数字）。
+> 建议使用 `ctx.isEnemyBullet(bullet)` 来判断子弹是否来自敌方，兼容两种模式。
 
 ### `items`（场上道具数组）
 
@@ -129,6 +133,8 @@ export default {
 | `isPathClear(x1,y1,x2,y2)` | 两点（含两端）之间能否直线通行（需同列或同行） |
 | `isBlocked(dir)`           | 玩家朝 `dir` 方向下一格是否被堵                |
 | `getFreeDistance(dir)`     | 玩家朝 `dir` 方向到最近障碍的距离（像素）      |
+| `isEnemyBullet(bullet)`    | 判断子弹是否来自敌方（兼容单人/AI对决两种模式）|
+| `selfTeamId`               | 当前坦克的阵营 ID（仅 AI 对决模式有效，数字）  |
 
 ---
 

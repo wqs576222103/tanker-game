@@ -245,7 +245,7 @@ export default {
         const cw = ctx.player.w;
 
         for (const b of ctx.bullets) {
-            if (b.owner === "player") continue;
+            if (ctx.isEnemyBullet && !ctx.isEnemyBullet(b)) continue;
             const vx = b.vx || 0,
                 vy = b.vy || 0;
             const vlen = Math.hypot(vx, vy);
@@ -317,7 +317,7 @@ export default {
         let min = Infinity;
         const N = 6;
         for (const b of ctx.bullets) {
-            if (b.owner === "player") continue;
+            if (ctx.isEnemyBullet && !ctx.isEnemyBullet(b)) continue;
             const vx = b.vx || 0,
                 vy = b.vy || 0;
             const vlen = Math.hypot(vx, vy);

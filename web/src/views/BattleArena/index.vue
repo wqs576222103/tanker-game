@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, reactive } from "vue";
 import playerSvg from "@/assets/player.svg";
 import {
   genMap,
@@ -161,9 +161,17 @@ async function importAIFiles(files) {
 }
 
 function addAITank(name, aiModule) {
+  const existingIdx = aiTanks.value.findIndex((a) => a.name === name);
+  if (existingIdx >= 0) {
+    const existing = aiTanks.value[existingIdx];
+    existing.aiModule = aiModule;
+    existing.kills = 0;
+    existing.deaths = 0;
+    return;
+  }
   if (aiTanks.value.length >= 8) return;
   const color = AI_COLORS[aiTanks.value.length];
-  aiTanks.value.push({
+  const aiObj = reactive({
     id: Math.random().toString(36).slice(2),
     name,
     color,
@@ -172,6 +180,7 @@ function addAITank(name, aiModule) {
     kills: 0,
     deaths: 0,
   });
+  aiTanks.value.push(aiObj);
 }
 
 function removeAITank(idx) {
@@ -219,10 +228,12 @@ function initBattleGame() {
     tank.aiName = ai.name;
     tank.isAI = true;
     tank.aiModule = ai.aiModule;
+    tank.teamId = i; // 每个坦克有自己的阵营 ID
     tank.hp = 3;
     tank.maxHp = 3;
     tank.speed = 70 + Math.random() * 30;
-    ai.tank = tank;
+    tank._aiRef = ai;
+    ai.tank = reactive(tank);
     ai.kills = 0;
     ai.deaths = 0;
     window.tanks.push(tank);
@@ -401,10 +412,12 @@ function startBattle() {
     tank.aiName = ai.name;
     tank.isAI = true;
     tank.aiModule = ai.aiModule;
+    tank.teamId = i;
     tank.hp = 3;
     tank.maxHp = 3;
     tank.speed = 70 + Math.random() * 30;
-    ai.tank = tank;
+    tank._aiRef = ai;
+    ai.tank = reactive(tank);
     ai.kills = 0;
     ai.deaths = 0;
     window.tanks.push(tank);
@@ -432,7 +445,6 @@ function toggleBattlePause() {
   } else if (window.state === "paused") {
     window.state = "playing";
     gameState.value = "playing";
-  gameState.value = "playing";
     if (ovPause) ovPause.classList.add("hidden");
     lastTime = performance.now();
   }
@@ -462,13 +474,16 @@ function updateBattle(dt) {
     window.itemSpawnTimer = 3.5 + Math.random() * 3;
   }
 
-  // 更新每个 AI 坦克
-  for (const ai of aiTanks.value) {
-    if (!ai.tank || !ai.tank.alive) continue;
-    const ctx = buildBattleContext(ai);
-    const action = ai.aiModule.decide(ctx, dt);
-    applyBattleAction(ai.tank, action);
-  }
+    // 给 AI 脚本额外注入 teamId 上下文（让现有 AI 脚本无需修改即可识别敌我）
+    // 在 decide 调用前，临时修改 ctx 使其能正确判断子弹来源
+    for (const ai of aiTanks.value) {
+      if (!ai.tank || !ai.tank.alive) continue;
+      const ctx = buildBattleContext(ai);
+      // 注入 selfTeamId 方便 AI 脚本判断
+      ctx.selfTeamId = ai.tank.teamId;
+      const action = ai.aiModule.decide(ctx, dt);
+      applyBattleAction(ai.tank, action);
+    }
 
   // 移动所有坦克并处理射击
   for (const t of window.tanks) {
@@ -626,11 +641,14 @@ function updateBattleBullets(dt) {
         b.dead = true;
       }
     } else if (tile === WALL) {
-      b.dead = true;
-      b.bounced = true;
-      b.dx = -b.dx;
-      b.dy = -b.dy;
-      sfx("bounce");
+      if (!b.bounced) {
+        b.bounced = true;
+        b.dx = -b.dx;
+        b.dy = -b.dy;
+        sfx("bounce");
+      } else {
+        b.dead = true;
+      }
     } else if (tile === CRACK) {
       b.dead = true;
       if (window.crackHp[`${cc.c},${cc.r}`]) {
@@ -656,19 +674,20 @@ function buildBattleContext(ai) {
       TILE: { EMPTY, WALL, GATE, BORDER, CRACK, GRASS },
       state: window.state, kills: window.kills, gtMs: window.gtMs,
       player: null,
-      enemies: window.tanks
-        .filter((t) => t.alive && t !== ownTank)
-        .map((t) => ({
-          id: t.id, x: t.x, y: t.y, w: t.w, h: t.h,
-          dirName: t.dirName, dir: { x: t.dir.x, y: t.dir.y },
-          speed: t.speed, hp: t.hp, maxHp: t.maxHp,
-          color: t.color, isAI: t.isAI,
-        })),
+    enemies: window.tanks
+      .filter((t) => t.alive && t.teamId !== ownTank.teamId)
+      .map((t) => ({
+        id: t.id, x: t.x, y: t.y, w: t.w, h: t.h,
+        dirName: t.dirName, dir: { x: t.dir.x, y: t.dir.y },
+        speed: t.speed, hp: t.hp, maxHp: t.maxHp,
+        color: t.color, isAI: t.isAI,
+      })),
       bullets: window.bullets.filter((b) => !b.dead).map((b) => ({
         x: b.x, y: b.y,
         dir: { x: b.dx || 0, y: b.dy || 0 },
         speed: b.speed || 210,
-        owner: b.owner, dmg: b.dmg,
+        owner: b.owner && b.owner.teamId,
+        dmg: b.dmg,
         teleported: b.teleported,
       })),
       items: window.items.filter((it) => !it.dead).map((it) => ({
@@ -684,6 +703,7 @@ function buildBattleContext(ai) {
         const v = window.map[r][c];
         return v === WALL || v === BORDER || v === CRACK;
       },
+      isEnemyBullet: (bullet) => bullet.owner !== ownTank.teamId,
     };
   }
 
@@ -703,7 +723,7 @@ function buildBattleContext(ai) {
       drones: ownTank.drones, mines: ownTank.mines,
     },
     enemies: window.tanks
-      .filter((t) => t.alive && t !== ownTank)
+      .filter((t) => t.alive && t.teamId !== ownTank.teamId)
       .map((t) => ({
         id: t.id, x: t.x, y: t.y, w: t.w, h: t.h,
         dirName: t.dirName, dir: { x: t.dir.x, y: t.dir.y },
@@ -714,7 +734,8 @@ function buildBattleContext(ai) {
       x: b.x, y: b.y,
       dir: { x: b.dx || 0, y: b.dy || 0 },
       speed: b.speed || 210,
-      owner: b.owner, dmg: b.dmg,
+      owner: b.owner && b.owner.teamId,
+      dmg: b.dmg,
       bounced: b.bounced,
       teleported: b.teleported,
     })),
@@ -744,6 +765,8 @@ function buildBattleContext(ai) {
       const v = window.map[r][c];
       return v === WALL || v === BORDER || v === CRACK;
     },
+    // 战斗模式专用：判断子弹是否属于敌方
+    isEnemyBullet: (bullet) => bullet.owner !== ownTank.teamId,
   };
 }
 
@@ -831,39 +854,10 @@ function checkBulletCollisions() {
   for (const b of window.bullets) {
     if (b.dead) continue;
 
-    // 检测与墙的碰撞
-    const cc = { c: Math.floor(b.x / CELL), r: Math.floor(b.y / CELL) };
-    if (cc.r >= 0 && cc.r < ROWS && cc.c >= 0 && cc.c < COLS) {
-    const tile = window.map[cc.r][cc.c];
-      if (tile === WALL) {
-        b.dead = true;
-        b.bounced = true;
-        b.dx = -b.dx;
-        b.dy = -b.dy;
-        sfx("bounce");
-        continue;
-      }
-      if (tile === CRACK) {
-        if (window.crackHp[`${cc.c},${cc.r}`]) {
-          window.crackHp[`${cc.c},${cc.r}`] -= b.dmg || 1;
-          if (window.crackHp[`${cc.c},${cc.r}`] <= 0) {
-            delete window.crackHp[`${cc.c},${cc.r}`];
-          window.map[cc.r][cc.c] = EMPTY;
-            spawnExplosion(cc.c * CELL + CELL / 2, cc.r * CELL + CELL / 2, 24, "#9aa0b0");
-            sfx("boom");
-          } else {
-            sfx("hit");
-          }
-        }
-        b.dead = true;
-        continue;
-      }
-    }
-
     // 检测与坦克的碰撞
     for (const t of window.tanks) {
       if (!t.alive) continue;
-      if (b.owner === t) continue;
+      if (b.owner && b.owner.teamId === t.teamId) continue;
       if (
         b.x > t.x && b.x < t.x + t.w &&
         b.y > t.y && b.y < t.y + t.h
@@ -873,20 +867,16 @@ function checkBulletCollisions() {
         spawnExplosion(b.x, b.y, 12, "#ff9f43");
         sfx("hit");
 
-        if (t.hp <= 0) {
+        if (t.hp <= 0 && t.alive) {
           t.alive = false;
-          const killer = bullets.find((bb) => bb === b && bb.owner);
-          if (killer && killer.owner) {
-            const killerAI = aiTanks.value.find((ai) => ai.tank === killer.owner);
-            if (killerAI) killerAI.kills++;
-          }
-          const dyingAI = aiTanks.value.find((ai) => ai.tank === t);
+          const dyingAI = t._aiRef;
+          const killerAI = b.owner && b.owner._aiRef ? b.owner._aiRef : null;
+          if (killerAI) killerAI.kills++;
           if (dyingAI) dyingAI.deaths++;
           spawnExplosion(t.x + t.w / 2, t.y + t.h / 2, 34, t.color || "#ff8a5a");
           sfx("boom");
           addFloat(t.x + t.w / 2, t.y, `+1 击杀`, "#ffd76e");
         }
-        break;
       }
     }
   }
@@ -921,7 +911,7 @@ function checkBattleEnd() {
     window.state = "over";
     gameState.value = "over";
     const winner = aliveTanks[0];
-    const winnerAI = winner ? aiTanks.value.find((ai) => ai.tank === winner) : null;
+    const winnerAI = winner?._aiRef || null;
 
     const winnerText = winnerAI
       ? `🏆 胜利者：${winnerAI.name}！`
@@ -1015,15 +1005,14 @@ function updateBattleHud() {
   const el = document.getElementById("hud-alive");
   if (el) el.textContent = alive;
   const sc = document.getElementById("hud-score");
-  if (sc) sc.textContent = window.kills;
+  if (sc) sc.textContent = aiTanks.value.reduce((sum, ai) => sum + ai.kills, 0);
 
   const mins = Math.floor(window.gtMs / 60000);
   const secs = Math.floor((window.gtMs % 60000) / 1000);
   const te = document.getElementById("hud-time");
   if (te) te.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
 
-  // 更新各 AI 的击杀/死亡显示
-  // （Vue 响应式自动更新，无需手动操作 DOM）
+  // Vue 响应式会自动更新 AI 列表
 }
 
 // ====================== Vue 生命周期 ======================
