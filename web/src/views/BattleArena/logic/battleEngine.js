@@ -43,6 +43,16 @@ const SPAWN_POINTS = [
   { c: COLS - 8, r: ROWS - 2 },
 ];
 
+function getSpawnPoints(count) {
+  if (count === 2) {
+    return [
+      { c: 1, r: 1 },
+      { c: COLS - 2, r: ROWS - 2 },
+    ];
+  }
+  return SPAWN_POINTS.slice(0, count);
+}
+
 export function initBattleGame(canvasEl) {
   const canvas = canvasEl;
   canvas.width = W;
@@ -54,10 +64,10 @@ export function initBattleGame(canvasEl) {
 
   genMap();
 
-  const spawnPoints = SPAWN_POINTS;
+  const spawnPoints = getSpawnPoints(aiTanks.value.length);
 
   aiTanks.value.forEach((ai, i) => {
-    const sp = spawnPoints[i] || spawnPoints[i % spawnPoints.length];
+    const sp = spawnPoints[i];
     const x = sp.c * CELL + 3;
     const y = sp.r * CELL + 3;
     const tank = makeTank(x, y, "down", false);
@@ -223,8 +233,10 @@ export function startBattle() {
   window.floats.splice(0, window.floats.length);
   genMap();
 
+  const spawnPoints = getSpawnPoints(aiTanks.value.length);
+
   aiTanks.value.forEach((ai, i) => {
-    const sp = SPAWN_POINTS[i] || SPAWN_POINTS[i % SPAWN_POINTS.length];
+    const sp = spawnPoints[i];
     const x = sp.c * CELL + 3;
     const y = sp.r * CELL + 3;
     const tank = makeTank(x, y, "down", false);
