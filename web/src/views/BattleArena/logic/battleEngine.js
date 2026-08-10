@@ -462,11 +462,32 @@ function battleFire(t, dt) {
 function updateBattleBullets(dt) {
   for (const b of window.bullets) {
     if (b.dead) continue;
+    const prevC = Math.floor(b.x / CELL);
+    const prevR = Math.floor(b.y / CELL);
     b.x += b.dx * dt;
     b.y += b.dy * dt;
     const cc = { c: Math.floor(b.x / CELL), r: Math.floor(b.y / CELL) };
     if (cc.r < 0 || cc.r >= ROWS || cc.c < 0 || cc.c >= COLS) {
-      b.dead = true;
+      if (!b.bounced) {
+        b.bounced = true;
+        if (cc.r < 0) {
+          b.dy = -b.dy;
+          b.y = prevR * CELL + CELL;
+        } else if (cc.r >= ROWS) {
+          b.dy = -b.dy;
+          b.y = prevR * CELL;
+        }
+        if (cc.c < 0) {
+          b.dx = -b.dx;
+          b.x = prevC * CELL + CELL;
+        } else if (cc.c >= COLS) {
+          b.dx = -b.dx;
+          b.x = prevC * CELL;
+        }
+        sfx("bounce");
+      } else {
+        b.dead = true;
+      }
       continue;
     }
     const tile = window.map[cc.r][cc.c];
@@ -493,11 +514,23 @@ function updateBattleBullets(dt) {
       } else {
         b.dead = true;
       }
-    } else if (tile === WALL) {
+    } else if (tile === BORDER || tile === WALL) {
       if (!b.bounced) {
         b.bounced = true;
-        b.dx = -b.dx;
-        b.dy = -b.dy;
+        const prevTile = window.map[prevR] && window.map[prevR][prevC];
+        const wasInside = prevTile !== BORDER && prevTile !== WALL;
+        if (wasInside) {
+          if (prevC !== cc.c) {
+            b.dx = -b.dx;
+            b.x = prevC * CELL + (cc.c > prevC ? CELL - 1 : 1);
+          } else {
+            b.dy = -b.dy;
+            b.y = prevR * CELL + (cc.r > prevR ? CELL - 1 : 1);
+          }
+        } else {
+          b.dx = -b.dx;
+          b.dy = -b.dy;
+        }
         sfx("bounce");
       } else {
         b.dead = true;
@@ -564,6 +597,7 @@ export function buildBattleContext(ai) {
           owner: b.owner && b.owner.teamId,
           dmg: b.dmg,
           teleported: b.teleported,
+          bounced: b.bounced,
         })),
       items: window.items
         .filter((it) => !it.dead)
