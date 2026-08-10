@@ -355,7 +355,7 @@ export const AIPlayer = {
           dir: { x: b.dx || 0, y: b.dy || 0 },
           vx: b.dx || 0,
           vy: b.dy || 0,
-          speed: b.speed || 210,
+          speed: b.speed || 140,
           owner: b.owner,
           dmg: b.dmg,
           bounced: b.bounced,

@@ -6,9 +6,9 @@ import { AILogger } from "./ai-logger.js";
 import { AIPlayer } from "./ai-player.js";
 
 // ====================== 基础 ======================
-export const CELL = 30,
-  COLS = 30,
-  ROWS = 20;
+export const CELL = 20,
+  COLS = 45,
+  ROWS = 30;
 export const W = COLS * CELL,
   H = ROWS * CELL;
 window.canvas = null;
@@ -42,7 +42,7 @@ export const DIRS = {
 };
 export const DIR_NAMES = ["up", "left", "down", "right"];
 
-export const PLAYER_SPAWN = { c: 14, r: 15 };
+export const PLAYER_SPAWN = { c: 22, r: 20 };
 export const ENEMY_SPAWNS = [
   { c: 1, r: 1 },
   { c: COLS - 2, r: 1 },
@@ -171,11 +171,11 @@ export function protectedKey(c, r) {
 export function isProtectedCell(c, r) {
   if (r >= 1 && r <= 2 && c >= 1 && c <= COLS - 2) return true; // 敌人出生车道
   if (c >= 4 && c <= 6 && r >= 14 && r <= 16) return true; // 玩家出生区
-  if (c >= 13 && c <= 15 && r >= 14 && r <= 16) return true; // 传送门上方出生区
+  if (c >= 20 && c <= 24 && r >= 26 && r <= 28) return true; // 下方传送门出生区
   if (c >= 1 && c <= 3 && r >= 3 && r <= 4) return true; // 左上传送门入口
-  if (c >= COLS - 3 && c <= COLS - 2 && r >= 3 && r <= 4) return true;
-  if (c >= 1 && c <= 3 && r >= 8 && r <= 11) return true; // 左右传送门入口
-  if (c >= COLS - 4 && c <= COLS - 2 && r >= 8 && r <= 11) return true;
+  if (c >= COLS - 3 && c <= COLS - 2 && r >= 3 && r <= 4) return true; // 右上传送门入口
+  if (c >= 1 && c <= 3 && r >= 13 && r <= 16) return true; // 左传送门入口
+  if (c >= COLS - 4 && c <= COLS - 2 && r >= 13 && r <= 16) return true; // 右传送门入口
   return false;
 }
 
@@ -205,7 +205,7 @@ export function placeRandomWalls() {
 
   // 随机划分两个区域：左侧/顶部为砖墙区，右侧/底部为碎石墙区，两区互不穿插
   const verticalSplit = Math.random() < 0.5;
-  const divider = randInt(10, 12);
+  const divider = randInt(18, 22);
   const typeOf = (c, r) => {
     const inBrickZone = verticalSplit ? c <= divider : r <= divider;
     if (inBrickZone && Math.random() < 0.6) return CRACK;
@@ -300,10 +300,10 @@ export function placeGates() {
     gates.push(g);
     return g;
   };
-  const gA = mkGate(1, 9, 1, 9),
-    gB = mkGate(28, 9, 28, 9);
-  const gC = mkGate(14, 1, 14, 1),
-    gD = mkGate(14, 17, 14, 17);
+  const gA = mkGate(1, 14, 1, 14),
+    gB = mkGate(COLS - 2, 14, COLS - 2, 14);
+  const gC = mkGate(Math.floor(COLS / 2), 1, Math.floor(COLS / 2), 1),
+    gD = mkGate(Math.floor(COLS / 2), 28, Math.floor(COLS / 2), 28);
   gA.partner = gB;
   gB.partner = gA;
   gC.partner = gD;
@@ -379,7 +379,7 @@ export function makeTank(x, y, dirName, isPlayer) {
     isPlayer,
     hp: isPlayer ? 3 : 2,
     maxHp: isPlayer ? 3 : 2,
-    speed: isPlayer ? 150 : 82,
+    speed: isPlayer ? 100 : 55,
     alive: true,
     invincible: 0,
     dirTimer: Math.random() * 1.2,
@@ -435,8 +435,8 @@ export function resetGame() {
   window.map = map;
   window.gates = gates;
   window.crackHp = crackHp;
-  const px = CELL * PLAYER_SPAWN.c + 15 - (CELL - 4) / 2;
-  const py = CELL * PLAYER_SPAWN.r + 15 - (CELL - 4) / 2;
+  const px = PLAYER_SPAWN.c * CELL + (CELL - 4) / 2;
+  const py = PLAYER_SPAWN.r * CELL + (CELL - 4) / 2;
   player = makeTank(px, py, "up", true);
   player.invincible = 2000;
   tanks.push(player);
@@ -459,7 +459,7 @@ export function spawnEnemy(instant) {
     const spCy = s.r * CELL + CELL / 2;
     const pCx = player.x + player.w / 2;
     const pCy = player.y + player.h / 2;
-    return Math.abs(spCx - pCx) > 90 || Math.abs(spCy - pCy) > 90;
+    return Math.abs(spCx - pCx) > 60 || Math.abs(spCy - pCy) > 60;
   });
   if (available.length === 0) return;
   let sp = available[0];
@@ -469,19 +469,19 @@ export function spawnEnemy(instant) {
       (t) =>
         t.alive &&
         !t.isPlayer &&
-        Math.abs(t.x - (s.c * CELL + 3)) < 80 &&
-        Math.abs(t.y - (s.r * CELL + 3)) < 80,
+        Math.abs(t.x - (s.c * CELL + 2)) < 60 &&
+        Math.abs(t.y - (s.r * CELL + 2)) < 60,
     ).length;
     if (cnt < least) {
       least = cnt;
       sp = s;
     }
   }
-  const x = sp.c * CELL + 3;
-  const y = sp.r * CELL + 3;
+  const x = sp.c * CELL + 2;
+  const y = sp.r * CELL + 2;
   const t = makeTank(x, y, Math.random() < 0.5 ? "down" : "left", false);
   const diff = 1 + Math.floor(gtMs / 45000);
-  t.speed = Math.min(82 + diff * 14, 132);
+  t.speed = Math.min(55 + diff * 10, 88);
   t.hp = baseEnemyHp;
   t.maxHp = baseEnemyHp;
   t.invincible = instant ? 300 : 800;
@@ -743,10 +743,10 @@ export function pickupItem(it) {
 export function explodeMine(m) {
   if (m.dead) return;
   m.dead = true;
-  spawnExplosion(m.x + 12, m.y + 12, 40, "#ff9a3a");
+  spawnExplosion(m.x + CELL / 2, m.y + CELL / 2, 40, "#ff9a3a");
   sfx("boom");
-  const cx = m.x + 12,
-    cy = m.y + 12;
+  const cx = m.x + CELL / 2,
+    cy = m.y + CELL / 2;
   // 波及碎石墙
   const cc = cellOf(cx, cy);
   for (let dr = -1; dr <= 1; dr++)
@@ -757,7 +757,7 @@ export function explodeMine(m) {
     }
   for (const t of tanks) {
     if (!t.alive || t.isPlayer) continue;
-    if (Math.hypot(t.x + t.w / 2 - cx, t.y + t.h / 2 - cy) < 70) {
+    if (Math.hypot(t.x + t.w / 2 - cx, t.y + t.h / 2 - cy) < 47) {
       t.hp -= 2;
       spawnExplosion(t.x + t.w / 2, t.y + t.h / 2, 20, "#ff8a5a");
       if (t.hp <= 0) killEnemy(t);
@@ -841,59 +841,75 @@ export function drawMap() {
         continue;
       }
       if (v === BORDER) {
+        ctx.fillStyle = "#3d4650";
+        ctx.fillRect(x, y, CELL, CELL);
         ctx.fillStyle = "#2a3138";
         ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-        ctx.fillStyle = "#3d4650";
-        ctx.fillRect(x + 4, y + 4, CELL - 8, CELL - 8);
         ctx.fillStyle = "#20262c";
-        ctx.fillRect(x + 6, y + 6, CELL - 12, CELL - 12);
+        ctx.fillRect(x + 3, y + 3, CELL - 6, CELL - 6);
         continue;
       }
       if (v === WALL) {
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,.5)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
         ctx.fillStyle = "#aeb6c0";
-        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+        ctx.fillRect(x, y, CELL, CELL);
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
         ctx.fillStyle = "#c6cdd6";
-        ctx.fillRect(x + 3, y + 3, CELL - 6, CELL - 6);
+        ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
         ctx.strokeStyle = "rgba(60,70,85,.55)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(x + 1, y + CELL / 2);
-        ctx.lineTo(x + CELL - 1, y + CELL / 2);
-        ctx.moveTo(x + CELL / 2, y + 1);
+        ctx.moveTo(x, y + CELL / 2);
+        ctx.lineTo(x + CELL, y + CELL / 2);
+        ctx.moveTo(x + CELL / 2, y);
         ctx.lineTo(x + CELL / 2, y + CELL / 2);
         ctx.moveTo(x + CELL / 4, y + CELL / 2);
-        ctx.lineTo(x + CELL / 4, y + CELL - 1);
+        ctx.lineTo(x + CELL / 4, y + CELL);
         ctx.moveTo(x + (CELL * 3) / 4, y + CELL / 2);
-        ctx.lineTo(x + (CELL * 3) / 4, y + CELL - 1);
+        ctx.lineTo(x + (CELL * 3) / 4, y + CELL);
         ctx.stroke();
+        ctx.restore();
         continue;
       }
       if (v === CRACK) {
         const hp = crackHp[protectedKey(c, r)] || 1;
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,.5)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
         ctx.fillStyle = "#ff9f43";
-        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+        ctx.fillRect(x, y, CELL, CELL);
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
         ctx.fillStyle = "#ffbe76";
-        ctx.fillRect(x + 3, y + 3, CELL - 6, CELL - 6);
+        ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
         ctx.strokeStyle = hp <= 1 ? "#ff9a5a" : "#c2600f";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x + 4, y + CELL - 6);
-        ctx.lineTo(x + 12, y + 14);
-        ctx.lineTo(x + 18, y + 8);
-        ctx.lineTo(x + CELL - 5, y + 14);
+        ctx.moveTo(x + 2, y + CELL - 4);
+        ctx.lineTo(x + 8, y + 8);
+        ctx.lineTo(x + 12, y + 5);
+        ctx.lineTo(x + CELL - 3, y + 8);
         ctx.stroke();
         if (hp <= 1) {
           ctx.strokeStyle = "#ff9a5a";
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(x + 8, y + 8);
-          ctx.lineTo(x + CELL - 7, y + CELL - 7);
-          ctx.moveTo(x + CELL - 8, y + 9);
-          ctx.lineTo(x + 9, y + CELL - 8);
+          ctx.moveTo(x + 5, y + 5);
+          ctx.lineTo(x + CELL - 4, y + CELL - 4);
+          ctx.moveTo(x + CELL - 5, y + 5);
+          ctx.lineTo(x + 5, y + CELL - 4);
           ctx.stroke();
         }
         ctx.fillStyle = "rgba(255,255,255,.55)";
-        for (let i = 0; i < hp; i++) ctx.fillRect(x + 4 + i * 7, y + 3, 5, 3);
+        for (let i = 0; i < hp; i++) ctx.fillRect(x + 2 + i * 5, y + 2, 3, 2);
+        ctx.restore();
         continue;
       }
       if (v === GRASS) {
@@ -903,10 +919,10 @@ export function drawMap() {
       if (v === GATE) {
         const pulse = 0.5 + 0.5 * Math.sin(gtMs / 250 + c * 0.6 + r * 0.3);
         ctx.fillStyle = `rgba(40,90,140,${0.25 + pulse * 0.35})`;
-        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+        ctx.fillRect(x, y, CELL, CELL);
         ctx.strokeStyle = `rgba(120,200,255,${0.4 + pulse * 0.5})`;
         ctx.lineWidth = 2;
-        ctx.strokeRect(x + 3, y + 3, CELL - 6, CELL - 6);
+        ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
         ctx.fillStyle = `rgba(160,220,255,${0.5 + pulse * 0.4})`;
         ctx.beginPath();
         ctx.arc(x + CELL / 2, y + CELL / 2, 3 + pulse * 3, 0, Math.PI * 2);
@@ -921,30 +937,38 @@ export function drawGrassCell(c, r) {
   const x = c * CELL,
     y = r * CELL;
   const seed = (c * 7919 + r * 104729) % 97;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,.4)";
+  ctx.shadowBlur = 3;
+  ctx.shadowOffsetY = 1;
   ctx.fillStyle = "#1a4a1e";
-  ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+  ctx.fillRect(x, y, CELL, CELL);
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
   ctx.strokeStyle = "#3f9e3f";
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let i = 0; i < 4; i++) {
-    const gx = x + 4 + ((seed * (i + 3)) % 22);
-    const gy = y + 4 + ((seed * (i + 5)) % 22);
-    ctx.moveTo(gx, gy + 5);
-    ctx.lineTo(gx + 2, gy);
-    ctx.lineTo(gx + 4, gy + 5);
+    const gx = x + 2 + ((seed * (i + 3)) % 16);
+    const gy = y + 2 + ((seed * (i + 5)) % 16);
+    ctx.moveTo(gx, gy + 3);
+    ctx.lineTo(gx + 1.5, gy);
+    ctx.lineTo(gx + 3, gy + 3);
   }
   ctx.stroke();
   ctx.strokeStyle = "#2e7d2e";
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let i = 0; i < 3; i++) {
-    const gx = x + 6 + ((seed * (i + 7)) % 18);
-    const gy = y + 6 + ((seed * (i + 11)) % 18);
-    ctx.moveTo(gx, gy + 4);
-    ctx.lineTo(gx + 2, gy - 2);
-    ctx.lineTo(gx + 4, gy + 4);
+    const gx = x + 3 + ((seed * (i + 7)) % 14);
+    const gy = y + 3 + ((seed * (i + 11)) % 14);
+    ctx.moveTo(gx, gy + 3);
+    ctx.lineTo(gx + 1.5, gy - 1);
+    ctx.lineTo(gx + 3, gy + 3);
   }
   ctx.stroke();
+  ctx.restore();
 }
 
 export function drawGrassOverlay() {
@@ -1058,7 +1082,7 @@ export function drawBullets() {
   for (const b of arr) {
     ctx.fillStyle = b.owner === "player" ? "#ffd76e" : "#ff5a4a";
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 3.5, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, 2, 0, Math.PI * 2);
     ctx.fill();
     if (b.bounced) {
       ctx.strokeStyle = "rgba(255,255,255,.5)";
@@ -1095,14 +1119,14 @@ export function drawMines() {
   for (const m of mines) {
     ctx.fillStyle = "#3a3a3a";
     ctx.beginPath();
-    ctx.arc(m.x + 12, m.y + 12, 8, 0, Math.PI * 2);
+    ctx.arc(m.x + 10, m.y + 10, 7, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#c9845a";
     ctx.beginPath();
-    ctx.arc(m.x + 12, m.y + 12, 5, 0, Math.PI * 2);
+    ctx.arc(m.x + 10, m.y + 10, 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#ffe14d";
-    ctx.fillRect(m.x + 11, m.y + 3, 3, 3);
+    ctx.fillRect(m.x + 9, m.y + 2, 2, 2);
     ctx.globalAlpha = 1;
   }
 }

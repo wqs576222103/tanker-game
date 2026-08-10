@@ -1,16 +1,14 @@
-
-
 // ====================== 通用工具方法 ======================
 import {
-    CELL,
-    COLS,
-    ROWS,
-    WALL,
-    CRACK,
-    GRASS,
-    BORDER,
-    protectedKey,
-} from './base.js'
+  CELL,
+  COLS,
+  ROWS,
+  WALL,
+  CRACK,
+  GRASS,
+  BORDER,
+  protectedKey,
+} from "./base.js";
 
 export const GameUtils = {
   // 获取所有存活坦克的位置
@@ -68,7 +66,7 @@ export const GameUtils = {
     return bullets
       .filter((b) => !b.dead)
       .map((b) => {
-        const speed = b.speed || 210;
+        const speed = b.speed || 140;
         const dx = b.dx || 0;
         const dy = b.dy || 0;
         return {
@@ -89,7 +87,7 @@ export const GameUtils = {
     return bullets
       .filter((b) => !b.dead && b.owner === "player")
       .map((b) => {
-        const speed = b.speed || 210;
+        const speed = b.speed || 140;
         const dx = b.dx || 0;
         const dy = b.dy || 0;
         return {
@@ -109,7 +107,7 @@ export const GameUtils = {
     return bullets
       .filter((b) => !b.dead && b.owner === "enemy")
       .map((b) => {
-        const speed = b.speed || 210;
+        const speed = b.speed || 140;
         const dx = b.dx || 0;
         const dy = b.dy || 0;
         return {

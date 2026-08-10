@@ -193,9 +193,9 @@ export const TankActions = {
   // 矩形碰撞检测
   rectHit(a, b) {
     return (
-      a.x < b.x + (b.w || b.size || 22) &&
+      a.x < b.x + (b.w || b.size || 14) &&
       a.x + a.w > b.x &&
-      a.y < b.y + (b.h || b.size || 22) &&
+      a.y < b.y + (b.h || b.size || 14) &&
       a.y + a.h > b.y
     );
   },
@@ -258,7 +258,7 @@ export const TankActions = {
         b.dy = Math.sin(b.angle);
       }
 
-      const step = (b.speed || 210) * dt;
+      const step = (b.speed || 140) * dt;
       const steps = Math.max(1, Math.ceil(step / 3));
       const d = step / steps;
       for (let i = 0; i < steps && !b.dead; i++) {
@@ -317,7 +317,7 @@ export const TankActions = {
 
       // 命中判定
       if (!b.dead) {
-        const br = { x: b.x - 2, y: b.y - 2, w: 4, h: 4 };
+        const br = { x: b.x - 1.5, y: b.y - 1.5, w: 3, h: 3 };
         if (!b.dead) {
           for (const t of tanks) {
             if (!t.alive) continue;
@@ -632,11 +632,11 @@ export const TankActions = {
       if (map[cc.r][cc.c] === EMPTY) {
         player.mines--;
         mines.push({
-          x: cc.c * CELL + 3,
-          y: cc.r * CELL + 3,
-          w: 24,
-          h: 24,
-          size: 24,
+          x: cc.c * CELL,
+          y: cc.r * CELL,
+          w: CELL,
+          h: CELL,
+          size: CELL,
           dead: false,
           age: 0,
         });
@@ -657,14 +657,14 @@ export const TankActions = {
         py = player.y + player.h / 2;
       const orbitA =
         dr.age * 2 + (i * Math.PI * 2) / Math.max(1, drones.length);
-      const tx = px + Math.cos(orbitA) * 34,
-        ty = py + Math.sin(orbitA) * 20 - 16;
+      const tx = px + Math.cos(orbitA) * 23,
+        ty = py + Math.sin(orbitA) * 14 - 11;
       dr.x += (tx - dr.x) * Math.min(1, dt * 4);
       dr.y += (ty - dr.y) * Math.min(1, dt * 4);
       dr.fireCd -= dt;
       if (dr.fireCd <= 0) {
         let best = null,
-          bd = 280;
+          bd = 187;
         for (const t of tanks) {
           if (t.isPlayer || !t.alive) continue;
           const dx = t.x - dr.x,

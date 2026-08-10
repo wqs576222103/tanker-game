@@ -1,7 +1,6 @@
-
 // ====================== 死亡日志系统（AI + 玩家，localStorage 持久化） ======================
 
-import { AIPlayer } from './ai-player.js'
+import { AIPlayer } from "./ai-player.js";
 
 export const AILogger = {
   maxRecords: 50,
@@ -58,7 +57,7 @@ export const AILogger = {
 
     const enemyTanks = tanks.filter((t) => t.alive && !t.isPlayer);
     const nearbyEnemies = enemyTanks
-      .filter((e) => Math.hypot(e.x + 15 - px, e.y + 15 - py) < 150)
+      .filter((e) => Math.hypot(e.x + 10 - px, e.y + 10 - py) < 100)
       .map((e) => ({
         x: e.x,
         y: e.y,
@@ -69,7 +68,7 @@ export const AILogger = {
     const liveBullets = bullets.filter((b) => !b.dead);
     const threatBullets = liveBullets
       .filter((b) => !b.isPlayerBullet)
-      .filter((b) => Math.hypot(b.x + 3 - px, b.y + 3 - py) < 150)
+      .filter((b) => Math.hypot(b.x + 2 - px, b.y + 2 - py) < 100)
       .map((b) => ({
         x: b.x,
         y: b.y,

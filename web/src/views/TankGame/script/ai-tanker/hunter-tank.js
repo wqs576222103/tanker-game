@@ -18,7 +18,7 @@ export default {
   shootMinCells: 5, // 与敌方保持的最小格子距离（防止被贴脸撞击）
   shootMaxCells: 11, // 最大有效射击距离（格子数）
   bulletLookahead: 1.2, // 子弹躲避提前量（秒）
-  bulletSpeed: 210, // 敌方子弹速度（像素/秒）
+  bulletSpeed: 140, // 敌方子弹速度（像素/秒）
   dodgePredict: 0.85, // 躲避时预测自身/子弹未来位置的时长（秒）
   lowHpRatio: 0.5, // 血线比例 <= 此值 => 视为残血，生命道具权重提升（仍低于回避子弹/碰撞）
   lowHpRange: 420, // 残血时拾取生命道具的最远触发范围（像素）
@@ -344,7 +344,7 @@ export default {
 
   // 玩家当前实际移动速度（含移速道具加成）
   playerSpeed(ctx) {
-    const spd = 150;
+    const spd = 100;
     if (ctx.player && ctx.player.speedT > ctx.gtMs) return spd * 1.4;
     return spd;
   },

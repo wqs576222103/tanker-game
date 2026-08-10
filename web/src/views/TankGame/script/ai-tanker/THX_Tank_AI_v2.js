@@ -3,7 +3,7 @@ const memory = {
   lastY: null,
   lastMovedAt: 0,
   lastMineAt: -99999,
-  lastDir: 'up',
+  lastDir: "up",
   unstuckUntil: 0,
   unstuckDir: null,
 };
@@ -15,12 +15,7 @@ const DIR = {
   right: { x: 1, y: 0 },
 };
 
-const DIR_NAMES = [
-  'up',
-  'down',
-  'left',
-  'right',
-];
+const DIR_NAMES = ["up", "down", "left", "right"];
 
 function emptyAction() {
   return {
@@ -33,16 +28,12 @@ function emptyAction() {
   };
 }
 
-function action(
-  dirName,
-  fire = true,
-  mine = false
-) {
+function action(dirName, fire = true, mine = false) {
   return {
-    up: dirName === 'up',
-    down: dirName === 'down',
-    left: dirName === 'left',
-    right: dirName === 'right',
+    up: dirName === "up",
+    down: dirName === "down",
+    left: dirName === "left",
+    right: dirName === "right",
     fire,
     mine,
   };
@@ -61,88 +52,41 @@ function center(o) {
   };
 }
 
-function distance(
-  ctx,
-  a,
-  b
-) {
-  if (
-    typeof ctx.distance ===
-    'function'
-  ) {
+function distance(ctx, a, b) {
+  if (typeof ctx.distance === "function") {
     try {
-      return ctx.distance(
-        a.x,
-        a.y,
-        b.x,
-        b.y
-      );
-    }
-    catch (_) {}
+      return ctx.distance(a.x, a.y, b.x, b.y);
+    } catch (_) {}
   }
 
-  return Math.hypot(
-    a.x - b.x,
-    a.y - b.y
-  );
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function cellOfPoint(
-  ctx,
-  p
-) {
-  if (
-    typeof ctx.cellOf ===
-    'function'
-  ) {
+function cellOfPoint(ctx, p) {
+  if (typeof ctx.cellOf === "function") {
     try {
-      return ctx.cellOf(
-        p.x,
-        p.y
-      );
-    }
-    catch (_) {}
+      return ctx.cellOf(p.x, p.y);
+    } catch (_) {}
   }
 
   return {
-    c:
-      Math.floor(
-        p.x / ctx.CELL
-      ),
+    c: Math.floor(p.x / ctx.CELL),
 
-    r:
-      Math.floor(
-        p.y / ctx.CELL
-      ),
+    r: Math.floor(p.y / ctx.CELL),
   };
 }
 
-function cellCenter(
-  ctx,
-  c,
-  r
-) {
-  if (
-    typeof ctx.centerOf ===
-    'function'
-  ) {
+function cellCenter(ctx, c, r) {
+  if (typeof ctx.centerOf === "function") {
     try {
-      return ctx.centerOf(
-        c,
-        r
-      );
-    }
-    catch (_) {}
+      return ctx.centerOf(c, r);
+    } catch (_) {}
   }
 
   return {
-    x:
-      c * ctx.CELL +
-      ctx.CELL / 2,
+    x: c * ctx.CELL + ctx.CELL / 2,
 
-    y:
-      r * ctx.CELL +
-      ctx.CELL / 2,
+    y: r * ctx.CELL + ctx.CELL / 2,
   };
 }
 
@@ -152,104 +96,48 @@ function cellCenter(
  * ================================
  */
 
-function isObstacle(
-  ctx,
-  c,
-  r
-) {
-  if (
-    typeof ctx.isObstacle ===
-    'function'
-  ) {
+function isObstacle(ctx, c, r) {
+  if (typeof ctx.isObstacle === "function") {
     try {
-      return !!ctx.isObstacle(
-        c,
-        r
-      );
-    }
-    catch (_) {}
+      return !!ctx.isObstacle(c, r);
+    } catch (_) {}
   }
 
-  if (
-    typeof ctx.mapAt !==
-    'function'
-  ) {
+  if (typeof ctx.mapAt !== "function") {
     return false;
   }
 
-  const t =
-    ctx.mapAt(
-      c,
-      r
-    );
+  const t = ctx.mapAt(c, r);
 
-  return (
-    t === ctx.TILE.WALL ||
-    t === ctx.TILE.CRACK ||
-    t === ctx.TILE.BORDER
-  );
+  return t === ctx.TILE.WALL || t === ctx.TILE.CRACK || t === ctx.TILE.BORDER;
 }
 
-function isBlocked(
-  ctx,
-  dirName
-) {
+function isBlocked(ctx, dirName) {
   if (!ctx.player) {
     return true;
   }
 
-  if (
-    typeof ctx.isBlocked ===
-    'function'
-  ) {
+  if (typeof ctx.isBlocked === "function") {
     try {
-      return !!ctx.isBlocked(
-        DIR[dirName]
-      );
-    }
-    catch (_) {}
+      return !!ctx.isBlocked(DIR[dirName]);
+    } catch (_) {}
   }
 
-  const pc =
-    cellOfPoint(
-      ctx,
-      center(ctx.player)
-    );
+  const pc = cellOfPoint(ctx, center(ctx.player));
 
-  const d =
-    DIR[dirName];
+  const d = DIR[dirName];
 
-  return isObstacle(
-    ctx,
-    pc.c + d.x,
-    pc.r + d.y
-  );
+  return isObstacle(ctx, pc.c + d.x, pc.r + d.y);
 }
 
-function freeDistance(
-  ctx,
-  dirName
-) {
-  if (
-    typeof ctx.getFreeDistance ===
-    'function'
-  ) {
+function freeDistance(ctx, dirName) {
+  if (typeof ctx.getFreeDistance === "function") {
     try {
-      return ctx.getFreeDistance(
-        DIR[dirName]
-      );
-    }
-    catch (_) {}
+      return ctx.getFreeDistance(DIR[dirName]);
+    } catch (_) {}
   }
 
-  return (
-    isBlocked(
-      ctx,
-      dirName
-    )
-      ? 0
-      : ctx.CELL * 2
-  );
+  return isBlocked(ctx, dirName) ? 0 : ctx.CELL * 2;
 }
 
 /*
@@ -259,25 +147,15 @@ function freeDistance(
  */
 
 function mineCells(ctx) {
-  const set =
-    new Set();
+  const set = new Set();
 
-  for (
-    const m
-    of ctx.mines || []
-  ) {
-    const c =
-      cellOfPoint(
-        ctx,
-        {
-          x: m.x,
-          y: m.y,
-        }
-      );
+  for (const m of ctx.mines || []) {
+    const c = cellOfPoint(ctx, {
+      x: m.x,
+      y: m.y,
+    });
 
-    set.add(
-      `${c.c},${c.r}`
-    );
+    set.add(`${c.c},${c.r}`);
   }
 
   return set;
@@ -289,60 +167,26 @@ function mineCells(ctx) {
  * ================================
  */
 
-function getEnemyBullets(
-  ctx,
-  dt
-) {
-  if (
-    ctx.utils &&
-    typeof ctx.utils.getEnemyBullets ===
-      'function'
-  ) {
+function getEnemyBullets(ctx, dt) {
+  if (ctx.utils && typeof ctx.utils.getEnemyBullets === "function") {
     try {
-      return (
-        ctx.utils.getEnemyBullets(
-          1,
-          dt || 16
-        ) || []
-      );
-    }
-    catch (_) {}
+      return ctx.utils.getEnemyBullets(1, dt || 16) || [];
+    } catch (_) {}
   }
 
-  return (
-    ctx.bullets || []
-  ).filter(
-    b =>
-      !ctx.isEnemyBullet || ctx.isEnemyBullet(b)
+  return (ctx.bullets || []).filter(
+    (b) => !ctx.isEnemyBullet || ctx.isEnemyBullet(b),
   );
 }
 
 function bulletVector(b) {
-  let vx =
-    Number.isFinite(b.vx)
-      ? b.vx
-      : (
-          (b.dir?.x || 0) *
-          (b.speed || 1)
-        );
+  let vx = Number.isFinite(b.vx) ? b.vx : (b.dir?.x || 0) * (b.speed || 1);
 
-  let vy =
-    Number.isFinite(b.vy)
-      ? b.vy
-      : (
-          (b.dir?.y || 0) *
-          (b.speed || 1)
-        );
+  let vy = Number.isFinite(b.vy) ? b.vy : (b.dir?.y || 0) * (b.speed || 1);
 
-  const len =
-    Math.hypot(
-      vx,
-      vy
-    );
+  const len = Math.hypot(vx, vy);
 
-  if (
-    len < 0.0001
-  ) {
+  if (len < 0.0001) {
     return null;
   }
 
@@ -362,28 +206,15 @@ function bulletVector(b) {
  * 2. 是否处于子弹弹道
  * 3. 子弹距离还有多远
  */
-function bulletRiskAt(
-  ctx,
-  p,
-  dt
-) {
+function bulletRiskAt(ctx, p, dt) {
   let risk = 0;
 
-  const bullets =
-    getEnemyBullets(
-      ctx,
-      dt
-    );
+  const bullets = getEnemyBullets(ctx, dt);
 
-  const lane =
-    ctx.CELL * 0.85;
+  const lane = ctx.CELL * 0.85;
 
-  for (
-    const b
-    of bullets
-  ) {
-    const v =
-      bulletVector(b);
+  for (const b of bullets) {
+    const v = bulletVector(b);
 
     if (!v) {
       continue;
@@ -392,101 +223,58 @@ function bulletRiskAt(
     const bx = b.x;
     const by = b.y;
 
-    const rx =
-      p.x - bx;
+    const rx = p.x - bx;
 
-    const ry =
-      p.y - by;
+    const ry = p.y - by;
 
     /*
      * 玩家在子弹飞行方向上
      * 还有多远
      */
-    const forward =
-      rx * v.x +
-      ry * v.y;
+    const forward = rx * v.x + ry * v.y;
 
     /*
      * 已经飞过去
      * 或者太远
      */
-    if (
-      forward <
-        -ctx.CELL * 0.4 ||
-      forward >
-        ctx.CELL * 10
-    ) {
+    if (forward < -ctx.CELL * 0.4 || forward > ctx.CELL * 10) {
       continue;
     }
 
     /*
      * 玩家距离弹道直线的距离
      */
-    const perpendicular =
-      Math.abs(
-        rx * v.y -
-        ry * v.x
-      );
+    const perpendicular = Math.abs(rx * v.y - ry * v.x);
 
-    if (
-      perpendicular >
-      lane
-    ) {
+    if (perpendicular > lane) {
       continue;
     }
 
-    const laneFactor =
-      1 -
-      perpendicular /
-        lane;
+    const laneFactor = 1 - perpendicular / lane;
 
     const distanceFactor =
-      1 -
-      Math.min(
-        Math.max(
-          forward,
-          0
-        ),
-        ctx.CELL * 10
-      ) /
-        (
-          ctx.CELL *
-          10
-        );
+      1 - Math.min(Math.max(forward, 0), ctx.CELL * 10) / (ctx.CELL * 10);
 
-    risk +=
-      110 *
-        laneFactor +
-      90 *
-        distanceFactor;
+    risk += 110 * laneFactor + 90 * distanceFactor;
 
     /*
      * 三格以内
      */
-    if (
-      forward <
-      ctx.CELL * 3
-    ) {
+    if (forward < ctx.CELL * 3) {
       risk += 130;
     }
 
     /*
      * 1.5 格以内
      */
-    if (
-      forward <
-      ctx.CELL * 1.5
-    ) {
+    if (forward < ctx.CELL * 1.5) {
       risk += 240;
     }
 
     /*
      * 几乎在正弹道上
      */
-    if (
-      perpendicular <
-      ctx.CELL * 0.35
-    ) {
+    if (perpendicular < ctx.CELL * 0.35) {
       risk += 90;
     }
   }
@@ -500,168 +288,63 @@ function bulletRiskAt(
  * ================================
  */
 
-function collisionRiskAt(
-  ctx,
-  p
-) {
+function collisionRiskAt(ctx, p) {
   let risk = 0;
 
-  const player =
-    ctx.player;
+  const player = ctx.player;
 
-  const playerRadius =
-    Math.max(
-      player.w ||
-        ctx.CELL,
-      player.h ||
-        ctx.CELL
-    ) / 2;
+  const playerRadius = Math.max(player.w || ctx.CELL, player.h || ctx.CELL) / 2;
 
   /*
    * Boss
    */
-  if (
-    ctx.boss &&
-    (
-      ctx.boss.hp == null ||
-      ctx.boss.hp > 0
-    )
-  ) {
-    const bp =
-      center(ctx.boss);
+  if (ctx.boss && (ctx.boss.hp == null || ctx.boss.hp > 0)) {
+    const bp = center(ctx.boss);
 
     const bossRadius =
-      Math.max(
-        ctx.boss.w ||
-          ctx.CELL,
-        ctx.boss.h ||
-          ctx.CELL
-      ) / 2;
+      Math.max(ctx.boss.w || ctx.CELL, ctx.boss.h || ctx.CELL) / 2;
 
-    const d =
-      distance(
-        ctx,
-        p,
-        bp
-      );
+    const d = distance(ctx, p, bp);
 
     /*
      * 硬碰撞区
      */
-    const hard =
-      playerRadius +
-      bossRadius +
-      ctx.CELL *
-        0.55;
+    const hard = playerRadius + bossRadius + ctx.CELL * 0.55;
 
     /*
      * Boss 警戒区
      */
-    const soft =
-      hard +
-      ctx.CELL *
-        2.2;
+    const soft = hard + ctx.CELL * 2.2;
 
-    if (
-      d < hard
-    ) {
-      risk +=
-        12000 +
-        (
-          hard -
-          d
-        ) *
-          700;
-    }
-    else if (
-      d < soft
-    ) {
-      risk +=
-        900 *
-        (
-          1 -
-          (
-            d -
-            hard
-          ) /
-            (
-              soft -
-              hard
-            )
-        );
+    if (d < hard) {
+      risk += 12000 + (hard - d) * 700;
+    } else if (d < soft) {
+      risk += 900 * (1 - (d - hard) / (soft - hard));
     }
   }
 
   /*
    * 普通敌人
    */
-  for (
-    const e
-    of ctx.enemies || []
-  ) {
-    if (
-      e.hp != null &&
-      e.hp <= 0
-    ) {
+  for (const e of ctx.enemies || []) {
+    if (e.hp != null && e.hp <= 0) {
       continue;
     }
 
-    const ep =
-      center(e);
+    const ep = center(e);
 
-    const enemyRadius =
-      Math.max(
-        e.w ||
-          ctx.CELL,
-        e.h ||
-          ctx.CELL
-      ) / 2;
+    const enemyRadius = Math.max(e.w || ctx.CELL, e.h || ctx.CELL) / 2;
 
-    const d =
-      distance(
-        ctx,
-        p,
-        ep
-      );
+    const d = distance(ctx, p, ep);
 
-    const hard =
-      playerRadius +
-      enemyRadius +
-      ctx.CELL *
-        0.2;
+    const hard = playerRadius + enemyRadius + ctx.CELL * 0.2;
 
-    const soft =
-      hard +
-      ctx.CELL *
-        1.1;
+    const soft = hard + ctx.CELL * 1.1;
 
-    if (
-      d < hard
-    ) {
-      risk +=
-        7000 +
-        (
-          hard -
-          d
-        ) *
-          350;
-    }
-    else if (
-      d < soft
-    ) {
-      risk +=
-        420 *
-        (
-          1 -
-          (
-            d -
-            hard
-          ) /
-            (
-              soft -
-              hard
-            )
-        );
+    if (d < hard) {
+      risk += 7000 + (hard - d) * 350;
+    } else if (d < soft) {
+      risk += 420 * (1 - (d - hard) / (soft - hard));
     }
   }
 
@@ -674,35 +357,18 @@ function collisionRiskAt(
  * ================================
  */
 
-function edgeRisk(
-  ctx,
-  p
-) {
-  const c =
-    cellOfPoint(
-      ctx,
-      p
-    );
+function edgeRisk(ctx, p) {
+  const c = cellOfPoint(ctx, p);
 
   let risk = 0;
 
-  if (
-    c.c <= 0 ||
-    c.r <= 0 ||
-    c.c >=
-      ctx.COLS - 1 ||
-    c.r >=
-      ctx.ROWS - 1
-  ) {
+  if (c.c <= 0 || c.r <= 0 || c.c >= ctx.COLS - 1 || c.r >= ctx.ROWS - 1) {
     risk += 300;
-  }
-  else if (
+  } else if (
     c.c <= 1 ||
     c.r <= 1 ||
-    c.c >=
-      ctx.COLS - 2 ||
-    c.r >=
-      ctx.ROWS - 2
+    c.c >= ctx.COLS - 2 ||
+    c.r >= ctx.ROWS - 2
   ) {
     risk += 60;
   }
@@ -716,27 +382,11 @@ function edgeRisk(
  * ================================
  */
 
-function positionRisk(
-  ctx,
-  p,
-  dt
-) {
+function positionRisk(ctx, p, dt) {
   return (
-    bulletRiskAt(
-      ctx,
-      p,
-      dt
-    ) * 5.0 +
-
-    collisionRiskAt(
-      ctx,
-      p
-    ) * 5.0 +
-
-    edgeRisk(
-      ctx,
-      p
-    )
+    bulletRiskAt(ctx, p, dt) * 5.0 +
+    collisionRiskAt(ctx, p) * 5.0 +
+    edgeRisk(ctx, p)
   );
 }
 
@@ -746,43 +396,24 @@ function positionRisk(
  * ================================
  */
 
-function directionSafetyScore(
-  ctx,
-  dirName,
-  dt
-) {
-  if (
-    isBlocked(
-      ctx,
-      dirName
-    )
-  ) {
+function directionSafetyScore(ctx, dirName, dt) {
+  if (isBlocked(ctx, dirName)) {
     return -1000000;
   }
 
-  const p =
-    center(
-      ctx.player
-    );
+  const p = center(ctx.player);
 
-  const d =
-    DIR[dirName];
+  const d = DIR[dirName];
 
   /*
    * 模拟往该方向走一步
    */
-  const step =
-    ctx.CELL *
-    0.85;
+  const step = ctx.CELL * 0.85;
 
   const probe = {
-    x:
-      p.x +
-      d.x * step,
+    x: p.x + d.x * step,
 
-    y:
-      p.y +
-      d.y * step,
+    y: p.y + d.y * step,
   };
 
   let score = 0;
@@ -790,41 +421,19 @@ function directionSafetyScore(
   /*
    * 风险越高分越低
    */
-  score -=
-    positionRisk(
-      ctx,
-      probe,
-      dt
-    );
+  score -= positionRisk(ctx, probe, dt);
 
   /*
    * 前面空间越大越好
    */
-  score +=
-    Math.min(
-      freeDistance(
-        ctx,
-        dirName
-      ),
-      ctx.CELL * 6
-    ) *
-      0.18;
+  score += Math.min(freeDistance(ctx, dirName), ctx.CELL * 6) * 0.18;
 
   /*
    * 不踩地雷
    */
-  const c =
-    cellOfPoint(
-      ctx,
-      probe
-    );
+  const c = cellOfPoint(ctx, probe);
 
-  if (
-    mineCells(ctx)
-      .has(
-        `${c.c},${c.r}`
-      )
-  ) {
+  if (mineCells(ctx).has(`${c.c},${c.r}`)) {
     score -= 8000;
   }
 
@@ -833,41 +442,21 @@ function directionSafetyScore(
    *
    * 防止疯狂左右抖
    */
-  if (
-    dirName ===
-    memory.lastDir
-  ) {
+  if (dirName === memory.lastDir) {
     score += 8;
   }
 
   return score;
 }
 
-function chooseSafestDirection(
-  ctx,
-  dt,
-  allowed =
-    DIR_NAMES
-) {
+function chooseSafestDirection(ctx, dt, allowed = DIR_NAMES) {
   let best = null;
-  let bestScore =
-    -Infinity;
+  let bestScore = -Infinity;
 
-  for (
-    const d
-    of allowed
-  ) {
-    const s =
-      directionSafetyScore(
-        ctx,
-        d,
-        dt
-      );
+  for (const d of allowed) {
+    const s = directionSafetyScore(ctx, d, dt);
 
-    if (
-      s >
-      bestScore
-    ) {
+    if (s > bestScore) {
       bestScore = s;
       best = d;
     }
@@ -882,42 +471,22 @@ function chooseSafestDirection(
  * ================================
  */
 
-function nearestCollisionThreat(
-  ctx
-) {
-  const p =
-    center(
-      ctx.player
-    );
+function nearestCollisionThreat(ctx) {
+  const p = center(ctx.player);
 
   let best = null;
 
   /*
    * Boss 3 格内
    */
-  if (
-    ctx.boss &&
-    (
-      ctx.boss.hp == null ||
-      ctx.boss.hp > 0
-    )
-  ) {
-    const bp =
-      center(ctx.boss);
+  if (ctx.boss && (ctx.boss.hp == null || ctx.boss.hp > 0)) {
+    const bp = center(ctx.boss);
 
-    const d =
-      distance(
-        ctx,
-        p,
-        bp
-      );
+    const d = distance(ctx, p, bp);
 
-    if (
-      d <
-      ctx.CELL * 3
-    ) {
+    if (d < ctx.CELL * 3) {
       best = {
-        kind: 'boss',
+        kind: "boss",
         p: bp,
         d,
       };
@@ -927,39 +496,18 @@ function nearestCollisionThreat(
   /*
    * 普通敌人 1.8 格内
    */
-  for (
-    const e
-    of ctx.enemies || []
-  ) {
-    if (
-      e.hp != null &&
-      e.hp <= 0
-    ) {
+  for (const e of ctx.enemies || []) {
+    if (e.hp != null && e.hp <= 0) {
       continue;
     }
 
-    const ep =
-      center(e);
+    const ep = center(e);
 
-    const d =
-      distance(
-        ctx,
-        p,
-        ep
-      );
+    const d = distance(ctx, p, ep);
 
-    if (
-      d <
-        ctx.CELL *
-          1.8 &&
-      (
-        !best ||
-        d < best.d
-      )
-    ) {
+    if (d < ctx.CELL * 1.8 && (!best || d < best.d)) {
       best = {
-        kind:
-          'enemy',
+        kind: "enemy",
 
         p: ep,
 
@@ -977,91 +525,49 @@ function nearestCollisionThreat(
  * 找既远离敌人，
  * 又避开子弹的方向。
  */
-function emergencyCollisionEscape(
-  ctx,
-  dt
-) {
-  const threat =
-    nearestCollisionThreat(
-      ctx
-    );
+function emergencyCollisionEscape(ctx, dt) {
+  const threat = nearestCollisionThreat(ctx);
 
   if (!threat) {
     return null;
   }
 
-  const p =
-    center(
-      ctx.player
-    );
+  const p = center(ctx.player);
 
   let best = null;
 
-  let bestScore =
-    -Infinity;
+  let bestScore = -Infinity;
 
-  for (
-    const dirName
-    of DIR_NAMES
-  ) {
-    if (
-      isBlocked(
-        ctx,
-        dirName
-      )
-    ) {
+  for (const dirName of DIR_NAMES) {
+    if (isBlocked(ctx, dirName)) {
       continue;
     }
 
-    const d =
-      DIR[dirName];
+    const d = DIR[dirName];
 
     const probe = {
-      x:
-        p.x +
-        d.x *
-          ctx.CELL,
+      x: p.x + d.x * ctx.CELL,
 
-      y:
-        p.y +
-        d.y *
-          ctx.CELL,
+      y: p.y + d.y * ctx.CELL,
     };
 
     /*
      * 往这个方向走之后，
      * 距敌人增加多少
      */
-    const away =
-      distance(
-        ctx,
-        probe,
-        threat.p
-      ) -
-      threat.d;
+    const away = distance(ctx, probe, threat.p) - threat.d;
 
     /*
      * 远离碰撞目标
      * +
      * 综合安全性
      */
-    const score =
-      away * 60 +
-      directionSafetyScore(
-        ctx,
-        dirName,
-        dt
-      );
+    const score = away * 60 + directionSafetyScore(ctx, dirName, dt);
 
-    if (
-      score >
-      bestScore
-    ) {
-      bestScore =
-        score;
+    if (score > bestScore) {
+      bestScore = score;
 
-      best =
-        dirName;
+      best = dirName;
     }
   }
 
@@ -1074,65 +580,31 @@ function emergencyCollisionEscape(
  * ================================
  */
 
-function immediateDodge(
-  ctx,
-  dt
-) {
-  const p =
-    center(
-      ctx.player
-    );
+function immediateDodge(ctx, dt) {
+  const p = center(ctx.player);
 
-  const currentRisk =
-    bulletRiskAt(
-      ctx,
-      p,
-      dt
-    );
+  const currentRisk = bulletRiskAt(ctx, p, dt);
 
   /*
    * v1 是 85
    *
    * v2 提前到 45
    */
-  if (
-    currentRisk <
-    45
-  ) {
+  if (currentRisk < 45) {
     return null;
   }
 
-  const candidates =
-    DIR_NAMES
-      .map(
-        d => ({
-          d,
+  const candidates = DIR_NAMES.map((d) => ({
+    d,
 
-          s:
-            directionSafetyScore(
-              ctx,
-              d,
-              dt
-            ),
-        })
-      )
-      .sort(
-        (a, b) =>
-          b.s -
-          a.s
-      );
+    s: directionSafetyScore(ctx, d, dt),
+  })).sort((a, b) => b.s - a.s);
 
-  if (
-    !candidates.length ||
-    candidates[0].s <
-      -500000
-  ) {
+  if (!candidates.length || candidates[0].s < -500000) {
     return null;
   }
 
-  return (
-    candidates[0].d
-  );
+  return candidates[0].d;
 }
 
 /*
@@ -1141,29 +613,13 @@ function immediateDodge(
  * ================================
  */
 
-function itemPriority(
-  ctx,
-  item
-) {
-  const hpRatio =
-    ctx.player.hp /
-    Math.max(
-      1,
-      ctx.player.maxHp
-    );
+function itemPriority(ctx, item) {
+  const hpRatio = ctx.player.hp / Math.max(1, ctx.player.maxHp);
 
   const base = {
-    heal:
-      hpRatio < 0.35
-        ? 150
-        : hpRatio < 0.65
-          ? 95
-          : 18,
+    heal: hpRatio < 0.35 ? 100 : hpRatio < 0.65 ? 95 : 18,
 
-    shield:
-      hpRatio < 0.45
-        ? 125
-        : 82,
+    shield: hpRatio < 0.45 ? 125 : 55,
 
     spread: 88,
 
@@ -1173,126 +629,63 @@ function itemPriority(
 
     speed: 70,
 
-    mine:
-      ctx.player.mines <= 1
-        ? 68
-        : 36,
+    mine: ctx.player.mines <= 1 ? 68 : 36,
   };
 
-  return (
-    base[item.type] ||
-    20
-  );
+  return base[item.type] || 20;
 }
 
-function chooseItem(
-  ctx,
-  dt
-) {
-  const p =
-    center(
-      ctx.player
-    );
+function chooseItem(ctx, dt) {
+  const p = center(ctx.player);
 
   let best = null;
 
-  let bestScore =
-    -Infinity;
+  let bestScore = -Infinity;
 
-  for (
-    const item
-    of ctx.items || []
-  ) {
+  for (const item of ctx.items || []) {
     const ip = {
       x: item.x,
       y: item.y,
     };
 
-    const d =
-      distance(
-        ctx,
-        p,
-        ip
-      );
+    const d = distance(ctx, p, ip);
 
-    let score =
-      itemPriority(
-        ctx,
-        item
-      ) *
-        100 -
-      d * 1.4;
+    let score = itemPriority(ctx, item) * 100 - d * 1.4;
 
     /*
      * 道具周围如果危险，
      * 不要为了吃道具送命。
      */
-    const risk =
-      positionRisk(
-        ctx,
-        ip,
-        dt
-      );
+    const risk = positionRisk(ctx, ip, dt);
 
-    score -=
-      Math.min(
-        risk,
-        5000
-      ) *
-        0.7;
+    score -= Math.min(risk, 5000) * 0.7;
 
     /*
      * 普通道具太远不值得追
      */
-    if (
-      d >
-        ctx.CELL *
-          12 &&
-      item.type !==
-        'heal' &&
-      item.type !==
-        'shield'
-    ) {
+    if (d > ctx.CELL * 12 && item.type !== "heal" && item.type !== "shield") {
       score -= 700;
     }
 
     /*
      * 快消失的道具
      */
-    if (
-      item.life != null &&
-      item.age != null
-    ) {
-      const remaining =
-        item.life -
-        item.age;
+    if (item.life != null && item.age != null) {
+      const remaining = item.life - item.age;
 
-      if (
-        remaining <
-        800
-      ) {
+      if (remaining < 800) {
         score -= 350;
       }
     }
 
-    if (
-      score >
-      bestScore
-    ) {
-      bestScore =
-        score;
+    if (score > bestScore) {
+      bestScore = score;
 
-      best =
-        item;
+      best = item;
     }
   }
 
-  return (
-    bestScore >=
-      2800
-      ? best
-      : null
-  );
+  return bestScore >= 2800 ? best : null;
 }
 
 /*
@@ -1301,120 +694,61 @@ function chooseItem(
  * ================================
  */
 
-function chooseCombatTarget(
-  ctx
-) {
-  const p =
-    center(
-      ctx.player
-    );
+function chooseCombatTarget(ctx) {
+  const p = center(ctx.player);
 
-  const candidates =
-    [];
+  const candidates = [];
 
   /*
    * Boss
    */
-  if (
-    ctx.boss &&
-    (
-      ctx.boss.hp == null ||
-      ctx.boss.hp > 0
-    )
-  ) {
-    const bp =
-      center(ctx.boss);
+  if (ctx.boss && (ctx.boss.hp == null || ctx.boss.hp > 0)) {
+    const bp = center(ctx.boss);
 
-    const d =
-      distance(
-        ctx,
-        p,
-        bp
-      );
+    const d = distance(ctx, p, bp);
 
     candidates.push({
-      kind:
-        'boss',
+      kind: "boss",
 
-      obj:
-        ctx.boss,
+      obj: ctx.boss,
 
-      p:
-        bp,
+      p: bp,
 
-      score:
-        16000 -
-        d,
+      score: 16000 - d,
     });
   }
 
   /*
    * 普通敌人
    */
-  for (
-    const e
-    of ctx.enemies || []
-  ) {
-    if (
-      e.hp != null &&
-      e.hp <= 0
-    ) {
+  for (const e of ctx.enemies || []) {
+    if (e.hp != null && e.hp <= 0) {
       continue;
     }
 
-    const ep =
-      center(e);
+    const ep = center(e);
 
-    const d =
-      distance(
-        ctx,
-        p,
-        ep
-      );
+    const d = distance(ctx, p, ep);
 
-    const hpRatio =
-      e.hp /
-      Math.max(
-        1,
-        e.maxHp ||
-          e.hp ||
-          1
-      );
+    const hpRatio = e.hp / Math.max(1, e.maxHp || e.hp || 1);
 
     /*
      * 残血优先补刀
      */
     candidates.push({
-      kind:
-        'enemy',
+      kind: "enemy",
 
-      obj:
-        e,
+      obj: e,
 
-      p:
-        ep,
+      p: ep,
 
-      score:
-        12000 -
-        d +
-        (
-          1 -
-          hpRatio
-        ) *
-          1800,
+      score: 12000 - d + (1 - hpRatio) * 1800,
     });
   }
 
-  candidates.sort(
-    (a, b) =>
-      b.score -
-      a.score
-  );
+  candidates.sort((a, b) => b.score - a.score);
 
-  return (
-    candidates[0] ||
-    null
-  );
+  return candidates[0] || null;
 }
 
 /*
@@ -1423,75 +757,39 @@ function chooseCombatTarget(
  * ================================
  */
 
-function canOccupyCell(
-  ctx,
-  c,
-  r,
-  mines
-) {
+function canOccupyCell(ctx, c, r, mines) {
   /*
    * 越界
    */
-  if (
-    c < 0 ||
-    r < 0 ||
-    c >= ctx.COLS ||
-    r >= ctx.ROWS
-  ) {
+  if (c < 0 || r < 0 || c >= ctx.COLS || r >= ctx.ROWS) {
     return false;
   }
 
   /*
    * 墙 / 碎石
    */
-  if (
-    isObstacle(
-      ctx,
-      c,
-      r
-    )
-  ) {
+  if (isObstacle(ctx, c, r)) {
     return false;
   }
 
   /*
    * 地雷
    */
-  if (
-    mines &&
-    mines.has(
-      `${c},${r}`
-    )
-  ) {
+  if (mines && mines.has(`${c},${r}`)) {
     return false;
   }
 
-  const cp =
-    cellCenter(
-      ctx,
-      c,
-      r
-    );
+  const cp = cellCenter(ctx, c, r);
 
   /*
    * 游戏提供的占用检查
    */
-  if (
-    ctx.utils &&
-    typeof ctx.utils.isPositionOccupied ===
-      'function'
-  ) {
+  if (ctx.utils && typeof ctx.utils.isPositionOccupied === "function") {
     try {
-      if (
-        ctx.utils.isPositionOccupied(
-          cp.x,
-          cp.y
-        )
-      ) {
+      if (ctx.utils.isPositionOccupied(cp.x, cp.y)) {
         return false;
       }
-    }
-    catch (_) {}
+    } catch (_) {}
   }
 
   /*
@@ -1500,26 +798,10 @@ function canOccupyCell(
    * 修复 v1：
    * BFS 会直接追进 Boss。
    */
-  if (
-    ctx.boss &&
-    (
-      ctx.boss.hp == null ||
-      ctx.boss.hp > 0
-    )
-  ) {
-    const bp =
-      center(
-        ctx.boss
-      );
+  if (ctx.boss && (ctx.boss.hp == null || ctx.boss.hp > 0)) {
+    const bp = center(ctx.boss);
 
-    if (
-      distance(
-        ctx,
-        cp,
-        bp
-      ) <
-      ctx.CELL * 1.8
-    ) {
+    if (distance(ctx, cp, bp) < ctx.CELL * 1.8) {
       return false;
     }
   }
@@ -1528,25 +810,12 @@ function canOccupyCell(
    * 普通敌人所在位置
    * 也不允许直接进入
    */
-  for (
-    const e
-    of ctx.enemies || []
-  ) {
-    if (
-      e.hp != null &&
-      e.hp <= 0
-    ) {
+  for (const e of ctx.enemies || []) {
+    if (e.hp != null && e.hp <= 0) {
       continue;
     }
 
-    if (
-      distance(
-        ctx,
-        cp,
-        center(e)
-      ) <
-      ctx.CELL * 1
-    ) {
+    if (distance(ctx, cp, center(e)) < ctx.CELL * 1) {
       return false;
     }
   }
@@ -1554,39 +823,18 @@ function canOccupyCell(
   return true;
 }
 
-function bfsNextDirection(
-  ctx,
-  targetCell
-) {
-  const start =
-    cellOfPoint(
-      ctx,
-      center(ctx.player)
-    );
+function bfsNextDirection(ctx, targetCell) {
+  const start = cellOfPoint(ctx, center(ctx.player));
 
-  const mines =
-    mineCells(ctx);
+  const mines = mineCells(ctx);
 
-  const key =
-    (c, r) =>
-      `${c},${r}`;
+  const key = (c, r) => `${c},${r}`;
 
-  const startKey =
-    key(
-      start.c,
-      start.r
-    );
+  const startKey = key(start.c, start.r);
 
-  const targetKey =
-    key(
-      targetCell.c,
-      targetCell.r
-    );
+  const targetKey = key(targetCell.c, targetCell.r);
 
-  if (
-    startKey ===
-    targetKey
-  ) {
+  if (startKey === targetKey) {
     return null;
   }
 
@@ -1594,14 +842,7 @@ function bfsNextDirection(
    * 目标本身非法，
    * 不寻路。
    */
-  if (
-    !canOccupyCell(
-      ctx,
-      targetCell.c,
-      targetCell.r,
-      mines
-    )
-  ) {
+  if (!canOccupyCell(ctx, targetCell.c, targetCell.r, mines)) {
     return null;
   }
 
@@ -1612,86 +853,42 @@ function bfsNextDirection(
     },
   ];
 
-  const prev =
-    new Map();
+  const prev = new Map();
 
-  prev.set(
-    startKey,
-    null
-  );
+  prev.set(startKey, null);
 
-  let found =
-    false;
+  let found = false;
 
-  for (
-    let qi = 0;
-    qi < q.length &&
-    qi <
-      ctx.COLS *
-        ctx.ROWS;
-    qi++
-  ) {
-    const cur =
-      q[qi];
+  for (let qi = 0; qi < q.length && qi < ctx.COLS * ctx.ROWS; qi++) {
+    const cur = q[qi];
 
-    for (
-      const name
-      of DIR_NAMES
-    ) {
-      const d =
-        DIR[name];
+    for (const name of DIR_NAMES) {
+      const d = DIR[name];
 
-      const nc =
-        cur.c +
-        d.x;
+      const nc = cur.c + d.x;
 
-      const nr =
-        cur.r +
-        d.y;
+      const nr = cur.r + d.y;
 
-      const nk =
-        key(
-          nc,
-          nr
-        );
+      const nk = key(nc, nr);
 
-      if (
-        prev.has(nk)
-      ) {
+      if (prev.has(nk)) {
         continue;
       }
 
-      if (
-        !canOccupyCell(
-          ctx,
-          nc,
-          nr,
-          mines
-        )
-      ) {
+      if (!canOccupyCell(ctx, nc, nr, mines)) {
         continue;
       }
 
-      prev.set(
-        nk,
-        {
-          c:
-            cur.c,
+      prev.set(nk, {
+        c: cur.c,
 
-          r:
-            cur.r,
+        r: cur.r,
 
-          via:
-            name,
-        }
-      );
+        via: name,
+      });
 
-      if (
-        nk ===
-        targetKey
-      ) {
-        found =
-          true;
+      if (nk === targetKey) {
+        found = true;
 
         break;
       }
@@ -1711,49 +908,26 @@ function bfsNextDirection(
     return null;
   }
 
-  let c =
-    targetCell.c;
+  let c = targetCell.c;
 
-  let r =
-    targetCell.r;
+  let r = targetCell.r;
 
-  let parent =
-    prev.get(
-      key(
-        c,
-        r
-      )
-    );
+  let parent = prev.get(key(c, r));
 
   /*
    * 从目标倒推，
    * 找第一步。
    */
   while (parent) {
-    if (
-      parent.c ===
-        start.c &&
-      parent.r ===
-        start.r
-    ) {
-      return (
-        parent.via
-      );
+    if (parent.c === start.c && parent.r === start.r) {
+      return parent.via;
     }
 
-    c =
-      parent.c;
+    c = parent.c;
 
-    r =
-      parent.r;
+    r = parent.r;
 
-    parent =
-      prev.get(
-        key(
-          c,
-          r
-        )
-      );
+    parent = prev.get(key(c, r));
   }
 
   return null;
@@ -1765,76 +939,31 @@ function bfsNextDirection(
  * ================================
  */
 
-function hasClearCellLine(
-  ctx,
-  a,
-  b
-) {
-  if (
-    a.c !== b.c &&
-    a.r !== b.r
-  ) {
+function hasClearCellLine(ctx, a, b) {
+  if (a.c !== b.c && a.r !== b.r) {
     return false;
   }
 
-  const ac =
-    cellCenter(
-      ctx,
-      a.c,
-      a.r
-    );
+  const ac = cellCenter(ctx, a.c, a.r);
 
-  const bc =
-    cellCenter(
-      ctx,
-      b.c,
-      b.r
-    );
+  const bc = cellCenter(ctx, b.c, b.r);
 
-  if (
-    typeof ctx.isPathClear ===
-    'function'
-  ) {
+  if (typeof ctx.isPathClear === "function") {
     try {
-      return !!ctx.isPathClear(
-        ac.x,
-        ac.y,
-        bc.x,
-        bc.y
-      );
-    }
-    catch (_) {}
+      return !!ctx.isPathClear(ac.x, ac.y, bc.x, bc.y);
+    } catch (_) {}
   }
 
-  const dc =
-    Math.sign(
-      b.c -
-      a.c
-    );
+  const dc = Math.sign(b.c - a.c);
 
-  const dr =
-    Math.sign(
-      b.r -
-      a.r
-    );
+  const dr = Math.sign(b.r - a.r);
 
-  let c =
-    a.c + dc;
+  let c = a.c + dc;
 
-  let r =
-    a.r + dr;
+  let r = a.r + dr;
 
-  while (
-    c !== b.c ||
-    r !== b.r
-  ) {
-    if (
-      isObstacle(
-        ctx,
-        c,
-        r
-      )
-    ) {
+  while (c !== b.c || r !== b.r) {
+    if (isObstacle(ctx, c, r)) {
       return false;
     }
 
@@ -1849,60 +978,23 @@ function hasClearCellLine(
  * 当前是否已经和目标
  * 形成同行 / 同列射击关系。
  */
-function aimDirectionIfAligned(
-  ctx,
-  targetPoint
-) {
-  const pc =
-    cellOfPoint(
-      ctx,
-      center(ctx.player)
-    );
+function aimDirectionIfAligned(ctx, targetPoint) {
+  const pc = cellOfPoint(ctx, center(ctx.player));
 
-  const tc =
-    cellOfPoint(
-      ctx,
-      targetPoint
-    );
+  const tc = cellOfPoint(ctx, targetPoint);
 
   /*
    * 同一列
    */
-  if (
-    pc.c ===
-      tc.c &&
-    hasClearCellLine(
-      ctx,
-      pc,
-      tc
-    )
-  ) {
-    return (
-      tc.r <
-      pc.r
-        ? 'up'
-        : 'down'
-    );
+  if (pc.c === tc.c && hasClearCellLine(ctx, pc, tc)) {
+    return tc.r < pc.r ? "up" : "down";
   }
 
   /*
    * 同一行
    */
-  if (
-    pc.r ===
-      tc.r &&
-    hasClearCellLine(
-      ctx,
-      pc,
-      tc
-    )
-  ) {
-    return (
-      tc.c <
-      pc.c
-        ? 'left'
-        : 'right'
-    );
+  if (pc.r === tc.r && hasClearCellLine(ctx, pc, tc)) {
+    return tc.c < pc.c ? "left" : "right";
   }
 
   return null;
@@ -1914,29 +1006,15 @@ function aimDirectionIfAligned(
  * ================================
  */
 
-function findFiringCell(
-  ctx,
-  targetPoint,
-  isBoss
-) {
-  const start =
-    cellOfPoint(
-      ctx,
-      center(ctx.player)
-    );
+function findFiringCell(ctx, targetPoint, isBoss) {
+  const start = cellOfPoint(ctx, center(ctx.player));
 
-  const tc =
-    cellOfPoint(
-      ctx,
-      targetPoint
-    );
+  const tc = cellOfPoint(ctx, targetPoint);
 
-  const mines =
-    mineCells(ctx);
+  const mines = mineCells(ctx);
 
   let best = null;
-  let bestScore =
-    Infinity;
+  let bestScore = Infinity;
 
   /*
    * Boss：
@@ -1945,48 +1023,19 @@ function findFiringCell(
    * 普通敌人：
    * 3~7 格。
    */
-  const minRange =
-    isBoss
-      ? 4
-      : 3;
+  const minRange = isBoss ? 4 : 3;
 
-  const maxRange =
-    isBoss
-      ? 8
-      : 7;
+  const maxRange = isBoss ? 8 : 7;
 
-  for (
-    const name
-    of DIR_NAMES
-  ) {
-    const d =
-      DIR[name];
+  for (const name of DIR_NAMES) {
+    const d = DIR[name];
 
-    for (
-      let range =
-        minRange;
-      range <=
-        maxRange;
-      range++
-    ) {
-      const c =
-        tc.c +
-        d.x *
-          range;
+    for (let range = minRange; range <= maxRange; range++) {
+      const c = tc.c + d.x * range;
 
-      const r =
-        tc.r +
-        d.y *
-          range;
+      const r = tc.r + d.y * range;
 
-      if (
-        !canOccupyCell(
-          ctx,
-          c,
-          r,
-          mines
-        )
-      ) {
+      if (!canOccupyCell(ctx, c, r, mines)) {
         continue;
       }
 
@@ -2001,67 +1050,35 @@ function findFiringCell(
             c,
             r,
           },
-          tc
+          tc,
         )
       ) {
         continue;
       }
 
-      const cp =
-        cellCenter(
-          ctx,
-          c,
-          r
-        );
+      const cp = cellCenter(ctx, c, r);
 
       /*
        * 碰撞风险太高
        */
-      if (
-        collisionRiskAt(
-          ctx,
-          cp
-        ) >
-        80
-      ) {
+      if (collisionRiskAt(ctx, cp) > 80) {
         continue;
       }
 
       /*
        * 离当前位置越近越好
        */
-      let score =
-        Math.abs(
-          c -
-          start.c
-        ) +
-        Math.abs(
-          r -
-          start.r
-        ) +
-        range *
-          0.12;
+      let score = Math.abs(c - start.c) + Math.abs(r - start.r) + range * 0.12;
 
       /*
        * 不喜欢贴墙
        */
-      if (
-        c <= 1 ||
-        r <= 1 ||
-        c >=
-          ctx.COLS - 2 ||
-        r >=
-          ctx.ROWS - 2
-      ) {
+      if (c <= 1 || r <= 1 || c >= ctx.COLS - 2 || r >= ctx.ROWS - 2) {
         score += 5;
       }
 
-      if (
-        score <
-        bestScore
-      ) {
-        bestScore =
-          score;
+      if (score < bestScore) {
+        bestScore = score;
 
         best = {
           c,
@@ -2082,119 +1099,48 @@ function findFiringCell(
  *
  * 永远不会寻路到敌人本体。
  */
-function findSafeApproachCell(
-  ctx,
-  targetPoint,
-  isBoss
-) {
-  const targetCell =
-    cellOfPoint(
-      ctx,
-      targetPoint
-    );
+function findSafeApproachCell(ctx, targetPoint, isBoss) {
+  const targetCell = cellOfPoint(ctx, targetPoint);
 
-  const playerCell =
-    cellOfPoint(
-      ctx,
-      center(ctx.player)
-    );
+  const playerCell = cellOfPoint(ctx, center(ctx.player));
 
-  const mines =
-    mineCells(ctx);
+  const mines = mineCells(ctx);
 
   let best = null;
-  let bestScore =
-    Infinity;
+  let bestScore = Infinity;
 
-  const minRadius =
-    isBoss
-      ? 4
-      : 3;
+  const minRadius = isBoss ? 4 : 3;
 
-  const maxRadius =
-    isBoss
-      ? 7
-      : 6;
+  const maxRadius = isBoss ? 7 : 6;
 
-  for (
-    let radius =
-      minRadius;
-    radius <=
-      maxRadius;
-    radius++
-  ) {
-    for (
-      let dc =
-        -radius;
-      dc <= radius;
-      dc++
-    ) {
-      for (
-        let dr =
-          -radius;
-        dr <= radius;
-        dr++
-      ) {
+  for (let radius = minRadius; radius <= maxRadius; radius++) {
+    for (let dc = -radius; dc <= radius; dc++) {
+      for (let dr = -radius; dr <= radius; dr++) {
         /*
          * 只检查这一圈
          */
-        if (
-          Math.abs(dc) !==
-            radius &&
-          Math.abs(dr) !==
-            radius
-        ) {
+        if (Math.abs(dc) !== radius && Math.abs(dr) !== radius) {
           continue;
         }
 
-        const c =
-          targetCell.c +
-          dc;
+        const c = targetCell.c + dc;
 
-        const r =
-          targetCell.r +
-          dr;
+        const r = targetCell.r + dr;
 
-        if (
-          !canOccupyCell(
-            ctx,
-            c,
-            r,
-            mines
-          )
-        ) {
+        if (!canOccupyCell(ctx, c, r, mines)) {
           continue;
         }
 
-        const cp =
-          cellCenter(
-            ctx,
-            c,
-            r
-          );
+        const cp = cellCenter(ctx, c, r);
 
         /*
          * 敌人碰撞风险高
          */
-        if (
-          collisionRiskAt(
-            ctx,
-            cp
-          ) >
-          80
-        ) {
+        if (collisionRiskAt(ctx, cp) > 80) {
           continue;
         }
 
-        let score =
-          Math.abs(
-            c -
-            playerCell.c
-          ) +
-          Math.abs(
-            r -
-            playerCell.r
-          );
+        let score = Math.abs(c - playerCell.c) + Math.abs(r - playerCell.r);
 
         /*
          * 能直接攻击，
@@ -2207,7 +1153,7 @@ function findSafeApproachCell(
               c,
               r,
             },
-            targetCell
+            targetCell,
           )
         ) {
           score -= 8;
@@ -2216,23 +1162,12 @@ function findSafeApproachCell(
         /*
          * 地图边缘惩罚
          */
-        if (
-          c <= 1 ||
-          r <= 1 ||
-          c >=
-            ctx.COLS - 2 ||
-          r >=
-            ctx.ROWS - 2
-        ) {
+        if (c <= 1 || r <= 1 || c >= ctx.COLS - 2 || r >= ctx.ROWS - 2) {
           score += 5;
         }
 
-        if (
-          score <
-          bestScore
-        ) {
-          bestScore =
-            score;
+        if (score < bestScore) {
+          bestScore = score;
 
           best = {
             c,
@@ -2259,85 +1194,47 @@ function findSafeApproachCell(
  * ================================
  */
 
-function adjacentCrackDirection(
-  ctx
-) {
-  const pc =
-    cellOfPoint(
-      ctx,
-      center(ctx.player)
-    );
+function adjacentCrackDirection(ctx) {
+  const pc = cellOfPoint(ctx, center(ctx.player));
 
   let best = null;
-  let bestHp =
-    Infinity;
+  let bestHp = Infinity;
 
-  for (
-    const name
-    of DIR_NAMES
-  ) {
-    const d =
-      DIR[name];
+  for (const name of DIR_NAMES) {
+    const d = DIR[name];
 
-    const c =
-      pc.c +
-      d.x;
+    const c = pc.c + d.x;
 
-    const r =
-      pc.r +
-      d.y;
+    const r = pc.r + d.y;
 
     let t;
 
     try {
-      t =
-        ctx.mapAt(
-          c,
-          r
-        );
-    }
-    catch (_) {
+      t = ctx.mapAt(c, r);
+    } catch (_) {
       continue;
     }
 
-    if (
-      t !==
-      ctx.TILE.CRACK
-    ) {
+    if (t !== ctx.TILE.CRACK) {
       continue;
     }
 
     let hp = 999;
 
-    if (
-      typeof ctx.crackHpAt ===
-      'function'
-    ) {
+    if (typeof ctx.crackHpAt === "function") {
       try {
-        const v =
-          ctx.crackHpAt(
-            c,
-            r
-          );
+        const v = ctx.crackHpAt(c, r);
 
-        if (
-          Number.isFinite(v)
-        ) {
+        if (Number.isFinite(v)) {
           hp = v;
         }
-      }
-      catch (_) {}
+      } catch (_) {}
     }
 
-    if (
-      hp <
-      bestHp
-    ) {
-      bestHp =
-        hp;
+    if (hp < bestHp) {
+      bestHp = hp;
 
-      best =
-        name;
+      best = name;
     }
   }
 
@@ -2350,57 +1247,36 @@ function adjacentCrackDirection(
  * ================================
  */
 
-function updateStuckState(
-  ctx,
-  desiredDir,
-  dt
-) {
-  const now =
-    ctx.gtMs || 0;
+function updateStuckState(ctx, desiredDir, dt) {
+  const now = ctx.gtMs || 0;
 
-  const p =
-    ctx.player;
+  const p = ctx.player;
 
-  if (
-    memory.lastX ==
-    null
-  ) {
-    memory.lastX =
-      p.x;
+  if (memory.lastX == null) {
+    memory.lastX = p.x;
 
-    memory.lastY =
-      p.y;
+    memory.lastY = p.y;
 
-    memory.lastMovedAt =
-      now;
+    memory.lastMovedAt = now;
 
     return;
   }
 
-  const moved =
-    Math.hypot(
-      p.x -
-        memory.lastX,
+  const moved = Math.hypot(
+    p.x - memory.lastX,
 
-      p.y -
-        memory.lastY
-    );
+    p.y - memory.lastY,
+  );
 
   /*
    * 正常移动
    */
-  if (
-    moved >
-    1.5
-  ) {
-    memory.lastMovedAt =
-      now;
+  if (moved > 1.5) {
+    memory.lastMovedAt = now;
 
-    memory.lastX =
-      p.x;
+    memory.lastX = p.x;
 
-    memory.lastY =
-      p.y;
+    memory.lastY = p.y;
 
     return;
   }
@@ -2410,49 +1286,24 @@ function updateStuckState(
    */
   if (
     desiredDir &&
-    now -
-      memory.lastMovedAt >
-      650 &&
-    now >=
-      memory.unstuckUntil
+    now - memory.lastMovedAt > 650 &&
+    now >= memory.unstuckUntil
   ) {
-    const alternatives =
-      DIR_NAMES.filter(
-        d =>
-          d !==
-          desiredDir
-      );
+    const alternatives = DIR_NAMES.filter((d) => d !== desiredDir);
 
-    memory.unstuckDir =
-      chooseSafestDirection(
-        ctx,
-        dt,
-        alternatives
-      );
+    memory.unstuckDir = chooseSafestDirection(ctx, dt, alternatives);
 
-    memory.unstuckUntil =
-      now + 420;
+    memory.unstuckUntil = now + 420;
 
-    memory.lastMovedAt =
-      now;
+    memory.lastMovedAt = now;
   }
 }
 
-function applyUnstuck(
-  ctx,
-  dir
-) {
-  const now =
-    ctx.gtMs || 0;
+function applyUnstuck(ctx, dir) {
+  const now = ctx.gtMs || 0;
 
-  if (
-    now <
-      memory.unstuckUntil &&
-    memory.unstuckDir
-  ) {
-    return (
-      memory.unstuckDir
-    );
+  if (now < memory.unstuckUntil && memory.unstuckDir) {
+    return memory.unstuckDir;
   }
 
   return dir;
@@ -2464,61 +1315,30 @@ function applyUnstuck(
  * ================================
  */
 
-function shouldMine(
-  ctx,
-  escaping
-) {
-  const now =
-    ctx.gtMs || 0;
+function shouldMine(ctx, escaping) {
+  const now = ctx.gtMs || 0;
 
-  if (
-    !ctx.player.mines ||
-    ctx.player.mines <= 0
-  ) {
+  if (!ctx.player.mines || ctx.player.mines <= 0) {
     return false;
   }
 
   /*
    * 防止瞬间把雷用光
    */
-  if (
-    now -
-      memory.lastMineAt <
-    1400
-  ) {
+  if (now - memory.lastMineAt < 1400) {
     return false;
   }
 
-  const p =
-    center(
-      ctx.player
-    );
+  const p = center(ctx.player);
 
-  let nearby =
-    false;
+  let nearby = false;
 
   /*
    * Boss 接近
    */
-  if (
-    ctx.boss &&
-    (
-      ctx.boss.hp == null ||
-      ctx.boss.hp > 0
-    )
-  ) {
-    if (
-      distance(
-        ctx,
-        p,
-        center(
-          ctx.boss
-        )
-      ) <
-      ctx.CELL * 2.6
-    ) {
-      nearby =
-        true;
+  if (ctx.boss && (ctx.boss.hp == null || ctx.boss.hp > 0)) {
+    if (distance(ctx, p, center(ctx.boss)) < ctx.CELL * 2.6) {
+      nearby = true;
     }
   }
 
@@ -2526,54 +1346,27 @@ function shouldMine(
    * 普通敌人接近
    */
   if (!nearby) {
-    for (
-      const e
-      of ctx.enemies || []
-    ) {
-      if (
-        e.hp != null &&
-        e.hp <= 0
-      ) {
+    for (const e of ctx.enemies || []) {
+      if (e.hp != null && e.hp <= 0) {
         continue;
       }
 
-      if (
-        distance(
-          ctx,
-          p,
-          center(e)
-        ) <
-        ctx.CELL * 2.4
-      ) {
-        nearby =
-          true;
+      if (distance(ctx, p, center(e)) < ctx.CELL * 2.4) {
+        nearby = true;
 
         break;
       }
     }
   }
 
-  const lowHp =
-    ctx.player.hp /
-      Math.max(
-        1,
-        ctx.player.maxHp
-      ) <
-    0.4;
+  const lowHp = ctx.player.hp / Math.max(1, ctx.player.maxHp) < 0.4;
 
   /*
    * 敌人贴脸
    * 或残血逃跑
    */
-  if (
-    nearby ||
-    (
-      escaping &&
-      lowHp
-    )
-  ) {
-    memory.lastMineAt =
-      now;
+  if (nearby || (escaping && lowHp)) {
+    memory.lastMineAt = now;
 
     return true;
   }
@@ -2587,32 +1380,20 @@ function shouldMine(
  * ================================
  */
 
-function resetMemory(
-  ctx
-) {
-  memory.lastX =
-    ctx.player?.x ??
-    null;
+function resetMemory(ctx) {
+  memory.lastX = ctx.player?.x ?? null;
 
-  memory.lastY =
-    ctx.player?.y ??
-    null;
+  memory.lastY = ctx.player?.y ?? null;
 
-  memory.lastMovedAt =
-    ctx.gtMs || 0;
+  memory.lastMovedAt = ctx.gtMs || 0;
 
-  memory.lastMineAt =
-    -99999;
+  memory.lastMineAt = -99999;
 
-  memory.lastDir =
-    ctx.player?.dirName ||
-    'up';
+  memory.lastDir = ctx.player?.dirName || "up";
 
-  memory.unstuckUntil =
-    0;
+  memory.unstuckUntil = 0;
 
-  memory.unstuckDir =
-    null;
+  memory.unstuckDir = null;
 }
 
 /*
@@ -2624,9 +1405,7 @@ function resetMemory(
  */
 
 export default {
-
-  name:
-    'THX-猎杀者-v2',
+  name: "THX-猎杀者-v2",
 
   onLoad(ctx) {
     resetMemory(ctx);
@@ -2636,17 +1415,8 @@ export default {
     resetMemory(ctx);
   },
 
-  decide(
-    ctx,
-    dt
-  ) {
-
-    if (
-      !ctx ||
-      ctx.state !==
-        'playing' ||
-      !ctx.player
-    ) {
+  decide(ctx, dt) {
+    if (!ctx || ctx.state !== "playing" || !ctx.player) {
       return emptyAction();
     }
 
@@ -2660,40 +1430,21 @@ export default {
      * ==================================================
      */
 
-    let dir =
-      emergencyCollisionEscape(
-        ctx,
-        dt
-      );
+    let dir = emergencyCollisionEscape(ctx, dt);
 
     if (dir) {
+      updateStuckState(ctx, dir, dt);
 
-      updateStuckState(
-        ctx,
-        dir,
-        dt
-      );
+      dir = applyUnstuck(ctx, dir);
 
-      dir =
-        applyUnstuck(
-          ctx,
-          dir
-        );
-
-      memory.lastDir =
-        dir ||
-        memory.lastDir;
+      memory.lastDir = dir || memory.lastDir;
 
       return action(
-        dir ||
-          memory.lastDir,
+        dir || memory.lastDir,
 
         true,
 
-        shouldMine(
-          ctx,
-          true
-        )
+        shouldMine(ctx, true),
       );
     }
 
@@ -2707,43 +1458,24 @@ export default {
      * ==================================================
      */
 
-    dir =
-      immediateDodge(
-        ctx,
-        dt
-      );
+    dir = immediateDodge(ctx, dt);
 
     if (dir) {
+      updateStuckState(ctx, dir, dt);
 
-      updateStuckState(
-        ctx,
-        dir,
-        dt
-      );
+      dir = applyUnstuck(ctx, dir);
 
-      dir =
-        applyUnstuck(
-          ctx,
-          dir
-        );
-
-      memory.lastDir =
-        dir ||
-        memory.lastDir;
+      memory.lastDir = dir || memory.lastDir;
 
       /*
        * 闪避时仍然持续射击
        */
       return action(
-        dir ||
-          memory.lastDir,
+        dir || memory.lastDir,
 
         true,
 
-        shouldMine(
-          ctx,
-          true
-        )
+        shouldMine(ctx, true),
       );
     }
 
@@ -2757,59 +1489,28 @@ export default {
      * ==================================================
      */
 
-    const item =
-      chooseItem(
-        ctx,
-        dt
-      );
+    const item = chooseItem(ctx, dt);
 
     if (item) {
+      const itemCell = cellOfPoint(ctx, {
+        x: item.x,
+        y: item.y,
+      });
 
-      const itemCell =
-        cellOfPoint(
-          ctx,
-          {
-            x: item.x,
-            y: item.y,
-          }
-        );
+      dir = bfsNextDirection(ctx, itemCell) || chooseSafestDirection(ctx, dt);
 
-      dir =
-        bfsNextDirection(
-          ctx,
-          itemCell
-        ) ||
-        chooseSafestDirection(
-          ctx,
-          dt
-        );
+      updateStuckState(ctx, dir, dt);
 
-      updateStuckState(
-        ctx,
-        dir,
-        dt
-      );
+      dir = applyUnstuck(ctx, dir);
 
-      dir =
-        applyUnstuck(
-          ctx,
-          dir
-        );
-
-      memory.lastDir =
-        dir ||
-        memory.lastDir;
+      memory.lastDir = dir || memory.lastDir;
 
       return action(
-        dir ||
-          memory.lastDir,
+        dir || memory.lastDir,
 
         true,
 
-        shouldMine(
-          ctx,
-          false
-        )
+        shouldMine(ctx, false),
       );
     }
 
@@ -2823,47 +1524,22 @@ export default {
      * ==================================================
      */
 
-    const target =
-      chooseCombatTarget(
-        ctx
-      );
+    const target = chooseCombatTarget(ctx);
 
     if (target) {
+      const isBoss = target.kind === "boss";
 
-      const isBoss =
-        target.kind ===
-        'boss';
+      const aim = aimDirectionIfAligned(ctx, target.p);
 
-      const aim =
-        aimDirectionIfAligned(
-          ctx,
-          target.p
-        );
+      const p = center(ctx.player);
 
-      const p =
-        center(
-          ctx.player
-        );
-
-      const targetDistance =
-        distance(
-          ctx,
-          p,
-          target.p
-        );
+      const targetDistance = distance(ctx, p, target.p);
 
       /*
        * Boss 比普通敌人
        * 保持更远安全距离
        */
-      const tooClose =
-        targetDistance <
-        ctx.CELL *
-          (
-            isBoss
-              ? 4
-              : 2.2
-          );
+      const tooClose = targetDistance < ctx.CELL * (isBoss ? 4 : 2.2);
 
       /*
        * ================================================
@@ -2874,7 +1550,6 @@ export default {
        */
 
       if (aim) {
-
         /*
          * 太近：
          *
@@ -2882,45 +1557,22 @@ export default {
          * 不继续冲脸。
          */
         if (tooClose) {
-
           const escape =
-            emergencyCollisionEscape(
-              ctx,
-              dt
-            ) ||
-            chooseSafestDirection(
-              ctx,
-              dt
-            );
+            emergencyCollisionEscape(ctx, dt) || chooseSafestDirection(ctx, dt);
 
           if (escape) {
+            updateStuckState(ctx, escape, dt);
 
-            updateStuckState(
-              ctx,
-              escape,
-              dt
-            );
+            dir = applyUnstuck(ctx, escape);
 
-            dir =
-              applyUnstuck(
-                ctx,
-                escape
-              );
-
-            memory.lastDir =
-              dir ||
-              memory.lastDir;
+            memory.lastDir = dir || memory.lastDir;
 
             return action(
-              dir ||
-                memory.lastDir,
+              dir || memory.lastDir,
 
               true,
 
-              shouldMine(
-                ctx,
-                true
-              )
+              shouldMine(ctx, true),
             );
           }
         }
@@ -2934,18 +1586,8 @@ export default {
          *
          * v1 会继续往敌人冲。
          */
-        if (
-          ctx.player.dirName ===
-          aim
-        ) {
-          return action(
-            null,
-            true,
-            shouldMine(
-              ctx,
-              false
-            )
-          );
+        if (ctx.player.dirName === aim) {
+          return action(null, true, shouldMine(ctx, false));
         }
 
         /*
@@ -2957,28 +1599,12 @@ export default {
          * 才允许。
          */
         if (
-          !isBlocked(
-            ctx,
-            aim
-          ) &&
-          directionSafetyScore(
-            ctx,
-            aim,
-            dt
-          ) >
-            -15000
+          !isBlocked(ctx, aim) &&
+          directionSafetyScore(ctx, aim, dt) > -15000
         ) {
-          memory.lastDir =
-            aim;
+          memory.lastDir = aim;
 
-          return action(
-            aim,
-            true,
-            shouldMine(
-              ctx,
-              false
-            )
-          );
+          return action(aim, true, shouldMine(ctx, false));
         }
       }
 
@@ -2992,20 +1618,9 @@ export default {
        * ================================================
        */
 
-      const firingCell =
-        findFiringCell(
-          ctx,
-          target.p,
-          isBoss
-        );
+      const firingCell = findFiringCell(ctx, target.p, isBoss);
 
-      dir =
-        firingCell
-          ? bfsNextDirection(
-              ctx,
-              firingCell
-            )
-          : null;
+      dir = firingCell ? bfsNextDirection(ctx, firingCell) : null;
 
       /*
        * 找不到完美射击位。
@@ -3017,22 +1632,10 @@ export default {
        * 不再 BFS 到敌人位置！
        */
       if (!dir) {
+        const approachCell = findSafeApproachCell(ctx, target.p, isBoss);
 
-        const approachCell =
-          findSafeApproachCell(
-            ctx,
-            target.p,
-            isBoss
-          );
-
-        if (
-          approachCell
-        ) {
-          dir =
-            bfsNextDirection(
-              ctx,
-              approachCell
-            );
+        if (approachCell) {
+          dir = bfsNextDirection(ctx, approachCell);
         }
       }
 
@@ -3042,39 +1645,21 @@ export default {
        * 选择当前安全方向。
        */
       if (!dir) {
-        dir =
-          chooseSafestDirection(
-            ctx,
-            dt
-          );
+        dir = chooseSafestDirection(ctx, dt);
       }
 
-      updateStuckState(
-        ctx,
-        dir,
-        dt
-      );
+      updateStuckState(ctx, dir, dt);
 
-      dir =
-        applyUnstuck(
-          ctx,
-          dir
-        );
+      dir = applyUnstuck(ctx, dir);
 
-      memory.lastDir =
-        dir ||
-        memory.lastDir;
+      memory.lastDir = dir || memory.lastDir;
 
       return action(
-        dir ||
-          memory.lastDir,
+        dir || memory.lastDir,
 
         true,
 
-        shouldMine(
-          ctx,
-          false
-        )
+        shouldMine(ctx, false),
       );
     }
 
@@ -3090,71 +1675,36 @@ export default {
      * ==================================================
      */
 
-    dir =
-      chooseSafestDirection(
-        ctx,
-        dt
-      );
+    dir = chooseSafestDirection(ctx, dt);
 
     /*
      * 如果完全没路，
      * 尝试打碎碎石。
      */
-    if (
-      !dir ||
-      directionSafetyScore(
-        ctx,
-        dir,
-        dt
-      ) <
-        -500000
-    ) {
-      const crackDir =
-        adjacentCrackDirection(
-          ctx
-        );
+    if (!dir || directionSafetyScore(ctx, dir, dt) < -500000) {
+      const crackDir = adjacentCrackDirection(ctx);
 
-      if (
-        crackDir
-      ) {
-        dir =
-          crackDir;
+      if (crackDir) {
+        dir = crackDir;
       }
     }
 
-    updateStuckState(
-      ctx,
-      dir,
-      dt
-    );
+    updateStuckState(ctx, dir, dt);
 
-    dir =
-      applyUnstuck(
-        ctx,
-        dir
-      );
+    dir = applyUnstuck(ctx, dir);
 
-    memory.lastDir =
-      dir ||
-      memory.lastDir;
+    memory.lastDir = dir || memory.lastDir;
 
     return action(
-      dir ||
-        memory.lastDir,
+      dir || memory.lastDir,
 
       true,
 
-      shouldMine(
-        ctx,
-        false
-      )
+      shouldMine(ctx, false),
     );
   },
 
-  onDeath(
-    ctx,
-    reason
-  ) {},
+  onDeath(ctx, reason) {},
 
   onDisabled(ctx) {},
 };
