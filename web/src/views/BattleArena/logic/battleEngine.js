@@ -391,7 +391,7 @@ export function moveBattleTank(t, dt) {
       t.x = cen.x - t.w / 2;
       t.y = cen.y - t.h / 2;
       window.lastTeleport[t.id] = window.gtMs;
-      spawnExplosion(cen.x, cen.y, 26, "#58a6ff");
+      spawnExplosion(cen.x, cen.y, 20, "#58a6ff");
       addFloat(cen.x, cen.y - 18, "传送", "#58a6ff");
       sfx("tp");
     }
@@ -694,16 +694,16 @@ export function buildBattleContext(ai) {
     boss:
       window.boss && window.boss.alive
         ? {
-            x: window.boss.x,
-            y: window.boss.y,
-            w: window.boss.w,
-            h: window.boss.h,
-            dirName: window.boss.dirName,
-            dir: { x: window.boss.dir.x, y: window.boss.dir.y },
-            speed: window.boss.speed,
-            hp: window.boss.hp,
-            maxHp: window.boss.maxHp,
-          }
+          x: window.boss.x,
+          y: window.boss.y,
+          w: window.boss.w,
+          h: window.boss.h,
+          dirName: window.boss.dirName,
+          dir: { x: window.boss.dir.x, y: window.boss.dir.y },
+          speed: window.boss.speed,
+          hp: window.boss.hp,
+          maxHp: window.boss.maxHp,
+        }
         : null,
     gates: window.gates.map((g) => ({
       cells: g.cells.map((c) => ({ column: c.c, row: c.r })),

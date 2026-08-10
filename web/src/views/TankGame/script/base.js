@@ -343,7 +343,7 @@ export function damageCrack(c, r, dmg) {
 
 // ====================== 实体 ======================
 export function spawnExplosion(x, y, r, color) {
-  const n = Math.min(26, Math.floor(r / 2));
+  const n = Math.min(20, Math.floor(r / 2));
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
     const sp = (0.5 + Math.random()) * (r / 8);
@@ -1462,13 +1462,11 @@ export function initGame() {
           r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
         } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
-        <div class="log-detail">得分: <span>${r.score ?? 0}</span></div>
+        <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        <div class="log-detail">血量: <span>${r.playerState.hp}/${r.playerState.maxHp}</span> | 护盾: <span>${r.playerState.hasShield ? "有" : "无"}</span></div>
         ${
           r.type === "ai"
-            ? `<div class="log-detail">权重 - 生存: <span>${Math.round(r.aiState.survivalWeight)}</span> | 击杀: <span>${Math.round(r.aiState.killWeight)}</span> | 物品: <span>${Math.round(r.aiState.itemWeight)}</span></div>
-        <div class="log-detail">决策: <span>${r.aiState.selectedAction || "N/A"}</span> | 躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
             : ""
         }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
@@ -1482,7 +1480,7 @@ export function initGame() {
               .slice(-5)
               .map(
                 (d) => `
-              <div>[${d.time.toFixed(1)}s] ${d.action} ${d.weights ? `- 权重(S:${Math.round(d.weights.survival)} K:${Math.round(d.weights.kill)} I:${Math.round(d.weights.item)})` : ""}</div>
+              <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
               )
               .join("")}

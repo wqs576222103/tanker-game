@@ -28,7 +28,6 @@ export const AILogger = {
     this.currentSession = {
       startTime: performance.now(),
       decisions: [],
-      lastWeights: { survival: 0, kill: 0, item: 0 },
       lastAction: null,
       lastMoveDir: null,
       wasDodging: false,
@@ -81,22 +80,14 @@ export const AILogger = {
       timestamp: Date.now(),
       type: AIPlayer.enabled ? "ai" : "player",
       aiName: AIPlayer.enabled ? AIPlayer.aiName : null,
-      kills,
+      kills: window.kills,
       deathReason: reason,
       playerState: {
-        hp: player.hp,
-        maxHp: player.maxHp || 5,
         x: player.x,
         y: player.y,
         dir: { ...player.dir },
-        hasShield: player.shieldT > performance.now(),
       },
       aiState: {
-        survivalWeight: this.currentSession.lastWeights.survival,
-        killWeight: this.currentSession.lastWeights.kill,
-        itemWeight: this.currentSession.lastWeights.item,
-        selectedAction: this.currentSession.lastAction,
-        moveDir: this.currentSession.lastMoveDir,
         wasDodging: this.currentSession.wasDodging,
       },
       surroundings: {
@@ -117,11 +108,6 @@ export const AILogger = {
 
     this.startSession();
     return record;
-  },
-
-  updateWeights(survival, kill, item) {
-    if (!this.currentSession) return;
-    this.currentSession.lastWeights = { survival, kill, item };
   },
 
   updateAction(action) {

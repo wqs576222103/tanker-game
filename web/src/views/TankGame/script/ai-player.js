@@ -244,6 +244,24 @@ export const AIPlayer = {
       return;
     }
     this.applyAction(action);
+
+    // 记录 AI 决策日志
+    const moveDir = action.left
+      ? "left"
+      : action.right
+        ? "right"
+        : action.up
+          ? "up"
+          : action.down
+            ? "down"
+            : null;
+    const isDodging = !!moveDir;
+    AILogger.updateAction(action._actionName || moveDir || "idle");
+    AILogger.updateDodging(isDodging, moveDir);
+    AILogger.logDecision({
+      action: action._actionName || moveDir || "idle",
+      isDodging,
+    });
   },
 
   // 将 AI 返回的动作写入按键

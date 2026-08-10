@@ -639,25 +639,25 @@ export default {
       alts =
         dy >= 0
           ? [
-              { x: 0, y: 1 },
-              { x: 0, y: -1 },
-            ]
+            { x: 0, y: 1 },
+            { x: 0, y: -1 },
+          ]
           : [
-              { x: 0, y: -1 },
-              { x: 0, y: 1 },
-            ];
+            { x: 0, y: -1 },
+            { x: 0, y: 1 },
+          ];
     } else {
       primary = dy >= 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
       alts =
         dx >= 0
           ? [
-              { x: 1, y: 0 },
-              { x: -1, y: 0 },
-            ]
+            { x: 1, y: 0 },
+            { x: -1, y: 0 },
+          ]
           : [
-              { x: -1, y: 0 },
-              { x: 1, y: 0 },
-            ];
+            { x: -1, y: 0 },
+            { x: 1, y: 0 },
+          ];
     }
     if (this.isClearDir(ctx, px, py, primary)) return primary;
     for (const alt of alts) {
@@ -669,8 +669,8 @@ export default {
   // 该轴方向前方一格是否可通行（宽度感知：检查移动后整个包围盒）
   isClearDir(ctx, px, py, d) {
     const CELL = ctx.CELL;
-    const w = ctx.player.w || 26,
-      h = ctx.player.h || 26;
+    const w = ctx.player.w || 20,
+      h = ctx.player.h || 20;
     const nx = px + d.x * CELL,
       ny = py + d.y * CELL;
     const c1 = Math.max(0, Math.floor(nx / CELL));

@@ -211,7 +211,7 @@ export const TankActions = {
       t.x = cen.x - t.w / 2;
       t.y = cen.y - t.h / 2;
       lastTeleport[t.id] = gtMs;
-      spawnExplosion(cen.x, cen.y, 26, "#58a6ff");
+      spawnExplosion(cen.x, cen.y, 20, "#58a6ff");
       addFloat(cen.x, cen.y - 18, "传送", "#58a6ff");
       sfx("tp");
     }
@@ -575,7 +575,7 @@ export const TankActions = {
     spawnExplosion(
       player.x + player.w / 2,
       player.y + player.h / 2,
-      26,
+      20,
       "#ff4a3a",
     );
     sfx("boom");
