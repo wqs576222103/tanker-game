@@ -32,25 +32,41 @@ import { aiTanks, gameState } from "./gameState.js";
 import { setBattleCtx, drawBattle } from "./draw.js";
 import { clearAllAITanks, importAIFiles } from "./aiManager.js";
 
-const SPAWN_POINTS = [
-  { c: 1, r: 1 },
-  { c: COLS - 2, r: 1 },
-  { c: 1, r: ROWS - 2 },
-  { c: COLS - 2, r: ROWS - 2 },
-  { c: 7, r: 1 },
-  { c: COLS - 8, r: 1 },
-  { c: 7, r: ROWS - 2 },
-  { c: COLS - 8, r: ROWS - 2 },
-];
+function makeSpawnPoints(count) {
+  const rows = [1, Math.floor(ROWS / 3), Math.floor((2 * ROWS) / 3), ROWS - 2];
+  const cols = [1, Math.floor(COLS / 3), Math.floor((2 * COLS) / 3), COLS - 2];
+  const rows8 = [1, 4, 8, 12, ROWS - 12, ROWS - 8, ROWS - 4, ROWS - 2];
+  const cols8 = [1, 4, 8, 12, COLS - 12, COLS - 8, COLS - 4, COLS - 2];
+  if (count <= 4) {
+    return rows.flatMap((r) => cols.map((c) => ({ c, r })));
+  }
+  return rows8.flatMap((r) => cols8.map((c) => ({ c, r })));
+}
+
+const SPAWN_POINTS = makeSpawnPoints(8);
+
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 function getSpawnPoints(count) {
-  if (count === 2) {
-    return [
-      { c: 1, r: 1 },
-      { c: COLS - 2, r: ROWS - 2 },
-    ];
+  const shuffled = shuffleArray(SPAWN_POINTS);
+  const result = [];
+  const usedRows = new Set();
+  const usedCols = new Set();
+  for (const p of shuffled) {
+    if (result.length >= count) break;
+    if (usedRows.has(p.r) || usedCols.has(p.c)) continue;
+    result.push(p);
+    usedRows.add(p.r);
+    usedCols.add(p.c);
   }
-  return SPAWN_POINTS.slice(0, count);
+  return result;
 }
 
 export function initBattleGame(canvasEl) {
