@@ -1,4 +1,6 @@
 const http = require("http");
+require("dotenv").config();
+const { ensureTable } = require("./api/db");
 const userRoutes = require("./api/user");
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -13,3 +15,9 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`server listening on http://localhost:${PORT}`);
 });
+
+ensureTable()
+  .then(() =>
+    console.log(`[db] 数据表 ${process.env.DB_TABLE || "t_user_sync"} 已就绪`),
+  )
+  .catch((err) => console.error(`[db] 初始化失败: ${err.message}`));

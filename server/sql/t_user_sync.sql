@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS `t_user_sync` (
+  `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+  `username` VARCHAR(64) DEFAULT NULL,
+  `phone` VARCHAR(32) DEFAULT NULL,
+  `employee_id` VARCHAR(64) DEFAULT NULL,
+  `post_name` VARCHAR(64) DEFAULT NULL,
+  `create_time` DATETIME DEFAULT NULL,
+  `update_time` DATETIME DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

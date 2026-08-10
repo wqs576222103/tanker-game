@@ -1,4 +1,5 @@
 const http = require("http");
+const { saveUser } = require("./db");
 
 const SOURCE_MAP = {
   localhost: "http://8.130.41.52",
@@ -27,6 +28,18 @@ function forward(req, res, targetBase, token, search) {
       headers: { ...req.headers, host: url.host, authorization: token },
     },
     (proxyRes) => {
+      const chunks = [];
+      proxyRes.on("data", (c) => chunks.push(c));
+      proxyRes.on("end", () => {
+        const body = Buffer.concat(chunks).toString("utf8");
+        try {
+          saveUser(JSON.parse(body)).catch((err) =>
+            console.error(`[db] 保存用户失败: ${err.message}`),
+          );
+        } catch (err) {
+          console.error(`[db] 解析上游响应失败: ${err.message}`);
+        }
+      });
       res.writeHead(proxyRes.statusCode, proxyRes.headers);
       proxyRes.pipe(res);
     },

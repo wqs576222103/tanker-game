@@ -1,7 +1,7 @@
 {
   "name": "tanker-game-server",
   "version": "1.0.0",
-  "description": "user/infoByToken proxy service",
+  "description": "tanker-game backend",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -9,5 +9,9 @@
   "engines": {
     "node": ">=14"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mysql2": "^3.23.2"
+  }
 }
