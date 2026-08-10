@@ -54,7 +54,7 @@ function forward(req, res, targetBase, token, search) {
 }
 
 function handle(req, res) {
-  const match = req.url.match(/^\/user\/infoByToken\/([^/?#]+)/);
+  const match = req.url.match(/^\/tank-game-api\/user\/infoByToken\/([^/?#]+)/);
   if (!match) return false;
 
   res.setHeader("Content-Type", "application/json; charset=utf-8");

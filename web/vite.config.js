@@ -8,6 +8,13 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    proxy: {
+      "/tank-game-api": {
+        target: "http://localhost:3000/tank-game-api",
+        changeOrigin: true,
+
+      },
+    },
   },
   resolve: {
     alias: {
