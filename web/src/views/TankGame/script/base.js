@@ -171,6 +171,13 @@ export function protectedKey(c, r) {
 export function isProtectedCell(c, r) {
   if (r >= 1 && r <= 2 && c >= 1 && c <= COLS - 2) return true; // 敌人出生车道
   if (c >= 4 && c <= 6 && r >= 14 && r <= 16) return true; // 玩家出生区
+  if (
+    c >= PLAYER_SPAWN.c &&
+    c <= PLAYER_SPAWN.c &&
+    r >= PLAYER_SPAWN.r &&
+    r <= PLAYER_SPAWN.r
+  )
+    return true; // 玩家精确出生格
   if (c >= 20 && c <= 24 && r >= 26 && r <= 28) return true; // 下方传送门出生区
   if (c >= 1 && c <= 3 && r >= 3 && r <= 4) return true; // 左上传送门入口
   if (c >= COLS - 3 && c <= COLS - 2 && r >= 3 && r <= 4) return true; // 右上传送门入口
@@ -435,9 +442,8 @@ export function resetGame() {
   window.map = map;
   window.gates = gates;
   window.crackHp = crackHp;
-  const px = PLAYER_SPAWN.c * CELL + (CELL - 4) / 2;
-  const py = PLAYER_SPAWN.r * CELL + (CELL - 4) / 2;
-  player = makeTank(px, py, "up", true);
+  const sp = centerOf(PLAYER_SPAWN.c, PLAYER_SPAWN.r);
+  player = makeTank(sp.x - (CELL - 4) / 2, sp.y - (CELL - 4) / 2, "up", true);
   player.invincible = 2000;
   tanks.push(player);
   spawnEnemy(true);

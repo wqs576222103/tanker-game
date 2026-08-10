@@ -6,7 +6,9 @@ import router from './router'
 const app = createApp(App).use(router)
 
 app.config.errorHandler = (err, instance, info) => {
+  console.error(err)
   alert('脚本报错, 请查看控制台: ' + (err instanceof Error ? err.message : String(err)))
+
 }
 
 // window.onerror = function (msg, url, line, col, err) {
@@ -14,10 +16,10 @@ app.config.errorHandler = (err, instance, info) => {
 //   return true
 // }
 
-window.addEventListener('unhandledrejection', (e) => {
+// window.addEventListener('unhandledrejection', (e) => {
+//   console.error(e.reason)
+//   alert('Promise 错误: ' + (e.reason?.message || e.reason))
 
-  alert('Promise 错误: ' + (e.reason?.message || e.reason))
-  console.error(e.reason)
-})
+// })
 
 app.mount('#app')
