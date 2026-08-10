@@ -74,25 +74,40 @@ function ctxIsPathClear(x1, y1, x2, y2) {
 
 function ctxIsBlocked(dir) {
   if (!player) return true;
-  const c = ctxCellOf(player.x + player.w / 2, player.y + player.h / 2);
-  const nc = c.c + (dir.x || 0);
-  const nr = c.r + (dir.y || 0);
-  const v = map[nr] ? map[nr][nc] : BORDER;
-  return ctxBlocked(v);
+  // 用游戏内 blocked() 逻辑模拟移动后的位置，完整覆盖坦克包围盒
+  const nx = player.x + (dir.x || 0) * CELL;
+  const ny = player.y + (dir.y || 0) * CELL;
+  return isTankBlocked(nx, ny, player.w, player.h);
 }
 
 function ctxGetFreeDistance(dir) {
   if (!player) return 0;
-  const s = ctxCellOf(player.x + player.w / 2, player.y + player.h / 2);
-  let c = s.c + (dir.x || 0);
-  let r = s.r + (dir.y || 0);
   let dist = 0;
-  while (map[r] && (map[r][c] === EMPTY || map[r][c] === GRASS)) {
-    dist += CELL;
-    c += dir.x || 0;
-    r += dir.y || 0;
+  // 逐步试探，每次步进 CELL/2 用包围盒检查，避免中心点误判
+  const step = Math.max(4, Math.floor(CELL / 4));
+  while (true) {
+    dist += step;
+    const nx = player.x + (dir.x || 0) * dist;
+    const ny = player.y + (dir.y || 0) * dist;
+    if (isTankBlocked(nx, ny, player.w, player.h)) break;
+    if (dist > 300) break; // 上限
   }
   return dist;
+}
+
+// 检查给定矩形位置是否碰撞障碍/边界/其他坦克（复制自 TankActions.blocked，仅障碍部分）
+function isTankBlocked(x, y, w, h) {
+  const c1 = Math.max(0, Math.floor(x / CELL));
+  const c2 = Math.min(COLS - 1, Math.floor((x + w - 1) / CELL));
+  const r1 = Math.max(0, Math.floor(y / CELL));
+  const r2 = Math.min(ROWS - 1, Math.floor((y + h - 1) / CELL));
+  for (let r = r1; r <= r2; r++) {
+    for (let c = c1; c <= c2; c++) {
+      const v = map[r] ? map[r][c] : BORDER;
+      if (v !== EMPTY && v !== GRASS) return true;
+    }
+  }
+  return false;
 }
 
 export const AIPlayer = {

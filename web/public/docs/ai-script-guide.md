@@ -131,8 +131,8 @@ export default {
 | `crackHpAt(column,row)`    | 碎石墙剩余 HP（无损的石头返回 0）              |
 | `isObstacle(column,row)`   | 是否为障碍（墙/边界/碎石）                     |
 | `isPathClear(x1,y1,x2,y2)` | 两点（含两端）之间能否直线通行（需同列或同行） |
-| `isBlocked(dir)`           | 玩家朝 `dir` 方向下一格是否被堵                |
-| `getFreeDistance(dir)`     | 玩家朝 `dir` 方向到最近障碍的距离（像素）      |
+| `isBlocked(dir)`           | 玩家朝 `dir` 方向移动一格是否会撞墙/边界（**宽度感知**，检查坦克包围盒） |
+| `getFreeDistance(dir)`     | 玩家朝 `dir` 方向到最近障碍的距离（像素，**宽度感知**）                  |
 | `isEnemyBullet(bullet)`    | 判断子弹是否来自敌方（兼容单人/AI对决两种模式）|
 | `selfTeamId`               | 当前坦克的阵营 ID（仅 AI 对决模式有效，数字）  |
 
@@ -169,3 +169,4 @@ export default {
 
 - 所有像素坐标为坦克/对象的**左上角**，中心点为 `x + w/2, y + h/2`。
 - `cellOf` / `mapAt` / `isObstacle` 用的格子下标：c 为列，r 为行，`map[r][c]`。
+- 坦克尺寸为 `w = h = CELL - 4 = 26px`，实际占据约一个格子宽。**`isBlocked` 和 `getFreeDistance` 已做宽度感知**（检查坦克包围盒所有格子），不会因只检测中心点而漏判右前方/左前方障碍。
