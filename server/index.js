@@ -1,23 +1,17 @@
-const http = require("http");
+const Koa = require("koa");
+const bodyParser = require("koa-bodyparser");
 require("dotenv").config();
-const { ensureTable } = require("./api/db");
-const userRoutes = require("./api/user");
+const userRouter = require("./api/user");
+const scoreRouter = require("./api/score");
 
+const app = new Koa();
 const PORT = Number(process.env.PORT) || 3000;
 
-const server = http.createServer((req, res) => {
-  if (userRoutes.handle(req, res)) return;
+app.use(bodyParser());
 
-  res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify({ code: 404, message: "Not Found" }));
-});
+app.use(userRouter.routes()).use(userRouter.allowedMethods());
+app.use(scoreRouter.routes()).use(scoreRouter.allowedMethods());
 
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`server listening on http://localhost:${PORT}`);
 });
-
-ensureTable()
-  .then(() =>
-    console.log(`[db] 数据表 ${process.env.DB_TABLE || "t_user_sync"} 已就绪`),
-  )
-  .catch((err) => console.error(`[db] 初始化失败: ${err.message}`));
