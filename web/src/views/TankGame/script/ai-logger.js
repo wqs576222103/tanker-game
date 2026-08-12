@@ -81,6 +81,7 @@ export const AILogger = {
       type: AIPlayer.enabled ? "ai" : "player",
       aiName: AIPlayer.enabled ? AIPlayer.aiName : null,
       kills: window.kills,
+      bossKills: window.bossKills,
       deathReason: reason,
       playerState: {
         x: player.x,
