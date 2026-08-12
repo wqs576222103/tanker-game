@@ -5,3 +5,5 @@ html, body {
   font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
   overflow: hidden;
 }
+
+.none-select { user-select: none; }
