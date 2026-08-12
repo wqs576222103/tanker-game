@@ -20,6 +20,11 @@ const routes = [
     name: 'BattleArena',
     component: () => import('../views/BattleArena/index.vue'),
   },
+  {
+    path: '/ranking',
+    name: 'Ranking',
+    component: () => import('../views/Ranking/index.vue'),
+  },
 ]
 
 const router = createRouter({
