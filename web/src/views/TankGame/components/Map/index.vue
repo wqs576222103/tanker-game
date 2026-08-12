@@ -22,7 +22,7 @@
         </p>
         <div class="items">
           🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />
-          🛡️ 护盾 &nbsp;💣 地雷 &nbsp;❤️ 生命恢复 &nbsp;🔄 反弹（永久）
+          🛡️ 护盾 &nbsp;💣 地雷 &nbsp;❤️ 生命恢复 &nbsp;🔄 反弹子弹
         </div>
         <p>
           ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />

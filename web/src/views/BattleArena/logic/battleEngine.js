@@ -619,6 +619,114 @@ export function buildBattleContext(ai) {
         return v === WALL || v === BORDER || v === CRACK;
       },
       isEnemyBullet: (bullet) => bullet.owner !== ownTank.teamId,
+      isPathClear(x1, y1, x2, y2) {
+        if (y1 === y2) {
+          const lo = Math.min(Math.floor(x1 / CELL), Math.floor(x2 / CELL));
+          const hi = Math.max(Math.floor(x1 / CELL), Math.floor(x2 / CELL));
+          for (let c = lo; c <= hi; c++) {
+            const v = window.map[Math.floor(y1 / CELL)][c];
+            if (v === WALL || v === BORDER || v === CRACK) return false;
+          }
+          return true;
+        }
+        if (x1 === x2) {
+          const lo = Math.min(Math.floor(y1 / CELL), Math.floor(y2 / CELL));
+          const hi = Math.max(Math.floor(y1 / CELL), Math.floor(y2 / CELL));
+          for (let r = lo; r <= hi; r++) {
+            const v = window.map[r][Math.floor(x1 / CELL)];
+            if (v === WALL || v === BORDER || v === CRACK) return false;
+          }
+          return true;
+        }
+        return false;
+      },
+      isBlocked(dir) {
+        if (!ownTank) return true;
+        const px = ownTank.x + ownTank.w / 2;
+        const py = ownTank.y + ownTank.h / 2;
+        const nx = px + (dir.x || 0) * CELL;
+        const ny = py + (dir.y || 0) * CELL;
+        const w = ownTank.w || 20,
+          h = ownTank.h || 20;
+        const c1 = Math.max(0, Math.floor(nx / CELL));
+        const c2 = Math.min(COLS - 1, Math.floor((nx + w - 1) / CELL));
+        const r1 = Math.max(0, Math.floor(ny / CELL));
+        const r2 = Math.min(ROWS - 1, Math.floor((ny + h - 1) / CELL));
+        for (let r = r1; r <= r2; r++) {
+          for (let c = c1; c <= c2; c++) {
+            const v = window.map[r] ? window.map[r][c] : BORDER;
+            if (v === WALL || v === BORDER || v === CRACK) return true;
+          }
+        }
+        for (const t of window.tanks) {
+          if (!t.alive || t.id === ownTank.id) continue;
+          if (nx < t.x + t.w && nx + w > t.x && ny < t.y + t.h && ny + h > t.y)
+            return true;
+        }
+        return false;
+      },
+      getFreeDistance(dir) {
+        if (!ownTank) return 0;
+        const w = ownTank.w || 20,
+          h = ownTank.h || 20;
+        let px = ownTank.x + w / 2,
+          py = ownTank.y + h / 2;
+        let dist = 0;
+        const step = Math.max(4, Math.floor(CELL / 4));
+        while (dist < 300) {
+          dist += step;
+          const nx = px + (dir.x || 0) * dist;
+          const ny = py + (dir.y || 0) * dist;
+          const c1 = Math.max(0, Math.floor(nx / CELL));
+          const c2 = Math.min(COLS - 1, Math.floor((nx + w - 1) / CELL));
+          const r1 = Math.max(0, Math.floor(ny / CELL));
+          const r2 = Math.min(ROWS - 1, Math.floor((ny + h - 1) / CELL));
+          let blocked = false;
+          for (let r = r1; r <= r2 && !blocked; r++)
+            for (let c = c1; c <= c2 && !blocked; c++) {
+              const v = window.map[r] ? window.map[r][c] : BORDER;
+              if (v === WALL || v === BORDER || v === CRACK) blocked = true;
+            }
+          if (blocked) break;
+        }
+        return dist;
+      },
+      utils: {
+        getEnemyBullets(frames = 1, dt = 0.016) {
+          const teamId = ownTank.teamId;
+          return window.bullets
+            .filter((b) => !b.dead && (b.owner && b.owner.teamId) !== teamId)
+            .map((b) => {
+              const speed = b.speed || 140;
+              const dx = b.dx || 0;
+              const dy = b.dy || 0;
+              return {
+                x: b.x,
+                y: b.y,
+                dir: { x: dx, y: dy },
+                speed,
+                nextX: b.x + dx * speed * dt * frames,
+                nextY: b.y + dy * speed * dt * frames,
+                damage: b.dmg,
+              };
+            });
+        },
+        isPositionOccupied(x, y, excludeTankId) {
+          for (const t of window.tanks) {
+            if (!t.alive || t.id === excludeTankId || t.id === ownTank.id)
+              continue;
+            if (
+              x < t.x + t.w &&
+              x + CELL > t.x &&
+              y < t.y + t.h &&
+              y + CELL > t.y
+            ) {
+              return true;
+            }
+          }
+          return false;
+        },
+      },
     };
   }
 
@@ -722,6 +830,114 @@ export function buildBattleContext(ai) {
       return v === WALL || v === BORDER || v === CRACK;
     },
     isEnemyBullet: (bullet) => bullet.owner !== ownTank.teamId,
+    isPathClear(x1, y1, x2, y2) {
+      if (y1 === y2) {
+        const lo = Math.min(Math.floor(x1 / CELL), Math.floor(x2 / CELL));
+        const hi = Math.max(Math.floor(x1 / CELL), Math.floor(x2 / CELL));
+        for (let c = lo; c <= hi; c++) {
+          const v = window.map[Math.floor(y1 / CELL)][c];
+          if (v === WALL || v === BORDER || v === CRACK) return false;
+        }
+        return true;
+      }
+      if (x1 === x2) {
+        const lo = Math.min(Math.floor(y1 / CELL), Math.floor(y2 / CELL));
+        const hi = Math.max(Math.floor(y1 / CELL), Math.floor(y2 / CELL));
+        for (let r = lo; r <= hi; r++) {
+          const v = window.map[r][Math.floor(x1 / CELL)];
+          if (v === WALL || v === BORDER || v === CRACK) return false;
+        }
+        return true;
+      }
+      return false;
+    },
+    isBlocked(dir) {
+      if (!ownTank) return true;
+      const px = ownTank.x + ownTank.w / 2;
+      const py = ownTank.y + ownTank.h / 2;
+      const nx = px + (dir.x || 0) * CELL;
+      const ny = py + (dir.y || 0) * CELL;
+      const w = ownTank.w || 20,
+        h = ownTank.h || 20;
+      const c1 = Math.max(0, Math.floor(nx / CELL));
+      const c2 = Math.min(COLS - 1, Math.floor((nx + w - 1) / CELL));
+      const r1 = Math.max(0, Math.floor(ny / CELL));
+      const r2 = Math.min(ROWS - 1, Math.floor((ny + h - 1) / CELL));
+      for (let r = r1; r <= r2; r++) {
+        for (let c = c1; c <= c2; c++) {
+          const v = window.map[r] ? window.map[r][c] : BORDER;
+          if (v === WALL || v === BORDER || v === CRACK) return true;
+        }
+      }
+      for (const t of window.tanks) {
+        if (!t.alive || t.id === ownTank.id) continue;
+        if (nx < t.x + t.w && nx + w > t.x && ny < t.y + t.h && ny + h > t.y)
+          return true;
+      }
+      return false;
+    },
+    getFreeDistance(dir) {
+      if (!ownTank) return 0;
+      const w = ownTank.w || 20,
+        h = ownTank.h || 20;
+      let px = ownTank.x + w / 2,
+        py = ownTank.y + h / 2;
+      let dist = 0;
+      const step = Math.max(4, Math.floor(CELL / 4));
+      while (dist < 300) {
+        dist += step;
+        const nx = px + (dir.x || 0) * dist;
+        const ny = py + (dir.y || 0) * dist;
+        const c1 = Math.max(0, Math.floor(nx / CELL));
+        const c2 = Math.min(COLS - 1, Math.floor((nx + w - 1) / CELL));
+        const r1 = Math.max(0, Math.floor(ny / CELL));
+        const r2 = Math.min(ROWS - 1, Math.floor((ny + h - 1) / CELL));
+        let blocked = false;
+        for (let r = r1; r <= r2 && !blocked; r++)
+          for (let c = c1; c <= c2 && !blocked; c++) {
+            const v = window.map[r] ? window.map[r][c] : BORDER;
+            if (v === WALL || v === BORDER || v === CRACK) blocked = true;
+          }
+        if (blocked) break;
+      }
+      return dist;
+    },
+    utils: {
+      getEnemyBullets(frames = 1, dt = 0.016) {
+        const teamId = ownTank.teamId;
+        return window.bullets
+          .filter((b) => !b.dead && (b.owner && b.owner.teamId) !== teamId)
+          .map((b) => {
+            const speed = b.speed || 140;
+            const dx = b.dx || 0;
+            const dy = b.dy || 0;
+            return {
+              x: b.x,
+              y: b.y,
+              dir: { x: dx, y: dy },
+              speed,
+              nextX: b.x + dx * speed * dt * frames,
+              nextY: b.y + dy * speed * dt * frames,
+              damage: b.dmg,
+            };
+          });
+      },
+      isPositionOccupied(x, y, excludeTankId) {
+        for (const t of window.tanks) {
+          if (!t.alive || t.id === excludeTankId || t.id === ownTank.id)
+            continue;
+          if (
+            x < t.x + t.w &&
+            x + CELL > t.x &&
+            y < t.y + t.h &&
+            y + CELL > t.y
+          ) {
+            return true;
+          }
+        }
+        return false;
+      },
+    },
   };
 }
 
