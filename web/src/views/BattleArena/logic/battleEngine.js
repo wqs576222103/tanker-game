@@ -140,7 +140,6 @@ export function initBattleGame(canvasEl) {
 }
 
 function setupControls() {
-  const btnStart = document.getElementById("btn-start");
   const btnRestart = document.getElementById("btn-restart");
   const btnRestart2 = document.getElementById("btn-restart2");
   const btnPause = document.getElementById("btn-pause");
@@ -151,7 +150,6 @@ function setupControls() {
   const btnSpeed = document.getElementById("btn-speed");
   const btnFullscreen = document.getElementById("btn-fullscreen");
 
-  if (btnStart) btnStart.addEventListener("click", startBattle);
   if (btnRestart) btnRestart.addEventListener("click", startBattle);
   if (btnRestart2) btnRestart2.addEventListener("click", startBattle);
   if (btnPause) btnPause.addEventListener("click", toggleBattlePause);
@@ -694,16 +692,16 @@ export function buildBattleContext(ai) {
     boss:
       window.boss && window.boss.alive
         ? {
-          x: window.boss.x,
-          y: window.boss.y,
-          w: window.boss.w,
-          h: window.boss.h,
-          dirName: window.boss.dirName,
-          dir: { x: window.boss.dir.x, y: window.boss.dir.y },
-          speed: window.boss.speed,
-          hp: window.boss.hp,
-          maxHp: window.boss.maxHp,
-        }
+            x: window.boss.x,
+            y: window.boss.y,
+            w: window.boss.w,
+            h: window.boss.h,
+            dirName: window.boss.dirName,
+            dir: { x: window.boss.dir.x, y: window.boss.dir.y },
+            speed: window.boss.speed,
+            hp: window.boss.hp,
+            maxHp: window.boss.maxHp,
+          }
         : null,
     gates: window.gates.map((g) => ({
       cells: g.cells.map((c) => ({ column: c.c, row: c.r })),

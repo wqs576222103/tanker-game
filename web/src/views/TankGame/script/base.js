@@ -399,6 +399,7 @@ export function makeTank(x, y, dirName, isPlayer) {
     spreadT: 0,
     drones: 0,
     mines: 0,
+    bounces: false,
     flash: 0,
   };
 }
@@ -445,6 +446,7 @@ export function resetGame() {
   const sp = centerOf(PLAYER_SPAWN.c, PLAYER_SPAWN.r);
   player = makeTank(sp.x - (CELL - 4) / 2, sp.y - (CELL - 4) / 2, "up", true);
   player.invincible = 2000;
+  window.player = player;
   tanks.push(player);
   spawnEnemy(true);
   spawnEnemy(true);
@@ -620,6 +622,7 @@ export const ITEMS = [
   { id: "shield", icon: "🛡️", name: "护盾", color: "#58a6ff", max: 1 },
   { id: "mine", icon: "💣", name: "地雷", color: "#c9845a", max: 3 },
   { id: "heal", icon: "❤️", name: "生命", color: "#ff6b81", max: 1 },
+  { id: "bounce", icon: "🔄", name: "反弹", color: "#a855f7", max: 1 },
 ];
 
 export function itemTimer(itemId) {
@@ -740,6 +743,9 @@ export function pickupItem(it) {
         player.hp++;
         sfx("pickup");
       }
+      break;
+    case "bounce":
+      player.bounces = true;
       break;
   }
   updateHud();
@@ -1219,6 +1225,7 @@ export function updateHud() {
     if (player.spreadT > gtMs)
       arr.push("✨" + Math.ceil((player.spreadT - gtMs) / 1000) + "s");
     if (player.drones > 0) arr.push("🚁×" + player.drones);
+    if (player.bounces) arr.push("🔄");
     buff.textContent = arr.length ? arr.join(" ") : "";
   }
 }

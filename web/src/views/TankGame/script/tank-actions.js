@@ -267,8 +267,16 @@ export const TankActions = {
         b.x += (b.dx || 0) * d;
         b.y += (b.dy || 0) * d;
         const cc = cellOf(b.x, b.y);
+        const pc = cellOf(px, py);
         const g = gateAt(cc.c, cc.r);
-        if (g && g.partner && !b.tp && gtMs - b.born > 60) {
+        // 只有从门外进入门内时才触发传送，防止反复横跳
+        const wasOutside =
+          pc.r < 0 ||
+          pc.r >= ROWS ||
+          pc.c < 0 ||
+          pc.c >= COLS ||
+          !gateAt(pc.c, pc.r);
+        if (g && g.partner && wasOutside && gtMs - b.born > 60) {
           const cen = centerOf(g.partner.cells[0].c, g.partner.cells[0].r);
           b.x = cen.x;
           b.y = cen.y;
@@ -282,11 +290,10 @@ export const TankActions = {
             ? map[cc.r][cc.c]
             : BORDER;
         if (v === WALL || v === BORDER) {
-          if (b.bounced) {
+          if (b.bounced || b.owner === "enemy" || !player.bounces) {
             b.dead = true;
             break;
           }
-          const pc = cellOf(px, py);
           if (cc.c !== pc.c) {
             b.dx = -b.dx;
             b.x = b.dx > 0 ? pc.c * CELL + CELL - 1 : pc.c * CELL + 1;
