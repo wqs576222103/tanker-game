@@ -40,6 +40,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { getRankList } from '@/api/rank'
 
 const rankings = ref([])
 const loading = ref(false)
@@ -67,34 +68,25 @@ function getKD(kills, deaths) {
 onMounted(async () => {
   loading.value = true
   try {
-    const res = await fetch('/tank-game-api/score/page')
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const text = await res.text()
-    let data
-    try {
-      data = JSON.parse(text)
-    } catch {
-      throw new Error('响应不是有效的JSON')
-    }
-    if (data.code === 200) {
-      const list = Array.isArray(data.data)
-        ? data.data
-        : data.data?.list || []
-      rankings.value = list.map((row) => ({
-        id: row.employee_id,
-        name: row.employee_id || '匿名玩家',
-        avatar: '',
-        kills: row.high_score || 0,
-        deaths: 0,
-        score: row.high_score || 0,
-      }))
-    } else {
-      throw new Error(data.message || '获取排名失败')
-    }
+    const data = await getRankList()
+    const list = Array.isArray(data.data)
+      ? data.data
+      : data.data?.list || []
+    rankings.value = list.map((row) => ({
+      id: row.employee_id,
+      name: row.employee_id || '匿名玩家',
+      avatar: '',
+      kills: row.high_score || 0,
+      deaths: 0,
+      score: row.high_score || 0,
+    }))
   } catch (e) {
-    console.warn('[Ranking] API failed, using mock data:', e.message)
-    error.value = ''
-    rankings.value = generateMockData()
+    console.warn('[Ranking] API failed:', e.message)
+    if (!error.value) {
+      error.value = e.message
+    } else {
+      rankings.value = generateMockData()
+    }
   } finally {
     loading.value = false
   }
