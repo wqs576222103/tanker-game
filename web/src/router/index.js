@@ -11,6 +11,11 @@ const routes = [
     component: () => import('../views/TankGame/index.vue'),
   },
   {
+    path: '/tank-game-mobile',
+    name: 'TankGameMobile',
+    component: () => import('../views/TankGame/mobile.vue'),
+  },
+  {
     path: '/battle-arena',
     name: 'BattleArena',
     component: () => import('../views/BattleArena/index.vue'),

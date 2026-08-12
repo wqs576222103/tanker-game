@@ -29,6 +29,50 @@ function getHighScore(employeeId) {
 
 const router = new Router({ prefix: "/tank-game-api/score" });
 
+router.get("/page", async (ctx) => {
+  const page = Math.max(1, parseInt(ctx.query.page, 10) || 1);
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(ctx.query.pageSize, 10) || 10),
+  );
+  const employeeId = ctx.query.employeeId;
+
+  const offset = (page - 1) * pageSize;
+
+  try {
+    let whereClause = "1=1";
+    let params = [];
+    if (employeeId) {
+      whereClause += " AND employee_id LIKE ?";
+      params.push(`%${employeeId}%`);
+    }
+
+    const [[totalRows]] = await getPool().execute(
+      `SELECT COUNT(*) AS cnt FROM \`${SCORE_TABLE}\` WHERE ${whereClause}`,
+      params,
+    );
+    const total = totalRows.cnt;
+
+    const [rows] = await getPool().execute(
+      `SELECT employee_id, high_score, create_time, update_time
+       FROM \`${SCORE_TABLE}\`
+       WHERE ${whereClause}
+       ORDER BY high_score DESC, update_time DESC
+       LIMIT ${pageSize} OFFSET ${offset}`,
+      params,
+    );
+
+    ctx.body = {
+      code: 200,
+      data: { list: rows, total, page, pageSize },
+    };
+  } catch (err) {
+    console.error(`[score] 分页查询失败: ${err.message}`);
+    ctx.status = 500;
+    ctx.body = { code: 500, message: "分页查询分数失败" };
+  }
+});
+
 router.get("/", async (ctx) => {
   const employeeId = ctx.query.employeeId;
   if (!employeeId) {
