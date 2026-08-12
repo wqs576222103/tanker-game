@@ -95,7 +95,7 @@ export default {
 
 每个元素含：`x, y, type, name, age, life`
 
-可用类型：`drone`(无人机) `spread`(散弹) `fire`(射速) `speed`(移速) `shield`(护盾) `mine`(地雷) `heal`(生命)
+可用类型：`drone`(无人机) `spread`(散弹) `fire`(射速) `speed`(移速) `shield`(护盾) `mine`(地雷) `heal`(生命) `bounce`(墙面反弹一次子弹)
 
 ### `mines`（地雷数组）
 
@@ -140,28 +140,28 @@ export default {
 
 ## 四、`utils`（更强的辅助工具，`ctx.utils.xxx`）
 
-| 方法                                    | 说明                                                                  |
-| --------------------------------------- | --------------------------------------------------------------------- |
-| `getTankPositions()`                    | 所有存活坦克位置                                                      |
-| `getPlayerPosition()`                   | 玩家位置（死亡返回 null）                                             |
-| `getEnemyPositions()`                   | 所有敌人位置（含朝向与速度）                                          |
-| `predictEnemyPositions(frames, dt)`     | 预测敌人 `frames` 帧后的位置                                          |
-| `getBulletPositions(frames, dt)`        | 所有子弹位置（含下一帧预测）                                          |
-| `getPlayerBullets(frames, dt)`          | 玩家子弹                                                              |
-| `getEnemyBullets(frames, dt)`           | 敌方子弹（含方向与下一帧位置）                                        |
-| `getObstaclePositions()`                | 所有墙/碎石位置                                                       |
-| `getDestructibleObstacles()`            | 可破坏的碎石墙（含 hp）                                               |
-| `getIndestructibleObstacles()`          | 不可破坏的砖墙                                                        |
-| `getGrassPositions()`                   | 草丛位置                                                              |
-| `getTanksInGrass()`                     | 草丛中隐藏的坦克信息                                                  |
-| `getTanksInRange(x,y,range)`            | 指定范围内的坦克                                                      |
-| `getGatePositions()`                    | 传送门位置                                                            |
-| `getItemPositions()`                    | 道具位置                                                              |
-| `getMinePositions()`                    | 地雷位置                                                              |
-| `getBossPosition()`                     | Boss 位置（无则 null）                                                |
-| `isPositionOccupied(x,y,excludeTankId)` | 位置是否被其它坦克占用                                                |
-| `isPositionObstacle(x,y)`               | 位置是否为障碍                                                        |
-| `getCellType(column,row)`               | 取格子类型                                                            |
+| 方法                                    | 说明                           |
+| --------------------------------------- | ------------------------------ |
+| `getTankPositions()`                    | 所有存活坦克位置               |
+| `getPlayerPosition()`                   | 玩家位置（死亡返回 null）      |
+| `getEnemyPositions()`                   | 所有敌人位置（含朝向与速度）   |
+| `predictEnemyPositions(frames, dt)`     | 预测敌人 `frames` 帧后的位置   |
+| `getBulletPositions(frames, dt)`        | 所有子弹位置（含下一帧预测）   |
+| `getPlayerBullets(frames, dt)`          | 玩家子弹                       |
+| `getEnemyBullets(frames, dt)`           | 敌方子弹（含方向与下一帧位置） |
+| `getObstaclePositions()`                | 所有墙/碎石位置                |
+| `getDestructibleObstacles()`            | 可破坏的碎石墙（含 hp）        |
+| `getIndestructibleObstacles()`          | 不可破坏的砖墙                 |
+| `getGrassPositions()`                   | 草丛位置                       |
+| `getTanksInGrass()`                     | 草丛中隐藏的坦克信息           |
+| `getTanksInRange(x,y,range)`            | 指定范围内的坦克               |
+| `getGatePositions()`                    | 传送门位置                     |
+| `getItemPositions()`                    | 道具位置                       |
+| `getMinePositions()`                    | 地雷位置                       |
+| `getBossPosition()`                     | Boss 位置（无则 null）         |
+| `isPositionOccupied(x,y,excludeTankId)` | 位置是否被其它坦克占用         |
+| `isPositionObstacle(x,y)`               | 位置是否为障碍                 |
+| `getCellType(column,row)`               | 取格子类型                     |
 
 ---
 
