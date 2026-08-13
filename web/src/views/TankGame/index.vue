@@ -16,8 +16,8 @@ const token = computed(() => route.query.token);
 onMounted(async () => {
   if (token.value) {
     try {
-      const userInfo = await getUserInfoByToken(token.value);
-      console.log("用户信息:", userInfo);
+      // const userInfo = await getUserInfoByToken(token.value);
+      // console.log("用户信息:", userInfo);
     } catch (err) {
       console.error("获取用户信息失败:", err);
     }
