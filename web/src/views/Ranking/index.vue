@@ -17,20 +17,12 @@
           :class="getRankClass(index)"
         >
           <div class="rank-num">{{ getMedal(index) }}</div>
-          <div class="rank-avatar">
-            {{ item.avatar || item.name?.[0] || "?" }}
-          </div>
           <div class="rank-info">
             <div class="rank-name">{{ item.name || "匿名玩家" }}</div>
             <div class="rank-stats">
-              <span>击杀: {{ item.kills || 0 }}</span>
-              <span>Boss击杀: {{ item.bossKills || 0 }}</span>
-              <span>死亡: {{ item.deaths || 0 }}</span>
+              <span>最高击杀数: {{ item.kills || 0 }}</span>
+              <span>最高Boss击杀数: {{ item.bossKills || 0 }}</span>
             </div>
-          </div>
-          <div class="rank-score">
-            <div class="score-val">{{ item.score || item.kills || 0 }}</div>
-            <div class="score-label">得分</div>
           </div>
         </div>
       </div>

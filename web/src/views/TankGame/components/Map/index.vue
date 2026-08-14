@@ -5,7 +5,6 @@
         <span class="bar" id="hud-heart"></span>
         <span class="bar">击杀 <b id="hud-score">0</b></span>
         <span class="bar">Boss <b id="hud-boss-score">0</b></span>
-        <span class="bar">💣 <b id="hud-mine">0</b></span>
         <span class="bar" id="hud-buff"></span>
       </div>
     </div>

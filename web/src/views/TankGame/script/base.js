@@ -128,7 +128,7 @@ export function sfx(type) {
     g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
     o.start(t);
     o.stop(t + p[1]);
-  } catch (e) { }
+  } catch (e) {}
 }
 
 // ====================== 地图 ======================
@@ -618,7 +618,7 @@ export function spawnItemAtPosition(x, y) {
 
 // ====================== 道具 ======================
 export const ITEMS = [
-  { id: "drone", icon: "🚁", name: "无人机", color: "#4fd1ff", max: 2 },
+  { id: "drone", icon: "🚁", name: "无人机", color: "#4fd1ff", max: 3 },
   { id: "spread", icon: "✨", name: "散弹", color: "#e0a93a", max: 1 },
   { id: "fire", icon: "⚡", name: "射速", color: "#ffe14d", max: 1 },
   { id: "speed", icon: "💨", name: "移速", color: "#7de07d", max: 1 },
@@ -1236,7 +1236,36 @@ export function updateHud() {
   const hi = document.getElementById("hud-hi");
   if (hi) hi.textContent = Math.max(hiScore, kills);
   const mine = document.getElementById("hud-mine");
-  if (mine) mine.textContent = player.mines;
+  if (player.mines > 0) {
+    if (!mine) {
+      const el = document.createElement("span");
+      el.className = "bar";
+      el.id = "hud-mine";
+      el.innerHTML = "💣 <b>0</b>";
+      const buff = document.getElementById("hud-buff");
+      buff.parentNode.insertBefore(el, buff);
+      const bounceEl = document.createElement("span");
+      bounceEl.className = "bar";
+      bounceEl.id = "hud-bounce";
+      bounceEl.innerHTML = "🔄 <b>0</b>";
+      buff.parentNode.insertBefore(bounceEl, buff);
+    }
+    const mineB = mine.querySelector("b");
+    if (mineB) mineB.textContent = player.mines;
+  } else if (mine) {
+    mine.remove();
+  }
+  const bounce = document.getElementById("hud-bounce");
+  if (bounce) {
+    const count = Math.min(
+      (window.bullets || bullets).filter(
+        (b) => b.owner === "player" && b.bounced,
+      ).length,
+      ITEMS.find((i) => i.id === "bounce").max,
+    );
+    const bounceB = bounce.querySelector("b");
+    if (bounceB) bounceB.textContent = count;
+  }
   const buff = document.getElementById("hud-buff");
   if (buff) {
     const arr = [];
@@ -1248,7 +1277,11 @@ export function updateHud() {
       arr.push("💨" + Math.ceil((player.speedT - gtMs) / 1000) + "s");
     if (player.spreadT > gtMs)
       arr.push("✨" + Math.ceil((player.spreadT - gtMs) / 1000) + "s");
-    if (player.drones > 0) arr.push("🚁×" + player.drones);
+    if (player.drones > 0)
+      arr.push(
+        "🚁×" +
+          Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
+      );
     if (player.bounces) arr.push("🔄");
     buff.textContent = arr.length ? arr.join(" ") : "";
   }
@@ -1328,10 +1361,9 @@ export function gameOver() {
   try {
     const userInfo = getUserInfo();
     if (userInfo.employeeId) {
-      saveGameKills(userInfo.employeeId, kills, bossKills)
-        .catch((err) => {
-          console.warn("[Game] 保存击杀数据失败:", err);
-        });
+      saveGameKills(userInfo.employeeId, kills, bossKills).catch((err) => {
+        console.warn("[Game] 保存击杀数据失败:", err);
+      });
       addDeath(userInfo.employeeId).catch((err) => {
         console.warn("[Game] 保存死亡数失败:", err);
       });
@@ -1515,34 +1547,37 @@ export function initGame() {
         .map(
           (r, i) => `
       <div class="log-item">
-        <div class="log-header">死亡 #${i + 1} - ${r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
-            } - ${r.deathReason}</div>
+        <div class="log-header">死亡 #${i + 1} - ${
+          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
+        } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">Boss击杀: <span>${r.bossKills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        ${r.type === "ai"
-              ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
-              : ""
-            }
+        ${
+          r.type === "ai"
+            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+            : ""
+        }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
         ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
-        ${r.type === "ai" && r.decisionLog.length > 0
-              ? `
+        ${
+          r.type === "ai" && r.decisionLog.length > 0
+            ? `
           <div class="log-decisions">
             <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
             ${r.decisionLog
-                .slice(-5)
-                .map(
-                  (d) => `
+              .slice(-5)
+              .map(
+                (d) => `
               <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
-                )
-                .join("")}
+              )
+              .join("")}
           </div>
         `
-              : ""
-            }
+            : ""
+        }
       </div>
     `,
         )
