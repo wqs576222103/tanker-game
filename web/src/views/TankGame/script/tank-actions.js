@@ -477,13 +477,11 @@ export const TankActions = {
           t.fireCd = 0.6 + Math.random() * 0.4;
         } else {
           t.fireCd = 2.2 + Math.random() * 2.0 - Math.min(0.6, gtMs / 60000);
-          // 向玩家发射子弹（基于当前朝向）
-          const ang =
-            Math.atan2(t.dir.y, t.dir.x) + (Math.random() - 0.5) * 0.22;
-          this.fireDir(
+          // 向玩家发射子弹（严格沿格子方向）
+          this.fireBullet(
             t.x + t.w / 2 + t.dir.x * (t.w / 2),
             t.y + t.h / 2 + t.dir.y * (t.h / 2),
-            ang,
+            t.dir,
             "enemy",
             1,
           );

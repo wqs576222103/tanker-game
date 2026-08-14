@@ -1240,7 +1240,7 @@ export function updateHud() {
   if (bsc) bsc.textContent = Math.max(hiBossKills, bossKills);
   const hi = document.getElementById("hud-hi");
   if (hi) hi.textContent = Math.max(hiScore, kills);
-  const mine = document.getElementById("hud-mine");
+  let mine = document.getElementById("hud-mine");
   if (player.mines > 0) {
     if (!mine) {
       const el = document.createElement("span");
@@ -1249,27 +1249,12 @@ export function updateHud() {
       el.innerHTML = "💣 <b>0</b>";
       const buff = document.getElementById("hud-buff");
       buff.parentNode.insertBefore(el, buff);
-      const bounceEl = document.createElement("span");
-      bounceEl.className = "bar";
-      bounceEl.id = "hud-bounce";
-      bounceEl.innerHTML = "🔄 <b>0</b>";
-      buff.parentNode.insertBefore(bounceEl, buff);
+      mine = el;
     }
     const mineB = mine.querySelector("b");
     if (mineB) mineB.textContent = player.mines;
   } else if (mine) {
     mine.remove();
-  }
-  const bounce = document.getElementById("hud-bounce");
-  if (bounce) {
-    const count = Math.min(
-      (window.bullets || bullets).filter(
-        (b) => b.owner === "player" && b.bounced,
-      ).length,
-      ITEMS.find((i) => i.id === "bounce").max,
-    );
-    const bounceB = bounce.querySelector("b");
-    if (bounceB) bounceB.textContent = count;
   }
   const buff = document.getElementById("hud-buff");
   if (buff) {
