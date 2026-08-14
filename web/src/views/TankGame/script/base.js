@@ -760,20 +760,25 @@ export function explodeMine(m) {
   m.dead = true;
   spawnExplosion(m.x + CELL / 2, m.y + CELL / 2, 40, "#ff9a3a");
   sfx("boom");
-  const cx = m.x + CELL / 2,
-    cy = m.y + CELL / 2;
-  // 波及碎石墙
-  const cc = cellOf(cx, cy);
+  const cc = cellOf(m.x + CELL / 2, m.y + CELL / 2);
+  // 波及 3x3 范围内的碎石墙
   for (let dr = -1; dr <= 1; dr++)
     for (let dc = -1; dc <= 1; dc++) {
       const r = cc.r + dr,
         c = cc.c + dc;
       if (map[r] && map[r][c] === CRACK) damageCrack(c, r, 2);
     }
+  // 波及 3x3 范围内的敌方坦克
+  const x1 = (cc.c - 1) * CELL,
+    y1 = (cc.r - 1) * CELL,
+    x2 = (cc.c + 2) * CELL,
+    y2 = (cc.r + 2) * CELL;
   for (const t of tanks) {
     if (!t.alive || t.isPlayer) continue;
-    if (Math.hypot(t.x + t.w / 2 - cx, t.y + t.h / 2 - cy) < 47) {
-      t.hp -= 2;
+    const tx = t.x + t.w / 2,
+      ty = t.y + t.h / 2;
+    if (tx >= x1 && tx < x2 && ty >= y1 && ty < y2) {
+      t.hp -= 6;
       spawnExplosion(t.x + t.w / 2, t.y + t.h / 2, 20, "#ff8a5a");
       if (t.hp <= 0) killEnemy(t);
     }
