@@ -1,8 +1,11 @@
 <template>
-  <Map></Map>
+  <div class="tank-game-wrap">
+    <Map></Map>
+    <div v-if="employeeId" class="user-info">工号：{{ employeeId }}</div>
+  </div>
 </template>
 <script setup>
-import { onMounted, computed } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
 import { getUserInfoByToken } from "@/api";
 import { getToken, getUserInfo } from "@/utils/user";
@@ -13,12 +16,13 @@ import SurvivalAI from "./script/ai-tanker/survival-tank.js";
 
 const route = useRoute();
 const token = getToken();
+const employeeId = ref("");
 
 onMounted(async () => {
   if (token) {
     try {
-      // const userInfo = await getUserInfoByToken(token.value);
-      // console.log("用户信息:", userInfo);
+      const userInfo = getUserInfo();
+      employeeId.value = userInfo.employeeId || "";
     } catch (err) {
       console.error("获取用户信息失败:", err);
     }
@@ -28,3 +32,23 @@ onMounted(async () => {
 
 AIPlayer.setDefault(SurvivalAI);
 </script>
+
+<style scoped>
+.tank-game-wrap {
+  position: absolute;
+  inset: 0;
+}
+.user-info {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.1);
+  color: #cfe3cf;
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  letter-spacing: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+</style>
