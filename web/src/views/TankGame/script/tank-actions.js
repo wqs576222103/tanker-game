@@ -276,11 +276,18 @@ export const TankActions = {
           pc.c < 0 ||
           pc.c >= COLS ||
           !gateAt(pc.c, pc.r);
-        if (g && g.partner && wasOutside && gtMs - b.born > 60) {
+        if (
+          g &&
+          g.partner &&
+          wasOutside &&
+          gtMs - b.born > 60 &&
+          b.tpPair !== g.pair
+        ) {
           const cen = centerOf(g.partner.cells[0].c, g.partner.cells[0].r);
           b.x = cen.x;
           b.y = cen.y;
           b.tp = true;
+          b.tpPair = g.pair;
           spawnExplosion(cen.x, cen.y, 14, "#58a6ff");
           sfx("tp");
           continue;

@@ -4,7 +4,7 @@ import bossSvg from "@/assets/enemy-boss.svg";
 import { TankActions } from "./tank-actions.js";
 import { AILogger } from "./ai-logger.js";
 import { AIPlayer } from "./ai-player.js";
-import { saveGameKills } from "@/api/score.js";
+import { saveGameKills, getScore } from "@/api/score.js";
 import { getToken, getUserInfo } from "@/utils/user";
 
 // ====================== 基础 ======================
@@ -127,7 +127,7 @@ export function sfx(type) {
     g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
     o.start(t);
     o.stop(t + p[1]);
-  } catch (e) { }
+  } catch (e) {}
 }
 
 // ====================== 地图 ======================
@@ -299,8 +299,8 @@ export function connectivityOk() {
 
 export function placeGates() {
   gates = [];
-  const mkGate = (c1, r1, c2, r2) => {
-    const g = { cells: [], partner: null };
+  const mkGate = (c1, r1, c2, r2, pair) => {
+    const g = { cells: [], partner: null, pair };
     for (let r = r1; r <= r2; r++)
       for (let c = c1; c <= c2; c++) {
         map[r][c] = GATE;
@@ -309,10 +309,10 @@ export function placeGates() {
     gates.push(g);
     return g;
   };
-  const gA = mkGate(1, 14, 1, 14),
-    gB = mkGate(COLS - 2, 14, COLS - 2, 14);
-  const gC = mkGate(Math.floor(COLS / 2), 1, Math.floor(COLS / 2), 1),
-    gD = mkGate(Math.floor(COLS / 2), 28, Math.floor(COLS / 2), 28);
+  const gA = mkGate(1, 14, 1, 14, "h"),
+    gB = mkGate(COLS - 2, 14, COLS - 2, 14, "h");
+  const gC = mkGate(Math.floor(COLS / 2), 1, Math.floor(COLS / 2), 1, "v"),
+    gD = mkGate(Math.floor(COLS / 2), 28, Math.floor(COLS / 2), 28, "v");
   gA.partner = gB;
   gB.partner = gA;
   gC.partner = gD;
@@ -1200,6 +1200,22 @@ export function drawFloats() {
 }
 
 // ====================== HUD ======================
+export async function loadHighScore() {
+  try {
+    const userInfo = getUserInfo();
+    if (!userInfo.employeeId) return;
+    const res = await getScore(userInfo.employeeId);
+    const score = res?.data?.highScore;
+    if (typeof score === "number" && score > hiScore) {
+      hiScore = score;
+      localStorage.setItem("tank-hi", String(hiScore));
+    }
+    updateHud();
+  } catch (err) {
+    console.error("获取最高击杀数失败:", err);
+  }
+}
+
 export function updateHud() {
   const heartEl = document.getElementById("hud-heart");
   if (heartEl) {
@@ -1239,6 +1255,7 @@ export function loop(ts) {
   lastTime = ts;
   if (state === "playing") update(dt * gameSpeed);
   if (damageFlash > 0) damageFlash -= dt * 1000;
+  updateHud();
 
   drawMap();
   drawItems();
@@ -1296,9 +1313,9 @@ export function gameOver() {
   try {
     const userInfo = getUserInfo();
     if (userInfo.employeeId) {
-      saveGameKills(userInfo.employeeId, kills, bossKills).catch(() => { });
+      saveGameKills(userInfo.employeeId, kills, bossKills).catch(() => {});
     }
-  } catch (e) { }
+  } catch (e) {}
 }
 
 export function startGame() {
@@ -1475,34 +1492,37 @@ export function initGame() {
         .map(
           (r, i) => `
       <div class="log-item">
-        <div class="log-header">死亡 #${i + 1} - ${r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
-            } - ${r.deathReason}</div>
+        <div class="log-header">死亡 #${i + 1} - ${
+          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
+        } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">Boss击杀: <span>${r.bossKills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        ${r.type === "ai"
-              ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
-              : ""
-            }
+        ${
+          r.type === "ai"
+            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+            : ""
+        }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
         ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
-        ${r.type === "ai" && r.decisionLog.length > 0
-              ? `
+        ${
+          r.type === "ai" && r.decisionLog.length > 0
+            ? `
           <div class="log-decisions">
             <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
             ${r.decisionLog
-                .slice(-5)
-                .map(
-                  (d) => `
+              .slice(-5)
+              .map(
+                (d) => `
               <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
-                )
-                .join("")}
+              )
+              .join("")}
           </div>
         `
-              : ""
-            }
+            : ""
+        }
       </div>
     `,
         )
@@ -1605,6 +1625,7 @@ export function initGame() {
   // ====================== 启动 ======================
   resetGame();
   updateHud();
+  loadHighScore();
   document.getElementById("btn-speed").textContent = "⏩ 1x";
   document.getElementById("btn-speed").disabled = true;
   requestAnimationFrame((t) => {
