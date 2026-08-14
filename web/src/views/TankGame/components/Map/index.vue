@@ -73,6 +73,7 @@
       <button id="btn-ai">🤖 AI: 关</button>
       <button id="btn-speed" disabled>⏩ 1x</button>
       <button id="btn-import-ai">📥 导入AI</button>
+      <button id="btn-sfx" class="active">🔊 音效</button>
       <button id="btn-fullscreen">⛶ 全屏 F</button>
       <button id="btn-export-death-log">📋 死亡日志</button>
     </div>

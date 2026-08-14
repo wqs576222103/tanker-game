@@ -1,6 +1,11 @@
 import playerSvg from "@/assets/player.svg";
 import enemySvg from "@/assets/enemy.svg";
 import bossSvg from "@/assets/enemy-boss.svg";
+import bgmMp3 from "@/assets/mp3/tank/background.mp3";
+import bonusMp3 from "@/assets/mp3/tank/bonus.mp3";
+import deathMp3 from "@/assets/mp3/tank/death.mp3";
+import enemyDeathMp3 from "@/assets/mp3/tank/enemy-death.mp3";
+import shotMp3 from "@/assets/mp3/tank/shot.mp3";
 import { TankActions } from "./tank-actions.js";
 import { AILogger } from "./ai-logger.js";
 import { AIPlayer } from "./ai-player.js";
@@ -100,8 +105,82 @@ export function setDeathReason(v) {
 
 // ====================== 音频 ======================
 window.audioCtx = null;
-export function sfx(type) {
+
+// 音效开关
+window.sfxEnabled = true;
+export function toggleSfx() {
+  sfxEnabled = !sfxEnabled;
+  if (!sfxEnabled) stopBgm();
+  else if (state !== "playing") playBgm();
+  const btn = document.getElementById("btn-sfx");
+  if (btn) {
+    btn.classList.toggle("active", sfxEnabled);
+    const icon = sfxEnabled ? "🔊" : "🔇";
+    btn.textContent = btn.textContent.includes("音效") ? icon + " 音效" : icon;
+  }
+  return sfxEnabled;
+}
+
+// 音效 mp3 映射：替换原振荡器合成音效
+const MP3_SFX = {
+  shoot: shotMp3,
+  pickup: bonusMp3,
+  over: deathMp3,
+  enemyDeath: enemyDeathMp3,
+};
+
+// 播放一次性音效
+export function playMp3(url) {
   try {
+    const a = new Audio(url);
+    a.volume = 0.6;
+    a.play().catch(() => {});
+    return a;
+  } catch (e) {}
+}
+
+// 背景音乐：仅在未开始游戏（开始/结束界面）时播放，每隔5秒播放一次
+let bgmAudio = null;
+let bgmTimer = null;
+export function playBgm() {
+  if (!sfxEnabled) return;
+  try {
+    if (!bgmAudio) {
+      bgmAudio = new Audio(bgmMp3);
+      bgmAudio.volume = 0.35;
+    }
+    bgmAudio.currentTime = 0;
+    bgmAudio.play().catch(() => {});
+    if (!bgmTimer) {
+      bgmTimer = setInterval(() => {
+        if (!sfxEnabled || state === "playing") return;
+        const a = new Audio(bgmMp3);
+        a.volume = 0.35;
+        a.play().catch(() => {});
+      }, 5000);
+    }
+  } catch (e) {}
+}
+export function stopBgm() {
+  try {
+    if (bgmTimer) {
+      clearInterval(bgmTimer);
+      bgmTimer = null;
+    }
+    if (bgmAudio) {
+      bgmAudio.pause();
+      bgmAudio.currentTime = 0;
+    }
+  } catch (e) {}
+}
+
+export function sfx(type) {
+  if (!sfxEnabled) return;
+  try {
+    if (MP3_SFX[type]) {
+      playMp3(MP3_SFX[type]);
+      return;
+    }
     audioCtx =
       audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === "suspended") audioCtx.resume();
@@ -111,13 +190,10 @@ export function sfx(type) {
     o.connect(g);
     g.connect(audioCtx.destination);
     const tones = {
-      shoot: [520, 0.06, "square", 0.05],
       enemy: [220, 0.08, "sawtooth", 0.05],
       hit: [180, 0.12, "sawtooth", 0.08],
       boom: [90, 0.35, "sawtooth", 0.12],
-      pickup: [660, 0.1, "sine", 0.08],
       tp: [880, 0.12, "sine", 0.06],
-      over: [140, 0.8, "sawtooth", 0.1],
       bounce: [700, 0.04, "triangle", 0.04],
     };
     const p = tones[type] || tones.hit;
@@ -128,7 +204,7 @@ export function sfx(type) {
     g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
     o.start(t);
     o.stop(t + p[1]);
-  } catch (e) { }
+  } catch (e) {}
 }
 
 // ====================== 地图 ======================
@@ -560,7 +636,7 @@ export function killEnemy(t) {
   t.alive = false;
   spawnExplosion(t.x + t.w / 2, t.y + t.h / 2, 34, "#ff8a5a");
   kills += 1;
-  sfx("boom");
+  sfx("enemyDeath");
   if (Math.random() < 0.28) spawnItemAtTank(t);
   updateHud();
 
@@ -1269,7 +1345,7 @@ export function updateHud() {
     if (player.drones > 0)
       arr.push(
         "🚁×" +
-        Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
+          Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
       );
     if (player.bounces) arr.push("🔄");
     buff.textContent = arr.length ? arr.join(" ") : "";
@@ -1310,6 +1386,7 @@ export function loop(ts) {
 export function gameOver() {
   state = "over";
   player.alive = false;
+  playBgm();
   spawnExplosion(
     player.x + player.w / 2,
     player.y + player.h / 2,
@@ -1365,6 +1442,7 @@ export function startGame() {
   resetGame();
   AIPlayer.init();
   state = "playing";
+  stopBgm();
   document.getElementById("ov-start").classList.add("hidden");
   document.getElementById("ov-over").classList.add("hidden");
   document.getElementById("ov-pause").classList.add("hidden");
@@ -1470,6 +1548,9 @@ export function initGame() {
   });
   document.getElementById("btn-resume").addEventListener("click", togglePause);
 
+  // 音效开关
+  document.getElementById("btn-sfx").addEventListener("click", toggleSfx);
+
   // AI 按钮
   const btnAI = document.getElementById("btn-ai");
   btnAI.addEventListener("click", toggleAI);
@@ -1535,34 +1616,37 @@ export function initGame() {
         .map(
           (r, i) => `
       <div class="log-item">
-        <div class="log-header">死亡 #${i + 1} - ${r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
-            } - ${r.deathReason}</div>
+        <div class="log-header">死亡 #${i + 1} - ${
+          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
+        } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">Boss击杀: <span>${r.bossKills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        ${r.type === "ai"
-              ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
-              : ""
-            }
+        ${
+          r.type === "ai"
+            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+            : ""
+        }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
         ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
-        ${r.type === "ai" && r.decisionLog.length > 0
-              ? `
+        ${
+          r.type === "ai" && r.decisionLog.length > 0
+            ? `
           <div class="log-decisions">
             <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
             ${r.decisionLog
-                .slice(-5)
-                .map(
-                  (d) => `
+              .slice(-5)
+              .map(
+                (d) => `
               <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
-                )
-                .join("")}
+              )
+              .join("")}
           </div>
         `
-              : ""
-            }
+            : ""
+        }
       </div>
     `,
         )
@@ -1668,6 +1752,17 @@ export function initGame() {
   loadHighScore();
   document.getElementById("btn-speed").textContent = "⏩ 1x";
   document.getElementById("btn-speed").disabled = true;
+
+  // 未开始时播放背景音乐（浏览器可能拦截自动播放，首次交互时补播）
+  playBgm();
+  const resumeBgm = () => {
+    if (state !== "playing") playBgm();
+    window.removeEventListener("pointerdown", resumeBgm);
+    window.removeEventListener("keydown", resumeBgm);
+  };
+  window.addEventListener("pointerdown", resumeBgm);
+  window.addEventListener("keydown", resumeBgm);
+
   requestAnimationFrame((t) => {
     lastTime = t;
     requestAnimationFrame(loop);

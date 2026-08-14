@@ -77,6 +77,7 @@
       <button id="btn-ai">🤖 关</button>
       <button id="btn-speed" disabled>⏩ 1x</button>
       <button id="btn-import-ai">📥</button>
+      <button id="btn-sfx" class="active">🔊</button>
       <button id="btn-fullscreen">⛶</button>
       <button id="btn-export-death-log">📋</button>
     </div>
