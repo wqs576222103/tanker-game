@@ -1312,7 +1312,7 @@ export function updateHud() {
   const sc = document.getElementById("hud-score");
   if (sc) sc.textContent = kills;
   const bsc = document.getElementById("hud-boss-score");
-  if (bsc) bsc.textContent = Math.max(hiBossKills, bossKills);
+  if (bsc) bsc.textContent = bossKills;
   const hi = document.getElementById("hud-hi");
   if (hi) hi.textContent = Math.max(hiScore, kills);
   let mine = document.getElementById("hud-mine");
@@ -1402,12 +1402,7 @@ export function gameOver() {
     hiBossKills = bossKills;
   }
   document.getElementById("ov-over-score").textContent =
-    "击杀：" +
-    kills +
-    "　Boss击杀：" +
-    bossKills +
-    "　最高Boss击杀：" +
-    hiBossKills;
+    "击杀：" + kills + "　Boss击杀：" + bossKills;
   document.getElementById("ov-over-reason").textContent =
     "死因：" + (deathReason || "不明原因");
 
