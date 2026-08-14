@@ -55,6 +55,7 @@ window.state = "start"; // start | playing | paused | over
 window.kills = 0;
 window.bossKills = 0;
 window.hiScore = +(localStorage.getItem("tank-hi") || 0);
+window.hiBossKills = +(localStorage.getItem("tank-hi-boss") || 0);
 window.gtMs = 0; // 游戏时间
 window.spawnTimer = 2;
 window.mapGenerated = false; // 地图是否已生成
@@ -127,7 +128,7 @@ export function sfx(type) {
     g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
     o.start(t);
     o.stop(t + p[1]);
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // ====================== 地图 ======================
@@ -1210,6 +1211,11 @@ export async function loadHighScore() {
       hiScore = score;
       localStorage.setItem("tank-hi", String(hiScore));
     }
+    const bossScore = res?.data?.highBossKills;
+    if (typeof bossScore === "number" && bossScore > hiBossKills) {
+      hiBossKills = bossScore;
+      localStorage.setItem("tank-hi-boss", String(hiBossKills));
+    }
     updateHud();
   } catch (err) {
     console.error("获取最高击杀数失败:", err);
@@ -1226,7 +1232,7 @@ export function updateHud() {
   const sc = document.getElementById("hud-score");
   if (sc) sc.textContent = kills;
   const bsc = document.getElementById("hud-boss-score");
-  if (bsc) bsc.textContent = bossKills;
+  if (bsc) bsc.textContent = Math.max(hiBossKills, bossKills);
   const hi = document.getElementById("hud-hi");
   if (hi) hi.textContent = Math.max(hiScore, kills);
   const mine = document.getElementById("hud-mine");
@@ -1293,8 +1299,17 @@ export function gameOver() {
     hiScore = kills;
     localStorage.setItem("tank-hi", String(hiScore));
   }
+  if (bossKills > hiBossKills) {
+    hiBossKills = bossKills;
+    localStorage.setItem("tank-hi-boss", String(hiBossKills));
+  }
   document.getElementById("ov-over-score").textContent =
-    "击杀：" + kills + "　Boss击杀：" + bossKills + "　最高：" + hiScore;
+    "击杀：" +
+    kills +
+    "　Boss击杀：" +
+    hiScore +
+    "　最高Boss击杀：" +
+    hiBossKills;
   document.getElementById("ov-over-reason").textContent =
     "死因：" + (deathReason || "不明原因");
 
@@ -1313,9 +1328,10 @@ export function gameOver() {
   try {
     const userInfo = getUserInfo();
     if (userInfo.employeeId) {
-      saveGameKills(userInfo.employeeId, kills, bossKills).catch((err) => {
-        console.warn("[Game] 保存击杀数据失败:", err);
-      });
+      saveGameKills(userInfo.employeeId, kills, bossKills)
+        .catch((err) => {
+          console.warn("[Game] 保存击杀数据失败:", err);
+        });
       addDeath(userInfo.employeeId).catch((err) => {
         console.warn("[Game] 保存死亡数失败:", err);
       });
@@ -1499,37 +1515,34 @@ export function initGame() {
         .map(
           (r, i) => `
       <div class="log-item">
-        <div class="log-header">死亡 #${i + 1} - ${
-          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
-        } - ${r.deathReason}</div>
+        <div class="log-header">死亡 #${i + 1} - ${r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
+            } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">Boss击杀: <span>${r.bossKills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        ${
-          r.type === "ai"
-            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
-            : ""
-        }
+        ${r.type === "ai"
+              ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+              : ""
+            }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
         ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
-        ${
-          r.type === "ai" && r.decisionLog.length > 0
-            ? `
+        ${r.type === "ai" && r.decisionLog.length > 0
+              ? `
           <div class="log-decisions">
             <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
             ${r.decisionLog
-              .slice(-5)
-              .map(
-                (d) => `
+                .slice(-5)
+                .map(
+                  (d) => `
               <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
-              )
-              .join("")}
+                )
+                .join("")}
           </div>
         `
-            : ""
-        }
+              : ""
+            }
       </div>
     `,
         )

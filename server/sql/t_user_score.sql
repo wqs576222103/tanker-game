@@ -1,8 +1,9 @@
 CREATE TABLE IF NOT EXISTS `t_user_score` (
   `employee_id` VARCHAR(64) NOT NULL PRIMARY KEY,
-  `high_score` INT NOT NULL DEFAULT 0,
+  `high_skills` INT NOT NULL DEFAULT 0,
   `last_kills` INT NOT NULL DEFAULT 0,
   `last_boss_kills` INT NOT NULL DEFAULT 0,
+  `high_boss_kills` INT NOT NULL DEFAULT 0,
   `deaths` INT NOT NULL DEFAULT 0,
   `create_time` DATETIME DEFAULT NULL,
   `update_time` DATETIME DEFAULT NULL

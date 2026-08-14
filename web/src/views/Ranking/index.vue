@@ -71,10 +71,10 @@ onMounted(async () => {
       id: row.employee_id,
       name: row.employee_id || "匿名玩家",
       avatar: "",
-      kills: row.high_score || 0,
+      kills: row.high_skills || 0,
       bossKills: row.last_boss_kills || 0,
       deaths: row.deaths || 0,
-      score: row.high_score || 0,
+      score: row.high_skills || 0,
     }));
   } catch (e) {
     console.warn("[Ranking] API failed:", e.message);

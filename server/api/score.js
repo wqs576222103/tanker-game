@@ -8,10 +8,10 @@ assertIdentifier(SCORE_TABLE);
 function saveHighScore(employeeId, score) {
   if (!employeeId || typeof score !== "number") return Promise.resolve(null);
   return getPool().execute(
-    `INSERT INTO \`${SCORE_TABLE}\` (employee_id, high_score, create_time, update_time)
+    `INSERT INTO \`${SCORE_TABLE}\` (employee_id, high_skills, create_time, update_time)
        VALUES (?, ?, NOW(), NOW())
        ON DUPLICATE KEY UPDATE
-        high_score = IF(VALUES(high_score) > high_score, VALUES(high_score), high_score),
+        high_skills = IF(VALUES(high_skills) > high_skills, VALUES(high_skills), high_skills),
         update_time = NOW()`,
     [employeeId, Math.floor(score)],
   );
@@ -21,26 +21,28 @@ function getHighScore(employeeId) {
   if (!employeeId) return Promise.resolve(null);
   return getPool()
     .execute(
-      `SELECT high_score FROM \`${SCORE_TABLE}\` WHERE employee_id = ?`,
+      `SELECT high_skills FROM \`${SCORE_TABLE}\` WHERE employee_id = ?`,
       [employeeId],
     )
-    .then(([rows]) => (rows.length > 0 ? rows[0].high_score : 0));
+    .then(([rows]) => (rows.length > 0 ? rows[0].high_skills : 0));
 }
 
 function saveGameKills(employeeId, kills, bossKills) {
   if (!employeeId || typeof kills !== "number") return Promise.resolve(null);
   return getPool().execute(
-    `INSERT INTO \`${SCORE_TABLE}\` (employee_id, high_score, last_kills, last_boss_kills, create_time, update_time)
-       VALUES (?, ?, ?, ?, NOW(), NOW())
+    `INSERT INTO \`${SCORE_TABLE}\` (employee_id, high_skills, last_kills, last_boss_kills, high_boss_kills, create_time, update_time)
+       VALUES (?, ?, ?, ?, ?, NOW(), NOW())
        ON DUPLICATE KEY UPDATE
-        high_score = IF(VALUES(high_score) > high_score, VALUES(high_score), high_score),
+        high_skills = IF(VALUES(high_skills) > high_skills, VALUES(high_skills), high_skills),
         last_kills = VALUES(last_kills),
         last_boss_kills = VALUES(last_boss_kills),
+        high_boss_kills = IF(VALUES(high_boss_kills) > high_boss_kills, VALUES(high_boss_kills), high_boss_kills),
         update_time = NOW()`,
     [
       employeeId,
       Math.floor(kills),
       Math.floor(kills),
+      Math.floor(bossKills || 0),
       Math.floor(bossKills || 0),
     ],
   );
@@ -49,7 +51,7 @@ function saveGameKills(employeeId, kills, bossKills) {
 function saveDeath(employeeId) {
   if (!employeeId) return Promise.resolve(null);
   return getPool().execute(
-    `INSERT INTO \`${SCORE_TABLE}\` (employee_id, high_score, deaths, create_time, update_time)
+    `INSERT INTO \`${SCORE_TABLE}\` (employee_id, high_skills, deaths, create_time, update_time)
        VALUES (?, 0, 1, NOW(), NOW())
        ON DUPLICATE KEY UPDATE
         deaths = deaths + 1,
@@ -85,10 +87,10 @@ router.get("/page", async (ctx) => {
     const total = totalRows.cnt;
 
     const [rows] = await getPool().execute(
-      `SELECT employee_id, high_score, last_kills, last_boss_kills, deaths, create_time, update_time
+      `SELECT employee_id, high_skills, last_kills, last_boss_kills, high_boss_kills, deaths, create_time, update_time
        FROM \`${SCORE_TABLE}\`
        WHERE ${whereClause}
-       ORDER BY high_score DESC, update_time DESC
+       ORDER BY high_skills DESC, update_time DESC
        LIMIT ${pageSize} OFFSET ${offset}`,
       params,
     );
@@ -113,7 +115,14 @@ router.get("/", async (ctx) => {
   }
   try {
     const highScore = await getHighScore(employeeId);
-    ctx.body = { code: 200, data: { employeeId, highScore } };
+    const [[{ high_boss_kills }]] = await getPool().execute(
+      `SELECT high_boss_kills FROM \`${SCORE_TABLE}\` WHERE employee_id = ?`,
+      [employeeId],
+    );
+    ctx.body = {
+      code: 200,
+      data: { employeeId, highScore, highBossKills: high_boss_kills },
+    };
   } catch (err) {
     console.error(`[score] 查询失败: ${err.message}`);
     ctx.status = 500;
@@ -148,7 +157,14 @@ router.post("/kills", async (ctx) => {
   }
   try {
     await saveGameKills(employeeId, kills, bossKills);
-    ctx.body = { code: 200, data: { employeeId, kills, bossKills } };
+    const [[{ high_boss_kills }]] = await getPool().execute(
+      `SELECT high_boss_kills FROM \`${SCORE_TABLE}\` WHERE employee_id = ?`,
+      [employeeId],
+    );
+    ctx.body = {
+      code: 200,
+      data: { employeeId, kills, bossKills, highBossKills: high_boss_kills },
+    };
   } catch (err) {
     console.error(`[score] 保存击杀数失败: ${err.message}`);
     ctx.status = 500;
