@@ -8,9 +8,9 @@ assertIdentifier(TABLE_NAME);
 
 const SOURCE_MAP = {
   localhost: "http://8.130.41.52",
-  "127.0.0.1": "http://8.130.41.52",
-  "::1": "http://8.130.41.52",
+  // 模拟环境
   "8.130.41.52": "http://8.130.41.52",
+  // 生产环境
   "113.249.91.32": "http://113.249.91.32",
 };
 
@@ -107,7 +107,7 @@ router.get("/infoByToken", async (ctx) => {
     if (first) clientIp = first;
   }
 
-  const targetBase = SOURCE_MAP[clientIp];
+  const targetBase = SOURCE_MAP[clientIp] || "http://8.130.41.52";
   if (!targetBase) {
     ctx.status = 403;
     ctx.body = { code: 403, message: `来源 ${clientIp} 不在允许列表中` };
