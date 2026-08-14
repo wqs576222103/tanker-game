@@ -27,6 +27,25 @@ function getHighScore(employeeId) {
     .then(([rows]) => (rows.length > 0 ? rows[0].high_score : 0));
 }
 
+function saveGameKills(employeeId, kills, bossKills) {
+  if (!employeeId || typeof kills !== "number") return Promise.resolve(null);
+  return getPool().execute(
+    `INSERT INTO \`${SCORE_TABLE}\` (employee_id, high_score, last_kills, last_boss_kills, create_time, update_time)
+       VALUES (?, ?, ?, ?, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE
+        high_score = IF(VALUES(high_score) > high_score, VALUES(high_score), high_score),
+        last_kills = VALUES(last_kills),
+        last_boss_kills = VALUES(last_boss_kills),
+        update_time = NOW()`,
+    [
+      employeeId,
+      Math.floor(kills),
+      Math.floor(kills),
+      Math.floor(bossKills || 0),
+    ],
+  );
+}
+
 const router = new Router({ prefix: "/tank-game-api/score" });
 
 router.get("/page", async (ctx) => {
@@ -105,6 +124,23 @@ router.post("/", async (ctx) => {
     console.error(`[score] 保存失败: ${err.message}`);
     ctx.status = 500;
     ctx.body = { code: 500, message: "保存分数失败" };
+  }
+});
+
+router.post("/kills", async (ctx) => {
+  const { employeeId, kills, bossKills } = ctx.request.body || {};
+  if (!employeeId || typeof kills !== "number") {
+    ctx.status = 400;
+    ctx.body = { code: 400, message: "缺少 employeeId 或 kills" };
+    return;
+  }
+  try {
+    await saveGameKills(employeeId, kills, bossKills);
+    ctx.body = { code: 200, data: { employeeId, kills, bossKills } };
+  } catch (err) {
+    console.error(`[score] 保存击杀数失败: ${err.message}`);
+    ctx.status = 500;
+    ctx.body = { code: 500, message: "保存击杀数失败" };
   }
 });
 

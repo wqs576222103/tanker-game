@@ -5,13 +5,14 @@
 import { onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
 import { getUserInfoByToken } from "@/api";
+import { getToken, getUserInfo } from "@/utils/user";
 import Map from "./components/Map/h5Map.vue";
 import { initGame } from "./script/base.js";
 import { AIPlayer } from "./script/ai-player.js";
 import SurvivalAI from "./script/ai-tanker/survival-tank.js";
 
 const route = useRoute();
-const token = computed(() => route.query.token);
+const token = getToken();
 
 onMounted(async () => {
   if (token.value) {

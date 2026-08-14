@@ -4,6 +4,8 @@ import bossSvg from "@/assets/enemy-boss.svg";
 import { TankActions } from "./tank-actions.js";
 import { AILogger } from "./ai-logger.js";
 import { AIPlayer } from "./ai-player.js";
+import { saveGameKills } from "@/api/score.js";
+import { getToken, getUserInfo } from "@/utils/user";
 
 // ====================== 基础 ======================
 export const CELL = 20,
@@ -125,7 +127,7 @@ export function sfx(type) {
     g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
     o.start(t);
     o.stop(t + p[1]);
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // ====================== 地图 ======================
@@ -1289,6 +1291,14 @@ export function gameOver() {
   AIPlayer.notifyDeath(deathReason);
 
   document.getElementById("ov-over").classList.remove("hidden");
+
+  // 保存当局击杀数到服务器
+  try {
+    const userInfo = getUserInfo();
+    if (userInfo.employeeId) {
+      saveGameKills(userInfo.employeeId, kills, bossKills).catch(() => { });
+    }
+  } catch (e) { }
 }
 
 export function startGame() {
@@ -1465,37 +1475,34 @@ export function initGame() {
         .map(
           (r, i) => `
       <div class="log-item">
-        <div class="log-header">死亡 #${i + 1} - ${
-          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
-        } - ${r.deathReason}</div>
+        <div class="log-header">死亡 #${i + 1} - ${r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
+            } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">Boss击杀: <span>${r.bossKills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        ${
-          r.type === "ai"
-            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
-            : ""
-        }
+        ${r.type === "ai"
+              ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+              : ""
+            }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
         ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
-        ${
-          r.type === "ai" && r.decisionLog.length > 0
-            ? `
+        ${r.type === "ai" && r.decisionLog.length > 0
+              ? `
           <div class="log-decisions">
             <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
             ${r.decisionLog
-              .slice(-5)
-              .map(
-                (d) => `
+                .slice(-5)
+                .map(
+                  (d) => `
               <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
-              )
-              .join("")}
+                )
+                .join("")}
           </div>
         `
-            : ""
-        }
+              : ""
+            }
       </div>
     `,
         )

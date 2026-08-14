@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { getUserInfoByToken } from "@/api";
+import { setUserInfo, setToken } from "@/utils/user.js";
 
 const routes = [
   {
@@ -35,12 +36,17 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const token = to.query.token;
+  setToken(token);
   if (token) {
     try {
-      const userInfo = await getUserInfoByToken(token);
-      localStorage.setItem("tanke-userToken", token);
-      localStorage.setItem("tanke-userInfo", JSON.stringify(userInfo));
+      const res = await getUserInfoByToken(token);
+      if (res.code !== 200) {
+        throw new Error(res.message || "获取用户信息失败");
+      }
+      const userInfo = res.data;
+      setUserInfo(userInfo);
     } catch (err) {
+      setUserInfo({});
       console.error("获取用户信息失败:", err);
     }
   }
