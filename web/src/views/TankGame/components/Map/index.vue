@@ -30,9 +30,6 @@
           >
         </p>
         <button id="btn-start">开 始 游 戏</button>
-        <button id="btn-ranking" class="secondary" @click="goRanking">
-          排 行 榜
-        </button>
       </div>
       <div class="overlay hidden" id="ov-over">
         <h2>游 戏 结 束</h2>
@@ -83,15 +80,7 @@
     <input type="file" id="ai-file" accept=".js" style="display: none" />
   </div>
 </template>
-<script setup>
-import { useRouter } from "vue-router";
-
-const router = useRouter();
-const goRanking = () => {
-  const token = new URLSearchParams(location.search).get("token");
-  router.push(token ? `/ranking?token=${token}` : "/ranking");
-};
-</script>
+<script setup></script>
 
 <style scoped>
 #wrap {
