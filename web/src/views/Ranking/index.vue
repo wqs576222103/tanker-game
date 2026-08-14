@@ -1,24 +1,41 @@
 <template>
   <div class="ranking-wrap">
     <div class="ranking-header">
-      <div class="title">⏱️ 时间坦克击杀排名</div>
+      <div class="title">坦克击杀排名</div>
       <div class="subtitle">TIME TANK KILL RANKING</div>
+    </div>
+
+    <div class="search-bar">
+      <input
+        v-model.trim="searchQuery"
+        type="text"
+        placeholder="按工号搜索..."
+      />
+      <span v-if="searchQuery" class="search-count">
+        匹配 {{ filteredRankings.length }} 条
+      </span>
     </div>
 
     <div class="ranking-list">
       <div v-if="loading" class="loading">加载中...</div>
       <div v-else-if="error" class="error">{{ error }}</div>
       <div v-else-if="rankings.length === 0" class="empty">暂无排名数据</div>
+      <div v-else-if="filteredRankings.length === 0" class="empty">
+        未找到工号 "{{ searchQuery }}" 的排名
+      </div>
       <div v-else class="list">
         <div
-          v-for="(item, index) in rankings"
+          v-for="{ item, index } in filteredRankings"
           :key="item.id || index"
           class="rank-item"
-          :class="getRankClass(index)"
+          :class="[getRankClass(index), { 'rank-mine': isMe(item) }]"
         >
           <div class="rank-num">{{ getMedal(index) }}</div>
           <div class="rank-info">
-            <div class="rank-name">{{ item.name || "匿名玩家" }}</div>
+            <div class="rank-name">
+              <span v-if="isMe(item)" class="my-tag">我的</span>
+              {{ item.name || "匿名玩家" }}
+            </div>
             <div class="rank-stats">
               <span>最高击杀数: {{ item.kills || 0 }}</span>
               <span>最高Boss击杀数: {{ item.bossKills || 0 }}</span>
@@ -33,12 +50,27 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { getRankList } from "@/api/rank";
+import { getUserInfo } from "@/utils/user";
 
 const rankings = ref([]);
 const loading = ref(false);
 const error = ref("");
+const searchQuery = ref("");
+const myEmployeeId = ref("");
+
+const filteredRankings = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  if (!query) return rankings.value.map((item, index) => ({ item, index }));
+  return rankings.value
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => String(item.id).toLowerCase().includes(query));
+});
+
+function isMe(item) {
+  return myEmployeeId.value && String(item.id) === String(myEmployeeId.value);
+}
 
 function getMedal(index) {
   if (index === 0) return "👑";
@@ -68,6 +100,11 @@ onMounted(async () => {
       deaths: row.deaths || 0,
       score: row.high_skills || 0,
     }));
+
+    const userInfo = getUserInfo();
+    if (userInfo && userInfo.employeeId) {
+      myEmployeeId.value = userInfo.employeeId;
+    }
   } catch (e) {
     console.warn("[Ranking] API failed:", e.message);
     if (!error.value) {
@@ -113,11 +150,64 @@ onMounted(async () => {
   margin-top: 4px;
 }
 
+.search-bar {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 10px 14px;
+  background: rgba(30, 45, 25, 0.8);
+  border: 1px solid #2a3a2a;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.search-bar input:focus {
+  border-color: #c8a84e;
+  box-shadow: 0 0 10px rgba(200, 168, 78, 0.3);
+}
+
+.search-bar input::placeholder {
+  color: #5a7a4a;
+}
+
+.search-count {
+  font-size: 12px;
+  color: #c8a84e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .ranking-list {
   width: 100%;
   max-width: 500px;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #3a5a3a transparent;
+}
+
+.ranking-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ranking-list::-webkit-scrollbar-thumb {
+  background: #3a5a3a;
+  border-radius: 3px;
+}
+
+.ranking-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .loading,
@@ -154,6 +244,25 @@ onMounted(async () => {
   background: rgba(40, 60, 30, 0.9);
   border-color: #3a5a3a;
   transform: translateX(4px);
+}
+
+.rank-mine {
+  border-color: #c8a84e;
+  box-shadow: 0 0 12px rgba(200, 168, 78, 0.25);
+}
+
+.rank-mine .rank-name {
+  color: #f0d88a;
+}
+
+.my-tag {
+  font-size: 11px;
+  color: #0a0f08;
+  background: #c8a84e;
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-right: 6px;
 }
 
 .rank-first {
@@ -215,6 +324,8 @@ onMounted(async () => {
 }
 
 .rank-name {
+  display: flex;
+  align-items: center;
   font-size: 16px;
   font-weight: bold;
   color: #e0e0e0;
