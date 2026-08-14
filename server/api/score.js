@@ -115,13 +115,17 @@ router.get("/", async (ctx) => {
   }
   try {
     const highScore = await getHighScore(employeeId);
-    const [[{ high_boss_kills }]] = await getPool().execute(
+    const [rows] = await getPool().execute(
       `SELECT high_boss_kills FROM \`${SCORE_TABLE}\` WHERE employee_id = ?`,
       [employeeId],
     );
     ctx.body = {
       code: 200,
-      data: { employeeId, highScore, highBossKills: high_boss_kills },
+      data: {
+        employeeId,
+        highScore,
+        highBossKills: rows.length > 0 ? rows[0].high_boss_kills : 0,
+      },
     };
   } catch (err) {
     console.error(`[score] 查询失败: ${err.message}`);
@@ -157,13 +161,18 @@ router.post("/kills", async (ctx) => {
   }
   try {
     await saveGameKills(employeeId, kills, bossKills);
-    const [[{ high_boss_kills }]] = await getPool().execute(
+    const [rows] = await getPool().execute(
       `SELECT high_boss_kills FROM \`${SCORE_TABLE}\` WHERE employee_id = ?`,
       [employeeId],
     );
     ctx.body = {
       code: 200,
-      data: { employeeId, kills, bossKills, highBossKills: high_boss_kills },
+      data: {
+        employeeId,
+        kills,
+        bossKills,
+        highBossKills: rows.length > 0 ? rows[0].high_boss_kills : 0,
+      },
     };
   } catch (err) {
     console.error(`[score] 保存击杀数失败: ${err.message}`);
