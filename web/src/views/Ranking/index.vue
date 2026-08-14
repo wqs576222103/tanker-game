@@ -96,7 +96,7 @@ onMounted(async () => {
       name: row.employee_id || "匿名玩家",
       avatar: "",
       kills: row.high_skills || 0,
-      bossKills: row.last_boss_kills || 0,
+      bossKills: row.high_boss_kills || 0,
       deaths: row.deaths || 0,
       score: row.high_skills || 0,
     }));
