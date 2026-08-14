@@ -46,6 +46,18 @@ function saveGameKills(employeeId, kills, bossKills) {
   );
 }
 
+function saveDeath(employeeId) {
+  if (!employeeId) return Promise.resolve(null);
+  return getPool().execute(
+    `INSERT INTO \`${SCORE_TABLE}\` (employee_id, high_score, deaths, create_time, update_time)
+       VALUES (?, 0, 1, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE
+        deaths = deaths + 1,
+        update_time = NOW()`,
+    [employeeId],
+  );
+}
+
 const router = new Router({ prefix: "/tank-game-api/score" });
 
 router.get("/page", async (ctx) => {
@@ -73,7 +85,7 @@ router.get("/page", async (ctx) => {
     const total = totalRows.cnt;
 
     const [rows] = await getPool().execute(
-      `SELECT employee_id, high_score, create_time, update_time
+      `SELECT employee_id, high_score, last_kills, last_boss_kills, deaths, create_time, update_time
        FROM \`${SCORE_TABLE}\`
        WHERE ${whereClause}
        ORDER BY high_score DESC, update_time DESC
@@ -141,6 +153,23 @@ router.post("/kills", async (ctx) => {
     console.error(`[score] 保存击杀数失败: ${err.message}`);
     ctx.status = 500;
     ctx.body = { code: 500, message: "保存击杀数失败" };
+  }
+});
+
+router.post("/deaths", async (ctx) => {
+  const { employeeId } = ctx.request.body || {};
+  if (!employeeId) {
+    ctx.status = 400;
+    ctx.body = { code: 400, message: "缺少 employeeId 参数" };
+    return;
+  }
+  try {
+    await saveDeath(employeeId);
+    ctx.body = { code: 200, data: { employeeId } };
+  } catch (err) {
+    console.error(`[score] 死亡数+1失败: ${err.message}`);
+    ctx.status = 500;
+    ctx.body = { code: 500, message: "死亡数+1失败" };
   }
 });
 

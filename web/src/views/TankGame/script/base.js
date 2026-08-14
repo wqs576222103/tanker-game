@@ -4,7 +4,7 @@ import bossSvg from "@/assets/enemy-boss.svg";
 import { TankActions } from "./tank-actions.js";
 import { AILogger } from "./ai-logger.js";
 import { AIPlayer } from "./ai-player.js";
-import { saveGameKills, getScore } from "@/api/score.js";
+import { saveGameKills, addDeath, getScore } from "@/api/score.js";
 import { getToken, getUserInfo } from "@/utils/user";
 
 // ====================== 基础 ======================
@@ -1313,9 +1313,16 @@ export function gameOver() {
   try {
     const userInfo = getUserInfo();
     if (userInfo.employeeId) {
-      saveGameKills(userInfo.employeeId, kills, bossKills).catch(() => {});
+      saveGameKills(userInfo.employeeId, kills, bossKills).catch((err) => {
+        console.warn("[Game] 保存击杀数据失败:", err);
+      });
+      addDeath(userInfo.employeeId).catch((err) => {
+        console.warn("[Game] 保存死亡数失败:", err);
+      });
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn("[Game] 保存游戏数据异常:", e);
+  }
 }
 
 export function startGame() {

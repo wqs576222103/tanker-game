@@ -17,13 +17,15 @@
           :class="getRankClass(index)"
         >
           <div class="rank-num">{{ getMedal(index) }}</div>
-          <div class="rank-avatar">{{ item.avatar || item.name?.[0] || '?' }}</div>
+          <div class="rank-avatar">
+            {{ item.avatar || item.name?.[0] || "?" }}
+          </div>
           <div class="rank-info">
-            <div class="rank-name">{{ item.name || '匿名玩家' }}</div>
+            <div class="rank-name">{{ item.name || "匿名玩家" }}</div>
             <div class="rank-stats">
               <span>击杀: {{ item.kills || 0 }}</span>
+              <span>Boss击杀: {{ item.bossKills || 0 }}</span>
               <span>死亡: {{ item.deaths || 0 }}</span>
-              <span>K/D: {{ getKD(item.kills, item.deaths) }}</span>
             </div>
           </div>
           <div class="rank-score">
@@ -39,73 +41,52 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getRankList } from '@/api/rank'
+import { ref, onMounted } from "vue";
+import { getRankList } from "@/api/rank";
 
-const rankings = ref([])
-const loading = ref(false)
-const error = ref('')
+const rankings = ref([]);
+const loading = ref(false);
+const error = ref("");
 
 function getMedal(index) {
-  if (index === 0) return '👑'
-  if (index === 1) return '🥈'
-  if (index === 2) return '🥉'
-  return `#${index + 1}`
+  if (index === 0) return "👑";
+  if (index === 1) return "🥈";
+  if (index === 2) return "🥉";
+  return `#${index + 1}`;
 }
 
 function getRankClass(index) {
-  if (index === 0) return 'rank-first'
-  if (index === 1) return 'rank-second'
-  if (index === 2) return 'rank-third'
-  return ''
-}
-
-function getKD(kills, deaths) {
-  if (!deaths) return kills?.toFixed(1) || '0.0'
-  return (kills / deaths).toFixed(2)
+  if (index === 0) return "rank-first";
+  if (index === 1) return "rank-second";
+  if (index === 2) return "rank-third";
+  return "";
 }
 
 onMounted(async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    const data = await getRankList()
-    const list = Array.isArray(data.data)
-      ? data.data
-      : data.data?.list || []
+    const data = await getRankList();
+    const list = Array.isArray(data.data) ? data.data : data.data?.list || [];
     rankings.value = list.map((row) => ({
       id: row.employee_id,
-      name: row.employee_id || '匿名玩家',
-      avatar: '',
+      name: row.employee_id || "匿名玩家",
+      avatar: "",
       kills: row.high_score || 0,
-      deaths: 0,
+      bossKills: row.last_boss_kills || 0,
+      deaths: row.deaths || 0,
       score: row.high_score || 0,
-    }))
+    }));
   } catch (e) {
-    console.warn('[Ranking] API failed:', e.message)
+    console.warn("[Ranking] API failed:", e.message);
     if (!error.value) {
-      error.value = e.message
+      error.value = e.message;
     } else {
-      rankings.value = generateMockData()
+      rankings.value = [];
     }
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
-
-function generateMockData() {
-  return [
-    { id: 1, name: 'TankMaster', avatar: '🎖️', kills: 128, deaths: 12, score: 1280 },
-    { id: 2, name: 'SteelWolf', avatar: '🐺', kills: 105, deaths: 18, score: 1050 },
-    { id: 3, name: 'IronBear', avatar: '🐻', kills: 92, deaths: 25, score: 920 },
-    { id: 4, name: 'Thunder', avatar: '⚡', kills: 78, deaths: 22, score: 780 },
-    { id: 5, name: 'Phantom', avatar: '👻', kills: 65, deaths: 30, score: 650 },
-    { id: 6, name: 'Viper', avatar: '🐍', kills: 54, deaths: 28, score: 540 },
-    { id: 7, name: 'Falcon', avatar: '🦅', kills: 48, deaths: 35, score: 480 },
-    { id: 8, name: 'Shadow', avatar: '🌑', kills: 42, deaths: 40, score: 420 },
-    { id: 9, name: 'Raven', avatar: '🐦‍⬛', kills: 35, deaths: 38, score: 350 },
-    { id: 10, name: 'Eagle', avatar: '🦅', kills: 28, deaths: 42, score: 280 },
-  ]
-}
+});
 </script>
 
 <style scoped>
@@ -147,7 +128,9 @@ function generateMockData() {
   overflow-y: auto;
 }
 
-.loading, .error, .empty {
+.loading,
+.error,
+.empty {
   text-align: center;
   padding: 40px;
   color: #5a7a4a;
@@ -182,18 +165,30 @@ function generateMockData() {
 }
 
 .rank-first {
-  background: linear-gradient(90deg, rgba(200, 168, 78, 0.2), rgba(30, 45, 25, 0.8));
+  background: linear-gradient(
+    90deg,
+    rgba(200, 168, 78, 0.2),
+    rgba(30, 45, 25, 0.8)
+  );
   border-color: #c8a84e;
   box-shadow: 0 0 15px rgba(200, 168, 78, 0.3);
 }
 
 .rank-second {
-  background: linear-gradient(90deg, rgba(192, 192, 192, 0.15), rgba(30, 45, 25, 0.8));
+  background: linear-gradient(
+    90deg,
+    rgba(192, 192, 192, 0.15),
+    rgba(30, 45, 25, 0.8)
+  );
   border-color: #a0a0a0;
 }
 
 .rank-third {
-  background: linear-gradient(90deg, rgba(205, 127, 50, 0.15), rgba(30, 45, 25, 0.8));
+  background: linear-gradient(
+    90deg,
+    rgba(205, 127, 50, 0.15),
+    rgba(30, 45, 25, 0.8)
+  );
   border-color: #cd7f32;
 }
 
