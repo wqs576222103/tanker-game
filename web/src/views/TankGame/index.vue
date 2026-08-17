@@ -9,7 +9,7 @@
 </template>
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { getUserInfoByToken } from "@/api";
 import { getToken, getUserInfo } from "@/utils/user";
 import Map from "./components/Map/index.vue";
@@ -18,11 +18,13 @@ import { AIPlayer } from "./script/ai-player.js";
 import SurvivalAI from "./script/ai-tanker/survival-tank.js";
 
 const route = useRoute();
+const router = useRouter();
 const token = getToken();
 const employeeId = ref("");
 const rankingUrl = computed(() => {
   const tokenStr = new URLSearchParams(location.search).get("token");
-  return tokenStr ? `/ranking?token=${tokenStr}` : "/ranking";
+  const query = tokenStr ? { token: tokenStr } : {};
+  return router.resolve({ name: "Ranking", query }).href;
 });
 
 onMounted(async () => {
