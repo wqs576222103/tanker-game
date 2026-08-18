@@ -4,6 +4,7 @@ import vue from "@vitejs/plugin-vue";
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: "/tanker/",
   plugins: [vue()],
   server: {
     host: true,
@@ -12,7 +13,6 @@ export default defineConfig({
       "/tank-game-api": {
         target: "http://localhost:3000",
         changeOrigin: true,
-
       },
     },
   },
