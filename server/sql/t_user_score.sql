@@ -1,3 +1,6 @@
+CREATE DATABASE IF NOT EXISTS `tanker_game` DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `tanker_game`;
+
 CREATE TABLE IF NOT EXISTS `t_user_score` (
   `employee_id` VARCHAR(64) NOT NULL PRIMARY KEY,
   `high_skills` INT NOT NULL DEFAULT 0,
