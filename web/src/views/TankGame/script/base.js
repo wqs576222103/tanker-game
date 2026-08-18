@@ -491,9 +491,6 @@ export function resetGame() {
   boss = null;
   lastBossKills = 0;
   baseEnemyHp = 2;
-  gameSpeed = 1;
-  const btnSpeed = document.getElementById("btn-speed");
-  if (btnSpeed) btnSpeed.textContent = "⏩ 1x";
   if (!mapGenerated) {
     genMap();
     mapGenerated = true;
