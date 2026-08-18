@@ -10,6 +10,7 @@ import Map from "./components/Map/h5Map.vue";
 import { initGame } from "./script/base.js";
 import { AIPlayer } from "./script/ai-player.js";
 import SurvivalAI from "./script/ai-tanker/survival-tank.js";
+import DefaultAI from "./script/ai-tanker/default-tank.js";
 
 const route = useRoute();
 const token = getToken();
@@ -26,5 +27,5 @@ onMounted(async () => {
   initGame();
 });
 
-AIPlayer.setDefault(SurvivalAI);
+AIPlayer.setDefault(DefaultAI);
 </script>

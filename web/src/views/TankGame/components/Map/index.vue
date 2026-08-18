@@ -25,7 +25,7 @@
           🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
           AI可导入，<a
             style="color: green"
-            href="/docs/ai-script-guide.md"
+            :href="aiGuideUrl"
             download
             >下载提示词</a
           >，定制化你的AI坦克吧！
@@ -81,7 +81,9 @@
     <input type="file" id="ai-file" accept=".js" style="display: none" />
   </div>
 </template>
-<script setup></script>
+<script setup>
+import aiGuideUrl from "@/assets/ai-script-guide.md?url";
+</script>
 
 <style scoped>
 #wrap {
