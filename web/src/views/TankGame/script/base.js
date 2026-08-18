@@ -107,7 +107,7 @@ export function setDeathReason(v) {
 window.audioCtx = null;
 
 // 音效开关
-window.sfxEnabled = true;
+window.sfxEnabled = false;
 export function toggleSfx() {
   sfxEnabled = !sfxEnabled;
   if (!sfxEnabled) stopBgm();
@@ -1544,7 +1544,11 @@ export function initGame() {
   document.getElementById("btn-resume").addEventListener("click", togglePause);
 
   // 音效开关
-  document.getElementById("btn-sfx").addEventListener("click", toggleSfx);
+  const sfxBtn = document.getElementById("btn-sfx");
+  sfxBtn.addEventListener("click", toggleSfx);
+  // 同步初始状态
+  sfxBtn.classList.toggle("active", sfxEnabled);
+  sfxBtn.textContent = sfxEnabled ? "🔊 音效" : "🔇 音效";
 
   // AI 按钮
   const btnAI = document.getElementById("btn-ai");

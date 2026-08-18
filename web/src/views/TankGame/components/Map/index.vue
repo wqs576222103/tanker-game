@@ -23,11 +23,12 @@
         <p>
           ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />
           🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
-          AI可自定义，支持导入JS脚本，<a
+          AI可导入，<a
+            style="color: green"
             href="/docs/ai-script-guide.md"
             download
-            >下载相关API</a
-          >
+            >下载提示词</a
+          >，定制化你的AI坦克吧！
         </p>
         <button id="btn-start">开 始 游 戏</button>
       </div>
@@ -73,7 +74,7 @@
       <button id="btn-ai">🤖 AI: 关</button>
       <button id="btn-speed" disabled>⏩ 1x</button>
       <button id="btn-import-ai">📥 导入AI</button>
-      <button id="btn-sfx" class="active">🔊 音效</button>
+      <button id="btn-sfx">🔇 音效</button>
       <button id="btn-fullscreen">⛶ 全屏 F</button>
       <button id="btn-export-death-log">📋 死亡日志</button>
     </div>
