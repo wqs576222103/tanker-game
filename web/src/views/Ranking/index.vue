@@ -193,6 +193,7 @@ onMounted(async () => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: #3a5a3a transparent;
 }
