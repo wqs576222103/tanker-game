@@ -72,7 +72,7 @@
       <button id="btn-pause">暂停 P</button>
       <button id="btn-restart2">重新开始 R</button>
       <button id="btn-ai">🤖 AI: 关</button>
-      <button id="btn-speed" disabled>⏩ 1x</button>
+      <button id="btn-speed" style="display: none">⏩ 1x</button>
       <button id="btn-import-ai">📥 导入AI</button>
       <button id="btn-sfx">🔇 音效</button>
       <button id="btn-fullscreen">⛶ 全屏 F</button>

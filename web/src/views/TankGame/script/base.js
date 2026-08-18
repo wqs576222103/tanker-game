@@ -64,7 +64,7 @@ window.hiBossKills = 0;
 window.gtMs = 0; // 游戏时间
 window.spawnTimer = 2;
 window.mapGenerated = false; // 地图是否已生成
-window.gameSpeed = 1; // 游戏倍速 (仅AI模式可用)
+window.gameSpeed = 1; // 游戏倍速
 
 window.map = [];
 window.gates = [];
@@ -491,6 +491,9 @@ export function resetGame() {
   boss = null;
   lastBossKills = 0;
   baseEnemyHp = 2;
+  gameSpeed = 1;
+  const btnSpeed = document.getElementById("btn-speed");
+  if (btnSpeed) btnSpeed.textContent = "⏩ 1x";
   if (!mapGenerated) {
     genMap();
     mapGenerated = true;
@@ -1554,7 +1557,7 @@ export function initGame() {
   const btnAI = document.getElementById("btn-ai");
   btnAI.addEventListener("click", toggleAI);
 
-  // 倍速按钮（仅AI模式可用）
+  // 倍速按钮
   const btnSpeed = document.getElementById("btn-speed");
   const SPEEDS = [1, 2, 4, 8];
   function cycleSpeed() {
@@ -1563,7 +1566,6 @@ export function initGame() {
     btnSpeed.textContent = "⏩ " + gameSpeed + "x";
   }
   btnSpeed.addEventListener("click", () => {
-    if (!AIPlayer.enabled) return;
     cycleSpeed();
   });
 
@@ -1595,7 +1597,6 @@ export function initGame() {
   function toggleAI() {
     const enabled = AIPlayer.toggle();
     btnAI.classList.toggle("active", enabled);
-    btnSpeed.disabled = !enabled;
     if (!enabled) {
       gameSpeed = 1;
       btnSpeed.textContent = "⏩ 1x";
@@ -1750,7 +1751,6 @@ export function initGame() {
   updateHud();
   loadHighScore();
   document.getElementById("btn-speed").textContent = "⏩ 1x";
-  document.getElementById("btn-speed").disabled = true;
 
   // 未开始时播放背景音乐（浏览器可能拦截自动播放，首次交互时补播）
   playBgm();

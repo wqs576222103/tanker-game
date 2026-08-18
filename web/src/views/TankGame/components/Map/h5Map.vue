@@ -75,7 +75,7 @@
       <button id="btn-pause">P</button>
       <button id="btn-restart2">R</button>
       <button id="btn-ai">🤖 关</button>
-      <button id="btn-speed" disabled>⏩ 1x</button>
+      <button id="btn-speed" style="display: none">⏩ 1x</button>
       <button id="btn-import-ai">📥</button>
       <button id="btn-sfx" class="active">🔊</button>
       <button id="btn-fullscreen">⛶</button>
