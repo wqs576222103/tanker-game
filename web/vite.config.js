@@ -4,6 +4,8 @@ import vue from "@vitejs/plugin-vue";
 
 // https://vite.dev/config/
 export default defineConfig({
+  // 生产环境下的公共路径, 生产环境用 /tanker
+  base: process.env.NODE_ENV === 'production' ? './' : '/',
   plugins: [vue()],
   server: {
     host: true,
@@ -27,6 +29,5 @@ export default defineConfig({
       },
     },
   },
-  // 生产环境下的公共路径, 生产环境用 /tanker
-  publicPath: process.env.NODE_ENV === 'production' ? './' : '/',
+
 });
