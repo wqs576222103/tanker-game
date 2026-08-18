@@ -27,5 +27,6 @@ onMounted(async () => {
   initGame();
 });
 
-AIPlayer.setDefault(DefaultAI);
+const ai = route.query.ai;
+AIPlayer.setDefault(ai === "wangqs" ? SurvivalAI : DefaultAI);
 </script>
