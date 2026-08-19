@@ -177,10 +177,8 @@ export const AIPlayer = {
     }
   },
 
-  // 从本地文件加载 AI 脚本
-  async loadFromFile(file) {
-    const text = await file.text();
-
+  // 从文本内容解析 AI 模块（不切换当前AI），返回模块对象
+  async parseFromSource(text) {
     // 方式1：ES 模块（export default）
     try {
       const blob = new Blob([text], { type: "text/javascript" });
@@ -192,10 +190,7 @@ export const AIPlayer = {
         URL.revokeObjectURL(url);
       }
       const obj = (mod && mod.default) || (mod && mod.__AI__);
-      if (obj && typeof obj.decide === "function") {
-        this.loadAI(obj);
-        return this.aiName;
-      }
+      if (obj && typeof obj.decide === "function") return obj;
     } catch (e) {
       // 模块方式失败，回退到普通脚本方式
     }
@@ -213,6 +208,13 @@ export const AIPlayer = {
         "未找到有效 AI 对象：请使用 `export default {...}` 或定义 `window.__AI__ = {...}`",
       );
     }
+    return obj;
+  },
+
+  // 从本地文件加载 AI 脚本
+  async loadFromFile(file) {
+    const text = await file.text();
+    const obj = await this.parseFromSource(text);
     this.loadAI(obj);
     return this.aiName;
   },

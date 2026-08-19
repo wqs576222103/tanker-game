@@ -79,7 +79,57 @@
   </div>
 </template>
 <script setup>
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
+import { getToken, getUserInfo } from "@/utils/user";
+import { getAiScript } from "@/api/ai.js";
+import { initGame } from "../../script/base.js";
+import { AIPlayer } from "../../script/ai-player.js";
+import SurvivalAI from "../../script/ai-tanker/survival-tank.js";
+import DefaultAI from "../../script/ai-tanker/default-tank.js";
+
+const employeeId = ref("");
+const token = getToken();
+const route = useRoute();
+
+onMounted(async () => {
+  if (token) {
+    try {
+      const userInfo = getUserInfo();
+      employeeId.value = userInfo.employeeId || "";
+    } catch (err) {
+      console.error("获取用户信息失败:", err);
+    }
+  }
+  initGame();
+  // 有用户信息且查询到已保存的 AI 脚本时，默认加载用户脚本；否则保持默认脚本
+  if (employeeId.value) {
+    await loadUserAI(employeeId.value);
+  }
+});
+
+// 加载该员工上次导入并保存在服务器的 AI 脚本作为默认AI
+async function loadUserAI(empId) {
+  try {
+    const res = await getAiScript(empId);
+    const script = res?.data;
+    if (!script || !script.scriptPath) return;
+    const resp = await fetch(script.scriptPath);
+    if (!resp.ok) {
+      console.warn("[AI] 拉取脚本内容失败:", resp.status);
+      return;
+    }
+    const text = await resp.text();
+    const obj = await AIPlayer.parseFromSource(text);
+    AIPlayer.setDefault(obj);
+  } catch (err) {
+    console.warn("[AI] 加载用户AI脚本失败，使用默认脚本:", err);
+  }
+}
+
+const ai = route.query.ai;
+AIPlayer.setDefault(ai === "wangqs" ? SurvivalAI : DefaultAI);
 </script>
 
 <style scoped>

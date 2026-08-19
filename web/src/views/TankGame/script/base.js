@@ -10,6 +10,7 @@ import { TankActions } from "./tank-actions.js";
 import { AILogger } from "./ai-logger.js";
 import { AIPlayer } from "./ai-player.js";
 import { saveGameKills, addDeath, getScore } from "@/api/score.js";
+import { uploadAiScript } from "@/api/ai.js";
 import { getToken, getUserInfo } from "@/utils/user";
 
 // ====================== 基础 ======================
@@ -1576,6 +1577,15 @@ export function initGame() {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     try {
+      // 有用户信息时，将脚本上传到服务器并存档 employeeId 与脚本路径
+      const userInfo = getUserInfo();
+      if (userInfo.employeeId) {
+        try {
+          await uploadAiScript(userInfo.employeeId, file);
+        } catch (err) {
+          console.warn("[AI] 上传脚本到服务器失败:", err);
+        }
+      }
       const name = await AIPlayer.loadFromFile(file);
       if (!AIPlayer.enabled) {
         AIPlayer.toggle();

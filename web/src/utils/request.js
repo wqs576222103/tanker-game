@@ -21,7 +21,10 @@ function buildOptions(method, data, headers) {
     method,
     headers: { ...DEFAULT_HEADERS, ...headers },
   };
-  if (
+  if (data instanceof FormData) {
+    options.body = data;
+    delete options.headers["Content-Type"];
+  } else if (
     ["POST", "PUT", "PATCH"].includes(method) &&
     data &&
     typeof data === "object"

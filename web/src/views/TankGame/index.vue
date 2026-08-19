@@ -13,10 +13,6 @@ import { useRoute, useRouter } from "vue-router";
 import { getUserInfoByToken } from "@/api";
 import { getToken, getUserInfo } from "@/utils/user";
 import Map from "./components/Map/index.vue";
-import { initGame } from "./script/base.js";
-import { AIPlayer } from "./script/ai-player.js";
-import SurvivalAI from "./script/ai-tanker/survival-tank.js";
-import DefaultAI from "./script/ai-tanker/default-tank.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -37,11 +33,7 @@ onMounted(async () => {
       console.error("获取用户信息失败:", err);
     }
   }
-  initGame();
 });
-
-const ai = route.query.ai;
-AIPlayer.setDefault(ai === "wangqs" ? SurvivalAI : DefaultAI);
 </script>
 
 <style scoped>
