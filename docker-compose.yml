@@ -38,6 +38,8 @@ services:
       DB_NAME: ${DB_NAME:-tanker_game}
     ports:
       - "8082:3000"
+    volumes:
+      - ./server/upload/ai:/app/upload/ai
 
   web:
     build:
