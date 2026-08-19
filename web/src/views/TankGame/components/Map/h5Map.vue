@@ -27,9 +27,7 @@
         <p>
           ⬜ 银色砖墙：反弹一次子弹（不可摧毁）　🟨 黄色砖墙：可被子弹击碎<br />
           🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
-          AI可自定义，支持导入JS脚本，<a
-            :href="aiGuideUrl"
-            download
+          AI可自定义，支持导入JS脚本，<a :href="aiGuideUrl" download
             >下载相关API</a
           >
         </p>
@@ -85,7 +83,7 @@
   </div>
 </template>
 <script setup>
-import aiGuideUrl from "@/assets/ai-script-guide.md?url";
+import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 </script>
 
 <style scoped>

@@ -23,10 +23,7 @@
         <p>
           ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />
           🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
-          AI可导入，<a
-            style="color: green"
-            :href="aiGuideUrl"
-            download
+          AI可导入，<a style="color: green" :href="aiGuideUrl" download
             >下载提示词</a
           >，定制化你的AI坦克吧！
         </p>
@@ -82,7 +79,7 @@
   </div>
 </template>
 <script setup>
-import aiGuideUrl from "@/assets/ai-script-guide.md?url";
+import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 </script>
 
 <style scoped>
