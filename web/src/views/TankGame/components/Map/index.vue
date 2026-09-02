@@ -23,7 +23,10 @@
         <p>
           ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />
           🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
-          AI可导入，<a style="color: green" :href="aiGuideUrl" download
+          可通过导入AI脚本自动运行坦克，<a
+            style="color: green"
+            :href="aiGuideUrl"
+            download
             >下载提示词</a
           >，定制化你的AI坦克吧！
         </p>
