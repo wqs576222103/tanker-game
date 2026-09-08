@@ -2,7 +2,7 @@
   <div class="tank-game-wrap">
     <Map></Map>
     <div class="top-right">
-      <div v-if="employeeId" class="user-info">工号：{{ employeeId }}</div>
+      <div v-if="username" class="user-info">姓名：{{ username }}</div>
       <a class="ranking-link" :href="rankingUrl" target="_blank">排 行 榜</a>
       <button class="game-intro-btn" @click="openGameIntro">游 戏 介 绍</button>
     </div>
@@ -24,6 +24,7 @@ const route = useRoute();
 const router = useRouter();
 const token = getToken();
 const employeeId = ref("");
+const username = ref("");
 const showIntro = ref(false);
 const rankingUrl = computed(() => {
   const tokenStr = new URLSearchParams(location.search).get("token");
@@ -36,6 +37,7 @@ onMounted(async () => {
     try {
       const userInfo = getUserInfo();
       employeeId.value = userInfo.employeeId || "";
+      username.value = userInfo.username || "";
     } catch (err) {
       console.error("获取用户信息失败:", err);
     }
