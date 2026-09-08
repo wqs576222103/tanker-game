@@ -13,6 +13,7 @@ const SOURCE_MAP = {
   localhost: testUserUrl,
   // 模拟环境
   "139.155.133.14": testUserUrl,
+  "118.112.177.2": testUserUrl,
   // 生产环境
   "113.249.91.32": prodUserUrl,
 };
