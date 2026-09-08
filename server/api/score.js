@@ -2,8 +2,10 @@ const Router = require("@koa/router");
 const { getPool, assertIdentifier } = require("../db");
 
 const SCORE_TABLE = process.env.DB_SCORE_TABLE || "t_user_score";
+const USER_TABLE = process.env.DB_TABLE || "t_user_sync";
 
 assertIdentifier(SCORE_TABLE);
+assertIdentifier(USER_TABLE);
 
 function saveHighScore(employeeId, score) {
   if (!employeeId || typeof score !== "number") return Promise.resolve(null);
@@ -68,29 +70,33 @@ router.get("/page", async (ctx) => {
     100,
     Math.max(1, parseInt(ctx.query.pageSize, 10) || 10),
   );
-  const employeeId = ctx.query.employeeId;
+  const keyword = ctx.query.keyword;
 
   const offset = (page - 1) * pageSize;
 
   try {
     let whereClause = "1=1";
     let params = [];
-    if (employeeId) {
-      whereClause += " AND employee_id LIKE ?";
-      params.push(`%${employeeId}%`);
+    if (keyword) {
+      whereClause += " AND (s.employee_id LIKE ? OR u.username LIKE ?)";
+      params.push(`%${keyword}%`, `%${keyword}%`);
     }
 
     const [[totalRows]] = await getPool().execute(
-      `SELECT COUNT(*) AS cnt FROM \`${SCORE_TABLE}\` WHERE ${whereClause}`,
+      `SELECT COUNT(*) AS cnt 
+       FROM \`${SCORE_TABLE}\` s
+       LEFT JOIN \`${USER_TABLE}\` u ON s.employee_id = u.employee_id
+       WHERE ${whereClause}`,
       params,
     );
     const total = totalRows.cnt;
 
     const [rows] = await getPool().execute(
-      `SELECT employee_id, high_skills, last_kills, last_boss_kills, high_boss_kills, deaths, create_time, update_time
-       FROM \`${SCORE_TABLE}\`
+      `SELECT s.employee_id, s.high_skills, s.last_kills, s.last_boss_kills, s.high_boss_kills, s.deaths, s.create_time, s.update_time, u.username
+       FROM \`${SCORE_TABLE}\` s
+       LEFT JOIN \`${USER_TABLE}\` u ON s.employee_id = u.employee_id
        WHERE ${whereClause}
-       ORDER BY high_skills DESC, update_time DESC
+       ORDER BY s.high_skills DESC, s.update_time DESC
        LIMIT ${pageSize} OFFSET ${offset}`,
       params,
     );

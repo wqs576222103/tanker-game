@@ -9,7 +9,7 @@
       <input
         v-model.trim="searchQuery"
         type="text"
-        placeholder="按工号搜索..."
+        placeholder="按工号或姓名搜索..."
       />
       <span v-if="searchQuery" class="search-count">
         匹配 {{ filteredRankings.length }} 条
@@ -21,7 +21,7 @@
       <div v-else-if="error" class="error">{{ error }}</div>
       <div v-else-if="rankings.length === 0" class="empty">暂无排名数据</div>
       <div v-else-if="filteredRankings.length === 0" class="empty">
-        未找到工号 "{{ searchQuery }}" 的排名
+        未找到匹配的排名
       </div>
       <div v-else class="list">
         <div
@@ -34,7 +34,7 @@
           <div class="rank-info">
             <div class="rank-name">
               <span v-if="isMe(item)" class="my-tag">我的</span>
-              {{ item.name || "匿名玩家" }}
+              {{ item.name || "匿名玩家" }}({{ item.id }})
             </div>
             <div class="rank-stats">
               <span>最高击杀数: {{ item.kills || 0 }}</span>
@@ -65,7 +65,11 @@ const filteredRankings = computed(() => {
   if (!query) return rankings.value.map((item, index) => ({ item, index }));
   return rankings.value
     .map((item, index) => ({ item, index }))
-    .filter(({ item }) => String(item.id).toLowerCase().includes(query));
+    .filter(
+      ({ item }) =>
+        String(item.id).toLowerCase().includes(query) ||
+        (item.name && item.name.toLowerCase().includes(query)),
+    );
 });
 
 function isMe(item) {
@@ -93,7 +97,7 @@ onMounted(async () => {
     const list = Array.isArray(data.data) ? data.data : data.data?.list || [];
     rankings.value = list.map((row) => ({
       id: row.employee_id,
-      name: row.employee_id || "匿名玩家",
+      name: row.username || row.employee_id || "匿名玩家",
       avatar: "",
       kills: row.high_skills || 0,
       bossKills: row.high_boss_kills || 0,
