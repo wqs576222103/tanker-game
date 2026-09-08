@@ -6,12 +6,15 @@ const TABLE_NAME = process.env.DB_TABLE || "t_user_sync";
 
 assertIdentifier(TABLE_NAME);
 
+const testUserUrl = "http://139.155.133.14:8081";
+const prodUserUrl = "http://113.249.91.32"
+
 const SOURCE_MAP = {
-  localhost: "http://8.130.41.52",
+  localhost: testUserUrl,
   // 模拟环境
-  "8.130.41.52": "http://8.130.41.52",
+  "139.155.133.14": testUserUrl,
   // 生产环境
-  "113.249.91.32": "http://113.249.91.32",
+  "113.249.91.32": prodUserUrl,
 };
 
 function normalizeIp(ip) {
@@ -100,14 +103,18 @@ router.get("/infoByToken", async (ctx) => {
     return;
   }
 
-  let clientIp = normalizeIp(ctx.socket.remoteAddress);
+  const hostHeader = ctx.request.headers.host;
+  let clientIp = hostHeader
+    ? hostHeader.split(":")[0]
+    : normalizeIp(ctx.socket.remoteAddress);
   const xff = ctx.headers["x-forwarded-for"];
   if (xff) {
     const first = normalizeIp(String(xff).split(",")[0].trim());
     if (first) clientIp = first;
   }
 
-  const targetBase = SOURCE_MAP[clientIp] || "http://113.249.91.32";
+  const targetBase = SOURCE_MAP[clientIp] || prodUserUrl;
+  console.log(`[user] ${clientIp} -> ${targetBase}`);
   if (!targetBase) {
     ctx.status = 403;
     ctx.body = { code: 403, message: `来源 ${clientIp} 不在允许列表中` };
