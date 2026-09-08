@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     host: true,
-    port: 8081,
+    port: 8101,
     proxy: {
       "/tank-game-api": {
         target: "http://localhost:3000",
