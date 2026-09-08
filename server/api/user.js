@@ -107,7 +107,7 @@ router.get("/infoByToken", async (ctx) => {
     if (first) clientIp = first;
   }
 
-  const targetBase = SOURCE_MAP[clientIp] || "http://8.130.41.52";
+  const targetBase = SOURCE_MAP[clientIp] || "http://113.249.91.32";
   if (!targetBase) {
     ctx.status = 403;
     ctx.body = { code: 403, message: `来源 ${clientIp} 不在允许列表中` };
