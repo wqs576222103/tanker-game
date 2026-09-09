@@ -7,25 +7,22 @@
 
     <div class="search-bar">
       <input
-        v-model.trim="searchQuery"
+        v-model.trim="keyword"
         type="text"
         placeholder="按工号或姓名搜索..."
+        @keyup.enter="handleSearch"
       />
-      <span v-if="searchQuery" class="search-count">
-        匹配 {{ filteredRankings.length }} 条
-      </span>
+      <button class="search-btn" @click="handleSearch">搜索</button>
+      <span v-if="total > 0" class="search-count">共 {{ total }} 条</span>
     </div>
 
     <div class="ranking-list">
       <div v-if="loading" class="loading">加载中...</div>
       <div v-else-if="error" class="error">{{ error }}</div>
       <div v-else-if="rankings.length === 0" class="empty">暂无排名数据</div>
-      <div v-else-if="filteredRankings.length === 0" class="empty">
-        未找到匹配的排名
-      </div>
       <div v-else class="list">
         <div
-          v-for="{ item, index } in filteredRankings"
+          v-for="(item, index) in rankings"
           :key="item.id || index"
           class="rank-item"
           :class="[getRankClass(index), { 'rank-mine': isMe(item) }]"
@@ -45,6 +42,14 @@
       </div>
     </div>
 
+    <div v-if="totalPages > 1" class="pagination">
+      <button :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
+      <span class="page-info">{{ page }} / {{ totalPages }}</span>
+      <button :disabled="page >= totalPages" @click="goPage(page + 1)">
+        下一页
+      </button>
+    </div>
+
     <div class="back-btn" @click="$router.push('/tank-game')">返回游戏</div>
   </div>
 </template>
@@ -57,20 +62,56 @@ import { getUserInfo } from "@/utils/user";
 const rankings = ref([]);
 const loading = ref(false);
 const error = ref("");
-const searchQuery = ref("");
+const keyword = ref("");
+const searchKeyword = ref("");
 const myEmployeeId = ref("");
+const page = ref(1);
+const pageSize = ref(10);
+const total = ref(0);
 
-const filteredRankings = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return rankings.value.map((item, index) => ({ item, index }));
-  return rankings.value
-    .map((item, index) => ({ item, index }))
-    .filter(
-      ({ item }) =>
-        String(item.id).toLowerCase().includes(query) ||
-        (item.name && item.name.toLowerCase().includes(query)),
-    );
-});
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value));
+
+async function fetchData() {
+  loading.value = true;
+  error.value = "";
+  try {
+    const data = await getRankList({
+      page: page.value,
+      pageSize: pageSize.value,
+      keyword: searchKeyword.value || undefined,
+    });
+    const list = Array.isArray(data.data) ? data.data : data.data?.list || [];
+    total.value = data.data?.total || 0;
+    rankings.value = list.map((row) => ({
+      id: row.employee_id,
+      name: row.username || row.employee_id || "匿名玩家",
+      kills: row.high_skills || 0,
+      bossKills: row.high_boss_kills || 0,
+      deaths: row.deaths || 0,
+    }));
+
+    const userInfo = getUserInfo();
+    if (userInfo && userInfo.employeeId) {
+      myEmployeeId.value = userInfo.employeeId;
+    }
+  } catch (e) {
+    error.value = e.message || "加载失败";
+    rankings.value = [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+function handleSearch() {
+  searchKeyword.value = keyword.value;
+  page.value = 1;
+  fetchData();
+}
+
+function goPage(p) {
+  page.value = p;
+  fetchData();
+}
 
 function isMe(item) {
   return myEmployeeId.value && String(item.id) === String(myEmployeeId.value);
@@ -90,36 +131,7 @@ function getRankClass(index) {
   return "";
 }
 
-onMounted(async () => {
-  loading.value = true;
-  try {
-    const data = await getRankList();
-    const list = Array.isArray(data.data) ? data.data : data.data?.list || [];
-    rankings.value = list.map((row) => ({
-      id: row.employee_id,
-      name: row.username || row.employee_id || "匿名玩家",
-      avatar: "",
-      kills: row.high_skills || 0,
-      bossKills: row.high_boss_kills || 0,
-      deaths: row.deaths || 0,
-      score: row.high_skills || 0,
-    }));
-
-    const userInfo = getUserInfo();
-    if (userInfo && userInfo.employeeId) {
-      myEmployeeId.value = userInfo.employeeId;
-    }
-  } catch (e) {
-    console.warn("[Ranking] API failed:", e.message);
-    if (!error.value) {
-      error.value = e.message;
-    } else {
-      rankings.value = [];
-    }
-  } finally {
-    loading.value = false;
-  }
-});
+onMounted(fetchData);
 </script>
 
 <style scoped>
@@ -386,5 +398,55 @@ onMounted(async () => {
   background: linear-gradient(90deg, #3a5a3a, #4a6a4a);
   color: #c0e0b0;
   box-shadow: 0 0 15px rgba(74, 106, 74, 0.5);
+}
+
+.search-btn {
+  padding: 10px 20px;
+  background: linear-gradient(90deg, #2a4a2a, #3a5a3a);
+  border: 1px solid #4a6a4a;
+  border-radius: 8px;
+  color: #a0c090;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.search-btn:hover {
+  background: linear-gradient(90deg, #3a5a3a, #4a6a4a);
+  color: #c0e0b0;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.pagination button {
+  padding: 8px 16px;
+  background: rgba(30, 45, 25, 0.8);
+  border: 1px solid #2a3a2a;
+  border-radius: 6px;
+  color: #a0c090;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: rgba(40, 60, 30, 0.9);
+  border-color: #3a5a3a;
+  color: #c0e0b0;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 13px;
+  color: #7a9a6a;
 }
 </style>
