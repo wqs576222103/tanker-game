@@ -27,10 +27,18 @@ const routes = [
     name: "Ranking",
     component: () => import("../views/Ranking/index.vue"),
   },
+  {
+    path: "/ai-script",
+    name: "AiScript",
+    component: () => import("../views/AiScript/index.vue"),
+  },
 ];
 
 const router = createRouter({
-  history: process.env.NODE_ENV === 'production' ? createWebHistory('/tanker') : createWebHistory(),
+  history:
+    process.env.NODE_ENV === "production"
+      ? createWebHistory("/tanker")
+      : createWebHistory(),
   routes,
 });
 

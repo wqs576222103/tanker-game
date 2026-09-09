@@ -5,8 +5,10 @@ const multer = require("@koa/multer");
 const { getPool, assertIdentifier } = require("../db");
 
 const AI_TABLE = process.env.DB_AI_TABLE || "t_user_ai";
+const USER_TABLE = process.env.DB_TABLE || "t_user_sync";
 
 assertIdentifier(AI_TABLE);
+assertIdentifier(USER_TABLE);
 
 const UPLOAD_DIR = path.join(__dirname, "..", "upload", "ai");
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -111,6 +113,54 @@ router.post("/upload", uploadSingle("file"), async (ctx) => {
     console.error(`[ai] 保存AI脚本记录失败: ${err.message}`);
     ctx.status = 500;
     ctx.body = { code: 500, message: "保存AI脚本记录失败" };
+  }
+});
+
+// 查询所有 AI 脚本列表，连表 t_user_sync 获取用户名
+router.get("/list", async (ctx) => {
+  const page = Math.max(1, parseInt(ctx.query.page, 10) || 1);
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(ctx.query.pageSize, 10) || 10),
+  );
+  const keyword = ctx.query.keyword;
+  const offset = (page - 1) * pageSize;
+
+  try {
+    let whereClause = "1=1";
+    const params = [];
+    if (keyword) {
+      whereClause += " AND (a.employee_id LIKE ? OR u.username LIKE ?)";
+      params.push(`%${keyword}%`, `%${keyword}%`);
+    }
+
+    const [[totalRows]] = await getPool().execute(
+      `SELECT COUNT(*) AS cnt
+       FROM \`${AI_TABLE}\` a
+       LEFT JOIN \`${USER_TABLE}\` u ON a.employee_id = u.employee_id
+       WHERE ${whereClause}`,
+      params,
+    );
+    const total = totalRows.cnt;
+
+    const [rows] = await getPool().execute(
+      `SELECT a.employee_id, u.username, a.file_name, a.create_time
+       FROM \`${AI_TABLE}\` a
+       LEFT JOIN \`${USER_TABLE}\` u ON a.employee_id = u.employee_id
+       WHERE ${whereClause}
+       ORDER BY a.create_time DESC
+       LIMIT ${pageSize} OFFSET ${offset}`,
+      params,
+    );
+
+    ctx.body = {
+      code: 200,
+      data: { list: rows, total, page, pageSize },
+    };
+  } catch (err) {
+    console.error(`[ai] 分页查询AI脚本失败: ${err.message}`);
+    ctx.status = 500;
+    ctx.body = { code: 500, message: "查询AI脚本列表失败" };
   }
 });
 

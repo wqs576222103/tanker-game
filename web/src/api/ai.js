@@ -10,3 +10,7 @@ export function uploadAiScript(employeeId, file) {
 export function getAiScript(employeeId) {
   return get("/ai", { employeeId });
 }
+
+export function getAiList(params) {
+  return get("/ai/list", params);
+}
