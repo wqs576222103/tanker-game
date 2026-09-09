@@ -218,7 +218,7 @@ export const TankActions = {
   },
 
   // 射击子弹
-  fireBullet(x, y, dir, owner, dmg) {
+  fireBullet(x, y, dir, owner, dmg, speed) {
     if (bullets.length > 200) return;
     const len = Math.hypot(dir.x, dir.y) || 1;
     bullets.push({
@@ -231,18 +231,20 @@ export const TankActions = {
       bounced: false,
       dead: false,
       born: gtMs,
+      ...(speed != null ? { speed } : {}),
     });
     sfx("shoot");
   },
 
   // 按方向射击
-  fireDir(x, y, angle, owner, dmg) {
+  fireDir(x, y, angle, owner, dmg, speed) {
     this.fireBullet(
       x,
       y,
       { x: Math.cos(angle), y: Math.sin(angle) },
       owner,
       dmg,
+      speed,
     );
   },
 
@@ -630,11 +632,13 @@ export const TankActions = {
       const ang = Math.atan2(player.dir.y, player.dir.x);
       const mx = cx + player.dir.x * (player.w / 2),
         my = cy + player.dir.y * (player.h / 2);
+      const curSpeed = player.speedT > gtMs ? player.speed * 1.4 : player.speed;
+      const bulletSpeed = Math.max(140, curSpeed * 1.4);
       if (player.spreadT > gtMs) {
         for (let i = -1; i <= 1; i++)
-          this.fireDir(mx, my, ang + i * 0.18, "player", 1);
+          this.fireDir(mx, my, ang + i * 0.18, "player", 1, bulletSpeed);
       } else {
-        this.fireDir(mx, my, ang, "player", 1);
+        this.fireDir(mx, my, ang, "player", 1, bulletSpeed);
       }
     }
 
