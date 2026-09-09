@@ -64,7 +64,7 @@ const error = ref("");
 const keyword = ref("");
 const searchKeyword = ref("");
 const page = ref(1);
-const pageSize = ref(20);
+const pageSize = ref(200);
 const total = ref(0);
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value));

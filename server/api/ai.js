@@ -91,6 +91,17 @@ router.post("/upload", uploadSingle("file"), async (ctx) => {
     }
   }
   const scriptPath = `/tank-game-api/ai/file/${finalName}`;
+
+  // 从文件内容中提取 name 作为脚本名
+  let scriptName = file.originalname;
+  try {
+    const content = fs.readFileSync(finalPath, "utf-8");
+    const nameMatch = content.match(/name\s*:\s*["'](.+?)["']/);
+    if (nameMatch && nameMatch[1]) {
+      scriptName = nameMatch[1];
+    }
+  } catch (_) {}
+
   try {
     await getPool().execute(
       `INSERT INTO \`${AI_TABLE}\` (employee_id, file_name, script_path, create_time, update_time)
@@ -99,13 +110,13 @@ router.post("/upload", uploadSingle("file"), async (ctx) => {
         file_name = VALUES(file_name),
         script_path = VALUES(script_path),
         update_time = NOW()`,
-      [employeeId, file.originalname, scriptPath],
+      [employeeId, scriptName, scriptPath],
     );
     ctx.body = {
       code: 200,
       data: {
         employeeId,
-        fileName: file.originalname,
+        fileName: scriptName,
         scriptPath,
       },
     };

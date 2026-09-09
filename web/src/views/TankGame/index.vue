@@ -4,6 +4,9 @@
     <div class="top-right">
       <div v-if="username" class="user-info">姓名：{{ username }}</div>
       <a class="ranking-link" :href="rankingUrl" target="_blank">排 行 榜</a>
+      <button class="game-intro-btn" @click="router.push('/ai-script')">
+        玩 家 脚 本
+      </button>
       <button class="game-intro-btn" @click="openGameIntro">游 戏 介 绍</button>
     </div>
     <GameIntro :visible="showIntro" @close="closeGameIntro">
