@@ -3,11 +3,9 @@
     <Map></Map>
     <div class="top-right">
       <div v-if="username" class="user-info">姓名：{{ username }}</div>
-      <a class="ranking-link" :href="rankingUrl" target="_blank">排 行 榜</a>
-      <button class="game-intro-btn" @click="router.push('/ai-script')">
-        玩 家 脚 本
-      </button>
-      <button class="game-intro-btn" @click="openGameIntro">游 戏 介 绍</button>
+      <a class="ranking-link" :href="rankingUrl" target="_blank">排行榜</a>
+      <a class="ranking-link" :href="aiScriptUrl" target="_blank">玩家脚本</a>
+      <button class="game-intro-btn" @click="openGameIntro">游戏介绍</button>
     </div>
     <GameIntro :visible="showIntro" @close="closeGameIntro">
       <button class="close-btn" @click="closeGameIntro">关 闭</button>
@@ -33,6 +31,11 @@ const rankingUrl = computed(() => {
   const tokenStr = new URLSearchParams(location.search).get("token");
   const query = tokenStr ? { token: tokenStr } : {};
   return router.resolve({ name: "Ranking", query }).href;
+});
+const aiScriptUrl = computed(() => {
+  const tokenStr = new URLSearchParams(location.search).get("token");
+  const query = tokenStr ? { token: tokenStr } : {};
+  return router.resolve({ name: "AiScript", query }).href;
 });
 
 onMounted(async () => {
