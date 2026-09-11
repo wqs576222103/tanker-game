@@ -3,6 +3,7 @@
     <Map></Map>
     <div class="top-right">
       <div v-if="username" class="user-info">姓名：{{ username }}</div>
+      <router-link to="/levels" class="level-mode-link">关卡模式</router-link>
       <a class="ranking-link" :href="rankingUrl" target="_blank">排行榜</a>
       <a class="ranking-link" :href="aiScriptUrl" target="_blank">玩家脚本</a>
       <button class="game-intro-btn" @click="openGameIntro">游戏介绍</button>
@@ -98,6 +99,22 @@ function closeGameIntro() {
 }
 .ranking-link:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+.level-mode-link {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  letter-spacing: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.level-mode-link:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  transform: scale(1.05);
 }
 .game-intro-btn {
   background: rgba(255, 255, 255, 0.1);

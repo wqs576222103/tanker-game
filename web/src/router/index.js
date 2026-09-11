@@ -27,6 +27,17 @@ const routes = [
     name: "AiScript",
     component: () => import("../views/AiScript/index.vue"),
   },
+  // 新增：关卡模式路由
+  {
+    path: "/levels",
+    name: "LevelSelect",
+    component: () => import("../views/LevelMode/index.vue"),
+  },
+  {
+    path: "/level/:id",
+    name: "LevelGame",
+    component: () => import("../views/LevelMode/LevelGame.vue"),
+  },
 ];
 
 const router = createRouter({

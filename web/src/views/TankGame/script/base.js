@@ -56,6 +56,114 @@ export const ENEMY_SPAWNS = [
   { c: COLS - 2, r: 1 },
 ];
 
+// ====================== 关卡模式支持 ======================
+export const LEVEL_MODE_KEYS = {
+  mode: "tank-level-mode",
+  config: "tank-level-config",
+  progress: "tank-level-progress",
+};
+
+export function setLevelMode(levelConfig) {
+  window.levelMode = true;
+  window.levelConfig = levelConfig;
+  window.levelObjective = levelConfig.objective.type;
+  window.levelKillsRequired = levelConfig.objective.target || 10;
+  window.levelEnemiesDefeated = 0;
+  window.flagCaptured = false;
+  window.flagCarrier = null;
+  if (levelConfig.flag) {
+    window.flagPosition = {
+      x: levelConfig.flag.x,
+      y: levelConfig.flag.y,
+      team: levelConfig.flag.team,
+    };
+  }
+  // 保存关卡配置到 localStorage
+  try {
+    localStorage.setItem(LEVEL_MODE_KEYS.config, JSON.stringify(levelConfig));
+  } catch (e) {
+    console.warn("保存关卡配置失败:", e);
+  }
+}
+
+export function clearLevelMode() {
+  window.levelMode = false;
+  window.levelConfig = null;
+  window.levelObjective = null;
+  window.levelKillsRequired = 0;
+  window.levelEnemiesDefeated = 0;
+  window.flagCaptured = false;
+  window.flagCarrier = null;
+  window.flagPosition = null;
+}
+
+export function isLevelMode() {
+  return window.levelMode === true;
+}
+
+export function getLevelConfig() {
+  return window.levelConfig;
+}
+
+export function getPlayerSpawnForLevel() {
+  if (window.levelConfig?.playerSpawn) {
+    return window.levelConfig.playerSpawn;
+  }
+  return PLAYER_SPAWN;
+}
+
+export function getEnemySpawnsForLevel() {
+  if (window.levelConfig?.enemySpawns) {
+    return window.levelConfig.enemySpawns;
+  }
+  return ENEMY_SPAWNS;
+}
+
+export function getMaxEnemiesForLevel() {
+  if (window.levelConfig?.maxEnemies) {
+    return window.levelConfig.maxEnemies;
+  }
+  return 8;
+}
+
+export function checkLevelWin() {
+  if (!window.levelMode || !window.levelConfig) return false;
+
+  const { objective } = window.levelConfig;
+
+  switch (objective.type) {
+    case "killCount":
+      return window.kills >= objective.target;
+    case "captureFlag":
+      return window.flagCaptured;
+    case "surviveTime":
+      return window.gtMs >= (objective.duration || 60) * 1000;
+    case "killBoss":
+      return window.bossKills > (window.levelLastBossKills || 0);
+    default:
+      return false;
+  }
+}
+
+export function showLevelComplete() {
+  const event = new CustomEvent("levelComplete", {
+    detail: {
+      levelId: window.levelConfig?.id,
+      time: window.gtMs,
+      kills: window.kills,
+      bossKills: window.bossKills,
+    },
+  });
+  window.dispatchEvent(event);
+}
+
+export function showLevelFailed(reason) {
+  const event = new CustomEvent("levelFailed", {
+    detail: { reason },
+  });
+  window.dispatchEvent(event);
+}
+
 // ====================== 状态 ======================
 window.state = "start"; // start | playing | paused | over
 window.kills = 0;
@@ -66,6 +174,17 @@ window.gtMs = 0; // 游戏时间
 window.spawnTimer = 2;
 window.mapGenerated = false; // 地图是否已生成
 window.gameSpeed = 1; // 游戏倍速
+
+// 关卡模式全局状态
+window.levelMode = false;
+window.levelConfig = null;
+window.levelObjective = null;
+window.levelKillsRequired = 0;
+window.levelEnemiesDefeated = 0;
+window.levelLastBossKills = 0;
+window.flagCaptured = false;
+window.flagCarrier = null;
+window.flagPosition = null;
 
 window.map = [];
 window.gates = [];
@@ -491,8 +610,35 @@ export function resetGame() {
   spawnTimer = 3;
   boss = null;
   lastBossKills = 0;
-  baseEnemyHp = 2;
-  if (!mapGenerated) {
+  baseEnemyHp = window.levelConfig?.baseEnemyHp || 2;
+  window.levelLastBossKills = 0;
+
+  // 关卡模式：重置关卡相关状态
+  if (window.levelMode && window.levelConfig) {
+    window.levelObjective = window.levelConfig.objective.type;
+    window.levelKillsRequired = window.levelConfig.objective.target || 10;
+    window.levelEnemiesDefeated = 0;
+    window.flagCaptured = false;
+    window.flagCarrier = null;
+    if (window.levelConfig.flag) {
+      window.flagPosition = {
+        x: window.levelConfig.flag.x,
+        y: window.levelConfig.flag.y,
+        team: window.levelConfig.flag.team,
+      };
+    }
+  }
+
+  // 关卡模式：使用预设地图
+  if (window.levelMode && window.levelConfig?.map) {
+    map = window.levelConfig.map.map((row) => [...row]);
+    gates = [];
+    crackHp = window.levelConfig.crackHp || {};
+    window.map = map;
+    window.gates = gates;
+    window.crackHp = crackHp;
+    mapGenerated = true;
+  } else if (!mapGenerated) {
     genMap();
     mapGenerated = true;
   } else {
@@ -503,7 +649,11 @@ export function resetGame() {
         if (map[r][c] === CRACK)
           crackHp[protectedKey(c, r)] = 2 + randInt(0, 1);
       }
+    window.map = map;
+    window.gates = gates;
+    window.crackHp = crackHp;
   }
+
   tanks = [];
   bullets = [];
   items = [];
@@ -520,28 +670,53 @@ export function resetGame() {
   window.particles = particles;
   window.floats = floats;
   window.lastTeleport = lastTeleport;
-  window.map = map;
-  window.gates = gates;
-  window.crackHp = crackHp;
-  const sp = centerOf(PLAYER_SPAWN.c, PLAYER_SPAWN.r);
+
+  // 关卡模式：使用关卡指定的重生点
+  const spawnPoint =
+    window.levelMode && window.levelConfig?.playerSpawn
+      ? window.levelConfig.playerSpawn
+      : PLAYER_SPAWN;
+  const sp = centerOf(spawnPoint.c, spawnPoint.r);
   player = makeTank(sp.x - (CELL - 4) / 2, sp.y - (CELL - 4) / 2, "up", true);
+  // 关卡模式：使用配置的玩家速度
+  if (window.levelMode && window.levelConfig?.playerSpeed) {
+    player.speed = window.levelConfig.playerSpeed;
+  }
   player.invincible = 2000;
   window.player = player;
   tanks.push(player);
-  spawnEnemy(true);
-  spawnEnemy(true);
+
+  // 关卡模式：生成初始敌军（initialEnemies 配置 > 0 时）
+  if (window.levelMode && window.levelConfig?.initialEnemies) {
+    for (let i = 0; i < window.levelConfig.initialEnemies; i++) {
+      spawnEnemy(true);
+    }
+  } else {
+    spawnEnemy(true);
+    spawnEnemy(true);
+  }
   updateHud();
 }
 
 // 根据击杀数计算最大敌人数量：0~5击杀=2个，之后每增加10击杀加1个，最多8个
 export function maxEnemies() {
+  if (window.levelMode && window.levelConfig?.maxEnemies) {
+    return window.levelConfig.maxEnemies;
+  }
   return Math.min(8, 2 + Math.floor(Math.max(0, kills - 5) / 10));
 }
 
 export function spawnEnemy(instant) {
   if (tanks.filter((t) => t.alive && !t.isPlayer).length >= maxEnemies())
     return;
-  const available = ENEMY_SPAWNS.filter((s) => {
+
+  // 关卡模式：使用关卡指定的敌人生成点
+  const enemySpawns =
+    window.levelMode && window.levelConfig?.enemySpawns
+      ? window.levelConfig.enemySpawns
+      : ENEMY_SPAWNS;
+
+  const available = enemySpawns.filter((s) => {
     if (!player || !player.alive) return true;
     const spCx = s.c * CELL + CELL / 2;
     const spCy = s.r * CELL + CELL / 2;
@@ -568,8 +743,15 @@ export function spawnEnemy(instant) {
   const x = sp.c * CELL + 2;
   const y = sp.r * CELL + 2;
   const t = makeTank(x, y, Math.random() < 0.5 ? "down" : "left", false);
+  // 关卡模式：使用配置的速度和血量
+  if (window.levelMode && window.levelConfig?.enemySpeed) {
+    t.speed = window.levelConfig.enemySpeed;
+  }
   const diff = 1 + Math.floor(gtMs / 45000);
-  t.speed = Math.min(55 + diff * 10, 88);
+  t.speed =
+    window.levelMode && window.levelConfig?.enemySpeed
+      ? window.levelConfig.enemySpeed
+      : Math.min(55 + diff * 10, 88);
   t.hp = baseEnemyHp;
   t.maxHp = baseEnemyHp;
   t.invincible = instant ? 300 : 800;
@@ -637,18 +819,28 @@ export function killEnemy(t) {
   t.alive = false;
   spawnExplosion(t.x + t.w / 2, t.y + t.h / 2, 34, "#ff8a5a");
   kills += 1;
+  window.levelEnemiesDefeated = (window.levelEnemiesDefeated || 0) + 1;
   sfx("enemyDeath");
   if (Math.random() < 0.28) spawnItemAtTank(t);
   updateHud();
 
   // 检查是否需要生成关卡boss
   checkSpawnBoss();
+
+  // 关卡模式：检查胜利条件
+  if (window.levelMode && checkLevelWin()) {
+    showLevelComplete();
+  }
 }
 
 // 检查是否需要生成关卡boss
 export function checkSpawnBoss() {
   if (boss && boss.alive) return;
-  // boss出现击杀数为 10 20 40 80 ... 每个翻倍
+
+  // 关卡模式：不生成boss
+  if (window.levelMode) return;
+
+  // 原有逻辑：boss出现击杀数为 10 20 40 80 ... 每个翻倍
   const next = lastBossKills === 0 ? 10 : lastBossKills * 2;
   if (kills >= next) {
     lastBossKills = next;
@@ -1028,6 +1220,27 @@ export function drawMap() {
       }
     }
   }
+  // 绘制旗帜（关卡模式）
+  if (window.levelMode && flagPosition && !flagCaptured) {
+    const fx = flagPosition.x;
+    const fy = flagPosition.y;
+    const flagColor = flagPosition.team === "player" ? "#7de07d" : "#ff6b6b";
+    ctx.save();
+    ctx.fillStyle = "#888";
+    ctx.fillRect(fx + 2, fy + 2, 2, CELL - 4);
+    const wave = Math.sin(gtMs / 200) * 2;
+    ctx.fillStyle = flagColor;
+    ctx.beginPath();
+    ctx.moveTo(fx + 4, fy + 4);
+    ctx.lineTo(fx + 16 + wave, fy + 8);
+    ctx.lineTo(fx + 4, fy + 16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.3)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 export function drawGrassCell(c, r) {
@@ -1402,6 +1615,18 @@ export function gameOver() {
   if (bossKills > hiBossKills) {
     hiBossKills = bossKills;
   }
+
+  // 关卡模式：显示关卡失败界面
+  if (window.levelMode) {
+    const reason = deathReason || "不明原因";
+    const event = new CustomEvent("levelFailed", {
+      detail: { reason },
+    });
+    window.dispatchEvent(event);
+    return;
+  }
+
+  // 原有游戏结束逻辑
   document.getElementById("ov-over-score").textContent =
     "击杀：" + kills + "　Boss击杀：" + bossKills;
   document.getElementById("ov-over-reason").textContent =
@@ -1442,6 +1667,9 @@ export function startGame() {
   document.getElementById("ov-start").classList.add("hidden");
   document.getElementById("ov-over").classList.add("hidden");
   document.getElementById("ov-pause").classList.add("hidden");
+  // 关卡模式：隐藏关卡完成/失败界面
+  document.getElementById("ov-level-complete")?.classList.add("hidden");
+  document.getElementById("ov-level-failed")?.classList.add("hidden");
 }
 
 export function togglePause() {

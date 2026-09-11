@@ -71,12 +71,14 @@
     <div id="btn-group" class="none-select">
       <button id="btn-pause">暂停 P</button>
       <button id="btn-restart2">重新开始 R</button>
-      <button id="btn-ai">🤖 AI: 关</button>
+      <button id="btn-ai" class="btn-ai-btn">🤖 AI: 关</button>
       <button id="btn-speed" style="display: none">⏩ 1x</button>
-      <button id="btn-import-ai">📥 导入AI</button>
+      <button id="btn-import-ai" class="btn-import-ai-btn">📥 导入AI</button>
       <button id="btn-sfx">🔇 音效</button>
       <button id="btn-fullscreen">⛶ 全屏 F</button>
-      <button id="btn-export-death-log">📋 死亡日志</button>
+      <button id="btn-export-death-log" class="btn-death-log-btn">
+        📋 死亡日志
+      </button>
     </div>
     <input type="file" id="ai-file" accept=".js" style="display: none" />
   </div>
@@ -91,6 +93,7 @@ import { initGame } from "../../script/base.js";
 import { AIPlayer } from "../../script/ai-player.js";
 import SurvivalAI from "../../script/ai-tanker/survival-tank.js";
 import DefaultAI from "../../script/ai-tanker/default-tank.js";
+import LevelAI from "../../script/ai-tanker/level-tank.js";
 
 const employeeId = ref("");
 const token = getToken();
@@ -132,7 +135,9 @@ async function loadUserAI(empId) {
 }
 
 const ai = route.query.ai;
-AIPlayer.setDefault(ai === "wangqs" ? SurvivalAI : DefaultAI);
+AIPlayer.setDefault(
+  ai === "wangqs" ? SurvivalAI : window.levelMode ? LevelAI : DefaultAI,
+);
 </script>
 
 <style scoped>
@@ -421,5 +426,11 @@ canvas {
 }
 #ov-ai-log button:hover {
   background: #3a4a3a;
+}
+/* 关卡模式隐藏AI相关按钮 */
+.level-mode .btn-ai-btn,
+.level-mode .btn-import-ai-btn,
+.level-mode .btn-death-log-btn {
+  display: none !important;
 }
 </style>

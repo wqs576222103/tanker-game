@@ -329,6 +329,15 @@ export const AIPlayer = {
       state,
       kills,
       gtMs,
+      // 关卡模式信息
+      levelMode: window.levelMode,
+      levelObjective: window.levelObjective,
+      levelKillsRequired: window.levelKillsRequired || 0,
+      levelEnemiesDefeated: window.levelEnemiesDefeated || 0,
+      flagCaptured: window.flagCaptured || false,
+      flagPosition: window.flagPosition
+        ? { x: window.flagPosition.x, y: window.flagPosition.y }
+        : null,
 
       player:
         player && player.alive
