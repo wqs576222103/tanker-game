@@ -3,9 +3,11 @@
     <Map></Map>
     <div class="top-right">
       <div v-if="username" class="user-info">姓名：{{ username }}</div>
-      <router-link to="/levels" class="level-mode-link">关卡模式</router-link>
       <a class="ranking-link" :href="rankingUrl" target="_blank">排行榜</a>
       <a class="ranking-link" :href="aiScriptUrl" target="_blank">玩家脚本</a>
+      <a class="ranking-link" :href="LevelSelectUrl" target="_blank"
+        >关卡模式</a
+      >
       <button class="game-intro-btn" @click="openGameIntro">游戏介绍</button>
     </div>
     <GameIntro :visible="showIntro" @close="closeGameIntro">
@@ -28,6 +30,13 @@ const token = getToken();
 const employeeId = ref("");
 const username = ref("");
 const showIntro = ref(false);
+
+const LevelSelectUrl = computed(() => {
+  const tokenStr = new URLSearchParams(location.search).get("token");
+  const query = tokenStr ? { token: tokenStr } : {};
+  return router.resolve({ name: "LevelSelect", params: { id: 1 }, query }).href;
+});
+
 const rankingUrl = computed(() => {
   const tokenStr = new URLSearchParams(location.search).get("token");
   const query = tokenStr ? { token: tokenStr } : {};

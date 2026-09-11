@@ -2,15 +2,18 @@
   <div class="level-game-wrap" :class="{ 'level-mode': levelConfig }">
     <Map></Map>
 
+    <!-- 返回按钮 -->
+    <button class="btn-back-top" @click="backToSelect">返回</button>
+
     <!-- 关卡目标HUD -->
     <div class="level-hud" v-if="levelConfig">
       <div class="objective-bar">
         <span class="level-tag"
           >{{ levelConfig.id }}. {{ levelConfig.name }}</span
         >
-        <span class="objective-text">{{
-          levelConfig.objective.description
-        }}</span>
+      </div>
+      <div class="objective-text">
+        {{ levelConfig.objective.description }}
       </div>
       <div class="progress-bar">
         <span class="kills">击杀: {{ kills }}</span>
@@ -183,11 +186,32 @@ onUnmounted(() => {
   inset: 0;
 }
 
+.btn-back-top {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.5);
+  color: #cfe3cf;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 20px;
+  font-size: 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  letter-spacing: 1px;
+}
+
+.btn-back-top:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 215, 110, 0.5);
+  color: #ffd76e;
+}
+
 .level-hud {
   position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 20px;
+  left: 20px;
   z-index: 20;
   display: flex;
   flex-direction: column;
