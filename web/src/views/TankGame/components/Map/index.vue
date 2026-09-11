@@ -20,7 +20,7 @@
           🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />
           🛡️ 护盾 &nbsp;💣 地雷 &nbsp;❤️ 生命恢复 &nbsp;🔄 反弹子弹
         </div>
-        <p>
+        <p v-if="!levelMode">
           ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />
           🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
           可通过导入AI脚本自动运行坦克，<a
@@ -69,8 +69,18 @@
       </div>
     </div>
     <div id="btn-group" class="none-select">
-      <button id="btn-pause">暂停 P</button>
-      <button id="btn-restart2">重新开始 R</button>
+      <button
+        id="btn-pause"
+        :style="{ display: gameState === 'start' ? 'none' : '' }"
+      >
+        暂停 P
+      </button>
+      <button
+        id="btn-restart2"
+        :style="{ display: gameState === 'start' ? 'none' : '' }"
+      >
+        重新开始 R
+      </button>
       <button id="btn-ai" class="btn-ai-btn">🤖 AI: 关</button>
       <button id="btn-speed" style="display: none">⏩ 1x</button>
       <button id="btn-import-ai" class="btn-import-ai-btn">📥 导入AI</button>
@@ -84,7 +94,7 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 import { getToken, getUserInfo } from "@/utils/user";
@@ -96,6 +106,9 @@ import DefaultAI from "../../script/ai-tanker/default-tank.js";
 import LevelAI from "../../script/ai-tanker/level-tank.js";
 
 const employeeId = ref("");
+const gameState = ref("start");
+const levelMode = ref(false);
+let stateCheckInterval = null;
 const token = getToken();
 const route = useRoute();
 
@@ -109,10 +122,22 @@ onMounted(async () => {
     }
   }
   initGame();
+  // 监听 game state 变化，控制按钮显示
+  const checkState = () => {
+    gameState.value = window.state || "start";
+    levelMode.value = !!window.levelMode;
+  };
+  // 每帧检查状态（game loop 中会更新 window.state）
+  stateCheckInterval = setInterval(checkState, 100);
+  checkState();
   // 有用户信息且查询到已保存的 AI 脚本时，默认加载用户脚本；否则保持默认脚本
   if (employeeId.value) {
     await loadUserAI(employeeId.value);
   }
+});
+
+onUnmounted(() => {
+  if (stateCheckInterval) clearInterval(stateCheckInterval);
 });
 
 // 加载该员工上次导入并保存在服务器的 AI 脚本作为默认AI
