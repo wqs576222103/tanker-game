@@ -7,10 +7,10 @@ const TABLE_NAME = process.env.DB_TABLE || "t_user_sync";
 assertIdentifier(TABLE_NAME);
 
 const testUserUrl = "http://139.155.133.14:8081";
-const prodUserUrl = "http://113.249.91.32"
+const prodUserUrl = "http://192.168.151.88:8081"
 
 const SOURCE_MAP = {
-  localhost: testUserUrl,
+  localhost: prodUserUrl,
   // 模拟环境
   "139.155.133.14": testUserUrl,
   "118.112.177.2": testUserUrl,
@@ -114,7 +114,7 @@ router.get("/infoByToken", async (ctx) => {
     if (first) clientIp = first;
   }
 
-  const targetBase = SOURCE_MAP[clientIp] || testUserUrl;
+  const targetBase = SOURCE_MAP[clientIp] || prodUserUrl;
   console.log(`[user] ${clientIp} -> ${targetBase}`);
   if (!targetBase) {
     ctx.status = 403;
