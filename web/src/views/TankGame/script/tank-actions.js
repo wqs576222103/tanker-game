@@ -69,6 +69,8 @@ export const TankActions = {
     for (const o of tanks) {
       if (!o.alive || o === self) continue;
       if (o.x < x + w && o.x + o.w > x && o.y < y + h && o.y + o.h > y) {
+        // 敌方坦克之间不互相阻挡
+        if (self && !self.isPlayer && !o.isPlayer) continue;
         if (self && this.resolveTankCollision(self, o)) return true;
         return true;
       }
@@ -571,6 +573,8 @@ export const TankActions = {
   // 玩家受伤
   damagePlayer(reason, bullet) {
     if (player.invincible > 0) return;
+    // 关卡模式：通关后玩家不再受伤
+    if (window.levelMode && window.flagCaptured) return;
     if (player.shieldT > gtMs) {
       if (!bullet) {
         player.shieldT = 0;

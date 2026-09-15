@@ -22,11 +22,11 @@
           <div class="mode-name">AI坦克对决</div>
           <div class="mode-desc">让AI之间展开激烈对决</div>
         </router-link>
-          <!-- <router-link :to="{ path: '/levels', query: { token } }" class="mode-card levels-mode">
+          <router-link :to="{ path: '/levels', query: { token } }" class="mode-card levels-mode">
           <div class="mode-icon">🎯</div>
           <div class="mode-name">关卡模式</div>
           <div class="mode-desc">挑战不同关卡，逐级突破</div>
-        </router-link> -->
+        </router-link>
       </div>
     </div>
   </div>

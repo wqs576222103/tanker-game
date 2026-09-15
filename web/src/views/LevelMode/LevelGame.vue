@@ -56,6 +56,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getToken, getUserInfo } from "@/utils/user";
+import { post } from "@/utils/request";
 import Map from "@/views/TankGame/components/Map/index.vue";
 import {
   LEVELS,
@@ -94,6 +95,19 @@ function handleLevelComplete(e) {
 
   // 保存关卡时间
   saveLevelTime(levelId.value, e.detail.time);
+
+  // 保存关卡通关数据到服务器
+  if (employeeId.value) {
+    post("/level-record", {
+      employeeId: employeeId.value,
+      username: username.value,
+      levelId: levelId.value,
+      kills: e.detail.kills,
+      durationMs: e.detail.time,
+    }).catch((err) => {
+      console.error("保存关卡记录失败:", err);
+    });
+  }
 
   // 显示完成界面
   document.getElementById("ov-level-complete").classList.remove("hidden");

@@ -75,7 +75,7 @@ export const LEVELS = [
   {
     id: 1,
     name: "夺旗精英",
-    description: "消灭所有敌军，夺取敌方旗帜并带回己方基地！",
+    description: "消灭敌军，夺取敌方旗帜！",
     map: level1Map,
     crackHp: {},
     playerSpawn: { c: 22, r: 26 },
