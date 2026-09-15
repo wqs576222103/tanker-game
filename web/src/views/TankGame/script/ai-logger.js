@@ -1,4 +1,4 @@
-// ====================== 死亡日志系统（AI + 玩家，localStorage 持久化） ======================
+// ====================== 淘汰日志系统（AI + 玩家，localStorage 持久化） ======================
 
 import { AIPlayer } from "./ai-player.js";
 
@@ -21,7 +21,7 @@ export const AILogger = {
   save() {
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(this.deathRecords));
-    } catch (e) {}
+    } catch (e) { }
   },
 
   startSession() {

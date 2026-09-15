@@ -198,9 +198,9 @@ router.post("/deaths", async (ctx) => {
     await saveDeath(employeeId);
     ctx.body = { code: 200, data: { employeeId } };
   } catch (err) {
-    console.error(`[score] 死亡数+1失败: ${err.message}`);
+    console.error(`[score] 淘汰数+1失败: ${err.message}`);
     ctx.status = 500;
-    ctx.body = { code: 500, message: "死亡数+1失败" };
+    ctx.body = { code: 500, message: "淘汰数+1失败" };
   }
 });
 

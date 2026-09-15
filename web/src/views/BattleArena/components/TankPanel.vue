@@ -13,6 +13,9 @@
         <span class="tank-name">{{
           ai.name.length > 20 ? ai.name.slice(0, 20) + "..." : ai.name
         }}</span>
+        <span v-if="ai.username" class="tank-employee-id">{{
+          ai.username
+        }}</span>
         <span
           class="tank-status"
           :class="
@@ -23,7 +26,7 @@
               : 'status-waiting'
           "
         >
-          {{ ai.tank ? (ai.tank.alive ? "存活" : "阵亡") : "准备" }}
+          {{ ai.tank ? (ai.tank.alive ? "存活" : "淘汰") : "准备" }}
         </span>
         <span class="tank-score">{{ ai.score }}分</span>
         <span class="tank-stats">{{ ai.kills }}杀/{{ ai.deaths }}死</span>
@@ -50,13 +53,13 @@
       >
         📥 选择AI
       </button>
-      <button
+      <!-- <button
         id="btn-import-local"
         :disabled="isPlaying"
         @click="triggerImport"
       >
         📥 导入本地AI
-      </button>
+      </button> -->
       <button id="btn-clear-all" :disabled="isPlaying" @click="clearAll">
         🗑️ 清空
       </button>
@@ -105,10 +108,18 @@
             :key="item.employee_id"
             class="modal-item"
             :class="{
-              'is-dup': isDuplicated(item.file_name, item.script_path),
+              'is-dup': isDuplicated(
+                item.file_name,
+                item.script_path,
+                item.employee_id,
+              ),
               'is-full':
                 aiTanks.length >= 8 &&
-                !isDuplicated(item.file_name, item.script_path) &&
+                !isDuplicated(
+                  item.file_name,
+                  item.script_path,
+                  item.employee_id,
+                ) &&
                 !isSelected(item.employee_id),
             }"
           >
@@ -117,7 +128,11 @@
                 type="checkbox"
                 :checked="isSelected(item.employee_id)"
                 :disabled="
-                  isDuplicated(item.file_name, item.script_path) ||
+                  isDuplicated(
+                    item.file_name,
+                    item.script_path,
+                    item.employee_id,
+                  ) ||
                   (aiTanks.length >= 8 && !isSelected(item.employee_id))
                 "
                 @change="toggleSelect(item)"
@@ -129,7 +144,13 @@
                 item.username || item.employee_id
               }}</span>
               <span
-                v-if="isDuplicated(item.file_name, item.script_path)"
+                v-if="
+                  isDuplicated(
+                    item.file_name,
+                    item.script_path,
+                    item.employee_id,
+                  )
+                "
                 class="modal-item-tag tag-dup"
                 >已导入</span
               >
@@ -231,12 +252,23 @@ async function fetchAIList() {
 
 const importedKeys = computed(() => {
   return new Set(
-    aiTanks.value.map((ai) => `${ai.name}\n${ai.scriptPath || ""}`),
+    aiTanks.value.map(
+      (ai) => `${ai.name}\n${ai.scriptPath || ""}\n${ai.employeeId || ""}`,
+    ),
   );
 });
 
-function isDuplicated(fileName, scriptPath) {
-  return importedKeys.value.has(`${fileName}\n${scriptPath || ""}`);
+const importedEmployeeIds = computed(() => {
+  return new Set(aiTanks.value.map((ai) => ai.employeeId).filter(Boolean));
+});
+
+function isDuplicated(fileName, scriptPath, employeeId) {
+  if (employeeId && importedEmployeeIds.value.has(employeeId)) {
+    return true;
+  }
+  return importedKeys.value.has(
+    `${fileName}\n${scriptPath || ""}\n${employeeId || ""}`,
+  );
 }
 
 function isSelected(employeeId) {
@@ -258,7 +290,12 @@ async function confirmImport() {
   importing.value = true;
   const tasks = selectedScripts.value.map(async (item) => {
     try {
-      await loadAIFromUrl(item.script_path, item.file_name);
+      await loadAIFromUrl(
+        item.script_path,
+        item.file_name,
+        item.employee_id,
+        item.username,
+      );
     } catch (err) {
       console.error(`导入 ${item.file_name} 失败:`, err);
     }
@@ -272,7 +309,7 @@ async function confirmImport() {
 <style scoped>
 #tank-panel {
   margin-top: 30px;
-  width: 500px;
+  width: 520px;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid #3a4a3a;
   border-radius: 8px;
@@ -343,13 +380,19 @@ async function confirmImport() {
 }
 
 .tank-name {
-  flex: 220px 1 0;
+  flex: 160px 1 0;
   font-size: 13px;
   color: #ffd76e;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+.tank-employee-id {
+  font-size: 11px;
+  color: #9fb6a6;
+  flex-shrink: 0;
 }
 
 .tank-stats {

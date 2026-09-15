@@ -98,7 +98,7 @@ export default {
   },
 
   onDeath(ctx, reason) {
-    console.log("[AI] 关卡AI阵亡，原因:", reason);
+    console.log("[AI] 关卡AI淘汰，原因:", reason);
     this.levelState = null;
   },
 };

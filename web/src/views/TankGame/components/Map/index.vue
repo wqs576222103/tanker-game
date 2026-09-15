@@ -37,12 +37,12 @@
         <p id="ov-over-score"></p>
         <p id="ov-over-reason" style="font-size: 14px; opacity: 0.85"></p>
         <button id="btn-ai-log" style="display: none; margin-bottom: 10px">
-          死亡日志 (0)
+          淘汰日志 (0)
         </button>
         <button id="btn-restart">再 来 一 局</button>
       </div>
       <div class="overlay hidden" id="ov-ai-log">
-        <h2>死亡日志</h2>
+        <h2>淘汰日志</h2>
         <div id="ai-log-content"></div>
         <div style="margin-top: 10px">
           <button id="btn-export-log">导出JSON</button>
@@ -87,7 +87,7 @@
       <button id="btn-sfx">🔇 音效</button>
       <button id="btn-fullscreen">⛶ 全屏 F</button>
       <button id="btn-export-death-log" class="btn-death-log-btn">
-        📋 死亡日志
+        📋 淘汰日志
       </button>
     </div>
     <input type="file" id="ai-file" accept=".js" style="display: none" />

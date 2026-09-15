@@ -21,7 +21,7 @@ export default {
       mine: false, // 布置地雷
     };
   },
-  onDeath(ctx, reason) {}, // 可选：玩家死亡时调用
+  onDeath(ctx, reason) {}, // 可选：玩家淘汰时调用
   onDisabled(ctx) {}, // 可选：被关闭时调用
 };
 ```
@@ -62,9 +62,9 @@ export default {
 | `state`           | string | 游戏状态：`"start" / "playing" / "paused" / "over"`           |
 | `score`           | number | 当前分数                                                      |
 | `gtMs`            | number | 本局已进行时间（毫秒）                                        |
-| `lastDeathReason` | string | 上次死亡原因：`""`（未死亡）/ `"punishment"`（挂机惩罚）/ 击杀者名字 |
+| `lastDeathReason` | string | 上次淘汰原因：`""`（未淘汰）/ `"punishment"`（挂机惩罚）/ 击杀者名字 |
 
-### `player`（玩家坦克，死亡时为 `null`）
+### `player`（玩家坦克，淘汰时为 `null`）
 
 | 字段                       | 类型    | 说明                           |
 | -------------------------- | ------- | ------------------------------ |
@@ -144,7 +144,7 @@ export default {
 | 方法                                    | 说明                           |
 | --------------------------------------- | ------------------------------ |
 | `getTankPositions()`                    | 所有存活坦克位置               |
-| `getPlayerPosition()`                   | 玩家位置（死亡返回 null）      |
+| `getPlayerPosition()`                   | 玩家位置（淘汰返回 null）      |
 | `getEnemyPositions()`                   | 所有敌人位置（含朝向与速度）   |
 | `predictEnemyPositions(frames, dt)`     | 预测敌人 `frames` 帧后的位置   |
 | `getBulletPositions(frames, dt)`        | 所有子弹位置（含下一帧预测）   |
@@ -198,7 +198,7 @@ export default {
 - **摇摆检测**：5 秒内累计移动超过 150 像素，但净位移小于 50 像素（来回移动）
 - 摇摆检测覆盖：上下、左右、左上、右上、左下、右下等所有方向组合
 - 触发任一条件即持续扣血（每帧扣 `dt * 2` 点生命值，速度较快）
-- 扣血直至死亡，死亡时显示"挂机惩罚"提示
+- 扣血直至淘汰，淘汰时显示"挂机惩罚"提示
 
 ### AI 编写建议
 - **必须持续移动**：避免长时间停留在同一位置

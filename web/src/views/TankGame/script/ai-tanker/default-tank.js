@@ -40,6 +40,6 @@ export default {
   },
 
   onDeath(ctx, reason) {
-    console.log("[AI] 阵亡，原因：", reason);
+    console.log("[AI] 淘汰，原因：", reason);
   },
 };

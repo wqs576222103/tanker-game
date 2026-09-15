@@ -4,32 +4,34 @@
 
 ### 1. 新增文件
 
-| 文件路径 | 大小 | 说明 |
-|---------|------|------|
-| `web/src/views/LevelMode/index.vue` | 5KB | 关卡选择页面 |
-| `web/src/views/LevelMode/LevelGame.vue` | 7KB | 关卡游戏页面 |
+| 文件路径                                  | 大小  | 说明         |
+| ----------------------------------------- | ----- | ------------ |
+| `web/src/views/LevelMode/index.vue`       | 5KB   | 关卡选择页面 |
+| `web/src/views/LevelMode/LevelGame.vue`   | 7KB   | 关卡游戏页面 |
 | `web/src/views/TankGame/script/levels.js` | 6.5KB | 关卡配置文件 |
-| `web/docs/LEVEL_MODE_DEVELOPMENT.md` | 10KB | 关卡开发文档 |
+| `web/docs/LEVEL_MODE_DEVELOPMENT.md`      | 10KB  | 关卡开发文档 |
 
 ### 2. 修改文件
 
-| 文件路径 | 修改内容 |
-|---------|---------|
+| 文件路径                                | 修改内容                    |
+| --------------------------------------- | --------------------------- |
 | `web/src/views/TankGame/script/base.js` | 添加关卡模式支持（约100行） |
-| `web/src/router/index.js` | 新增2个路由 |
-| `web/src/views/TankGame/index.vue` | 添加"关卡模式"入口按钮 |
+| `web/src/router/index.js`               | 新增2个路由                 |
+| `web/src/views/TankGame/index.vue`      | 添加"关卡模式"入口按钮      |
 
 ---
 
 ## 二、核心功能实现
 
 ### 1. 关卡系统
+
 - ✅ 关卡选择页面（网格布局，显示关卡卡片）
 - ✅ 关卡进度保存（localStorage）
 - ✅ 关卡解锁机制
 - ✅ 通关时间记录
 
 ### 2. 游戏适配
+
 - ✅ 固定地图加载
 - ✅ 自定义重生点配置
 - ✅ 自定义敌人生成点
@@ -37,12 +39,14 @@
 - ✅ 关卡失败处理
 
 ### 3. UI组件
+
 - ✅ 关卡目标HUD显示
 - ✅ 关卡完成遮罩（含下一关、重试、返回按钮）
 - ✅ 关卡失败遮罩（含重试、返回按钮）
 - ✅ 导航集成（主游戏页面入口）
 
 ### 4. 第一关内容
+
 - ✅ Level 1: "夺旗精英"
 - ✅ 固定迷宫地图设计
 - ✅ 夺旗胜利条件
@@ -53,6 +57,7 @@
 ## 三、技术架构
 
 ### 数据流
+
 ```
 LevelSelect → LevelGame → base.js (游戏引擎)
      ↓              ↓              ↓
@@ -73,12 +78,14 @@ LevelSelect → LevelGame → base.js (游戏引擎)
 ## 四、访问方式
 
 ### 开发环境
+
 ```
 http://localhost:5173/levels          # 关卡选择页
 http://localhost:5173/level/1         # 第1关
 ```
 
 ### 主游戏入口
+
 在主游戏页面右上角找到 **"关卡模式"** 按钮，点击即可进入。
 
 ---
@@ -86,11 +93,13 @@ http://localhost:5173/level/1         # 第1关
 ## 五、下一步开发建议
 
 ### 立即可用
+
 1. 启动开发服务器测试第一关
 2. 验证地图设计和难度平衡
 3. 调整敌人刷新频率和强度
 
 ### 短期扩展（1-2天）
+
 1. 创建 Level 2: "Boss之战"
    - 类型：killBoss
    - 难度：敌人HP=3，速度=70
@@ -102,6 +111,7 @@ http://localhost:5173/level/1         # 第1关
    - 额外机制：时间结束前击杀数达标即胜利
 
 ### 中期优化（3-5天）
+
 1. 添加夺旗视觉反馈
    - 旗帜图标显示在地图位置
    - 玩家持旗时的特殊状态
@@ -124,6 +134,7 @@ http://localhost:5173/level/1         # 第1关
 参见详细文档：`web/docs/LEVEL_MODE_DEVELOPMENT.md`
 
 **快速开始：**
+
 1. 打开 `web/src/views/TankGame/script/levels.js`
 2. 在 LEVELS 数组末尾添加新关卡对象
 3. 使用 `createMap()` 函数或程序化生成地图
@@ -151,7 +162,7 @@ http://localhost:5173/level/1         # 第1关
 - [ ] 击败敌人后击杀数增加
 - [ ] 达到胜利条件后显示完成界面
 - [ ] 点击"下一关"能进入后续关卡（如有）
-- [ ] 玩家死亡后显示失败界面
+- [ ] 玩家淘汰后显示失败界面
 - [ ] 点击"重试"能重新开始
 - [ ] 点击"返回关卡选择"能回到选择页
 - [ ] 通关后进度正确保存

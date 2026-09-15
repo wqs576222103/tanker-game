@@ -254,9 +254,9 @@ export function playMp3(url) {
   try {
     const a = new Audio(url);
     a.volume = 0.6;
-    a.play().catch(() => {});
+    a.play().catch(() => { });
     return a;
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // 背景音乐：仅在未开始游戏（开始/结束界面）时播放，每隔5秒播放一次
@@ -270,16 +270,16 @@ export function playBgm() {
       bgmAudio.volume = 0.35;
     }
     bgmAudio.currentTime = 0;
-    bgmAudio.play().catch(() => {});
+    bgmAudio.play().catch(() => { });
     if (!bgmTimer) {
       bgmTimer = setInterval(() => {
         if (!sfxEnabled || state === "playing") return;
         const a = new Audio(bgmMp3);
         a.volume = 0.35;
-        a.play().catch(() => {});
+        a.play().catch(() => { });
       }, 5000);
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 export function stopBgm() {
   try {
@@ -291,7 +291,7 @@ export function stopBgm() {
       bgmAudio.pause();
       bgmAudio.currentTime = 0;
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 export function sfx(type) {
@@ -324,7 +324,7 @@ export function sfx(type) {
     g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
     o.start(t);
     o.stop(t + p[1]);
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // ====================== 地图 ======================
@@ -1559,7 +1559,7 @@ export function updateHud() {
     if (player.drones > 0)
       arr.push(
         "🚁×" +
-          Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
+        Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
       );
     if (player.bounces) arr.push("🔄");
     buff.textContent = arr.length ? arr.join(" ") : "";
@@ -1635,7 +1635,7 @@ export function gameOver() {
   const logCount = AILogger.getRecordCount();
   const logBtn = document.getElementById("btn-ai-log");
   if (logBtn) {
-    logBtn.textContent = `死亡日志 (${logCount})`;
+    logBtn.textContent = `淘汰日志 (${logCount})`;
     logBtn.style.display = "inline-block";
   }
 
@@ -1651,7 +1651,7 @@ export function gameOver() {
         console.warn("[Game] 保存击杀数据失败:", err);
       });
       addDeath(userInfo.employeeId).catch((err) => {
-        console.warn("[Game] 保存死亡数失败:", err);
+        console.warn("[Game] 保存淘汰数失败:", err);
       });
     }
   } catch (e) {
@@ -1845,43 +1845,40 @@ export function initGame() {
 
     if (records.length === 0) {
       content.innerHTML =
-        '<p style="color:#9fb6a6;text-align:center">暂无死亡日志</p>';
+        '<p style="color:#9fb6a6;text-align:center">暂无淘汰日志</p>';
     } else {
       content.innerHTML = records
         .map(
           (r, i) => `
       <div class="log-item">
-        <div class="log-header">死亡 #${i + 1} - ${
-          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
-        } - ${r.deathReason}</div>
+        <div class="log-header">淘汰 #${i + 1} - ${r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
+            } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">Boss击杀: <span>${r.bossKills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        ${
-          r.type === "ai"
-            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
-            : ""
-        }
+        ${r.type === "ai"
+              ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+              : ""
+            }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
         ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
-        ${
-          r.type === "ai" && r.decisionLog.length > 0
-            ? `
+        ${r.type === "ai" && r.decisionLog.length > 0
+              ? `
           <div class="log-decisions">
             <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
             ${r.decisionLog
-              .slice(-5)
-              .map(
-                (d) => `
+                .slice(-5)
+                .map(
+                  (d) => `
               <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
-              )
-              .join("")}
+                )
+                .join("")}
           </div>
         `
-            : ""
-        }
+              : ""
+            }
       </div>
     `,
         )
@@ -1911,7 +1908,7 @@ export function initGame() {
     document.getElementById("ai-log-content").innerHTML =
       '<p style="color:#9fb6a6;text-align:center">日志已清除</p>';
     const logBtn = document.getElementById("btn-ai-log");
-    if (logBtn) logBtn.textContent = "死亡日志 (0)";
+    if (logBtn) logBtn.textContent = "淘汰日志 (0)";
   }
 
   document.getElementById("btn-ai-log").addEventListener("click", showAILog);
