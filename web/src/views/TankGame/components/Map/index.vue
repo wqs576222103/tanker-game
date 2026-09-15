@@ -4,7 +4,7 @@
       <div class="l">
         <span class="bar" id="hud-heart"></span>
         <span class="bar">击杀 <b id="hud-score">0</b></span>
-        <span class="bar">Boss击杀 <b id="hud-boss-score">0</b></span>
+        <span class="bar" v-if="!levelMode">Boss击杀 <b id="hud-boss-score">0</b></span>
         <span class="bar" id="hud-buff"></span>
       </div>
     </div>
@@ -20,15 +20,15 @@
           🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />
           🛡️ 护盾 &nbsp;💣 地雷 &nbsp;❤️ 生命恢复 &nbsp;🔄 反弹子弹
         </div>
-        <p v-if="!levelMode">
+        <p>
           ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />
           🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
-          可通过导入AI脚本自动运行坦克，<a
+         <template v-if="!levelMode"> 可通过导入AI脚本自动运行坦克，<a
             style="color: green"
             :href="aiGuideUrl"
             download
             >下载提示词</a
-          >，定制化你的AI坦克吧！
+          >，定制化你的AI坦克吧！</template>
         </p>
         <button id="btn-start">开 始 游 戏</button>
       </div>

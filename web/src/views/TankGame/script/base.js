@@ -145,6 +145,23 @@ export function checkLevelWin() {
   }
 }
 
+// 关卡模式：检测玩家是否触碰旗帜（拾取旗帜即过关）
+export function checkFlagCapture() {
+  if (!window.levelMode || !window.levelConfig || window.flagCaptured) return;
+  if (window.levelConfig.objective.type !== "captureFlag") return;
+  if (!window.flagPosition || !player || !player.alive) return;
+  // 击杀数未达标时不能拾取
+  if (kills < (window.levelConfig.objective.target || 5)) return;
+
+  const flagCell = cellOf(window.flagPosition.x, window.flagPosition.y);
+  const playerCell = cellOf(player.x + player.w / 2, player.y + player.h / 2);
+
+  if (flagCell.c === playerCell.c && flagCell.r === playerCell.r) {
+    window.flagCaptured = true;
+    showLevelComplete();
+  }
+}
+
 export function showLevelComplete() {
   const event = new CustomEvent("levelComplete", {
     detail: {
@@ -727,9 +744,20 @@ export function spawnEnemy(instant) {
     return Math.abs(spCx - pCx) > 60 || Math.abs(spCy - pCy) > 60;
   });
   if (available.length === 0) return;
-  let sp = available[0];
+
+  // 过滤掉已被其他坦克占用的出生点
+  const free = available.filter((s) => {
+    const sx = s.c * CELL + 2;
+    const sy = s.r * CELL + 2;
+    return !tanks.some(
+      (t) => t.alive && Math.abs(t.x - sx) < CELL && Math.abs(t.y - sy) < CELL,
+    );
+  });
+  if (free.length === 0) return;
+
+  let sp = free[0];
   let least = Infinity;
-  for (const s of available) {
+  for (const s of free) {
     const cnt = tanks.filter(
       (t) =>
         t.alive &&
@@ -825,6 +853,25 @@ export function killEnemy(t) {
   sfx("enemyDeath");
   if (Math.random() < 0.28) spawnItemAtTank(t);
   updateHud();
+
+  // 关卡模式：击杀达标后移除旗帜周围的墙
+  if (
+    window.levelMode &&
+    window.levelConfig?.flagWallCells &&
+    kills >= (window.levelConfig.objective.target || 5)
+  ) {
+    for (const cell of window.levelConfig.flagWallCells) {
+      if (map[cell.r] && map[cell.r][cell.c] === WALL) {
+        map[cell.r][cell.c] = EMPTY;
+      }
+    }
+    addFloat(
+      window.flagPosition ? window.flagPosition.x + CELL / 2 : W / 2,
+      window.flagPosition ? window.flagPosition.y : H / 2,
+      "旗帜区域已开放！",
+      "#ffd76e",
+    );
+  }
 
   // 检查是否需要生成关卡boss
   checkSpawnBoss();
@@ -1085,6 +1132,9 @@ export function update(dt) {
   updateItems(dt);
   updateParticles(dt);
   updateFloats(dt);
+
+  // 关卡模式：检测旗帜拾取
+  checkFlagCapture();
 
   // 更新boss
   if (boss && boss.alive) {

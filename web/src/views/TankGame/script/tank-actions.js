@@ -100,6 +100,8 @@ export const TankActions = {
 
   // 解决坦克碰撞
   resolveTankCollision(attacker, defender) {
+    // 敌方坦克不会互相造成伤害
+    if (!attacker.isPlayer && !defender.isPlayer) return false;
     if (attacker.invincible > 0 || defender.invincible > 0) return false;
     const attackerMoving =
       Math.abs(attacker.dir.x) + Math.abs(attacker.dir.y) > 0;
