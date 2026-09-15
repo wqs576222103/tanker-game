@@ -31,6 +31,7 @@ import { reactive } from "vue";
 import { aiTanks, gameState } from "./gameState.js";
 import { setBattleCtx, drawBattle } from "./draw.js";
 import { clearAllAITanks, importAIFiles } from "./aiManager.js";
+import { saveBattleRecord } from "@/api/battleRecord.js";
 
 function makeSpawnPoints(count) {
   const rows = [1, Math.floor(ROWS / 3), Math.floor((2 * ROWS) / 3), ROWS - 2];
@@ -1170,18 +1171,25 @@ export function checkBattleEnd() {
     const allDead = aliveTanks.length === 0;
     const allSameScore = sorted.every((ai) => ai.score === maxScore);
 
+    let winner = null;
+    let isDraw = false;
+
     if (allDead && allSameScore) {
       winnerText = "平局！";
+      isDraw = true;
     } else if (maxScore === 0) {
       winnerText = "平局！";
+      isDraw = true;
     } else {
       const winners = sorted.filter(
         (ai) => ai.score === maxScore && ai.score > 0,
       );
       if (winners.length === 1) {
         winnerText = `🏆 胜利者：${winners[0].name}！`;
+        winner = winners[0];
       } else {
         winnerText = `🏆 并列第一：${winners.map((w) => w.name).join("、")}！`;
+        isDraw = true;
       }
     }
 
@@ -1195,6 +1203,28 @@ export function checkBattleEnd() {
     if (statsEl) statsEl.textContent = stats;
     const ovOver = document.getElementById("ov-over");
     if (ovOver) ovOver.classList.remove("hidden");
+
+    const gameDurationMs = Math.floor(window.gtMs);
+    const players = aiTanks.value.map((ai) => ({
+      employeeId: ai.employeeId || "",
+      tankName: ai.name || "",
+      score: ai.score || 0,
+      kills: ai.kills || 0,
+      deaths: ai.deaths || 0,
+      deathReason: ai.lastDeathReason || "",
+      isWinner: winner && winner.name === ai.name && winner.employeeId === ai.employeeId,
+    }));
+
+    saveBattleRecord({
+      winnerName: winner ? winner.name : "",
+      winnerEmployeeId: winner ? winner.employeeId : "",
+      totalPlayers: aiTanks.value.length,
+      gameDurationMs,
+      isDraw,
+      players,
+    }).catch((err) => {
+      console.error("[battleEngine] 保存战斗记录失败:", err);
+    });
   }
 }
 

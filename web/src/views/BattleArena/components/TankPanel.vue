@@ -65,10 +65,13 @@
         :disabled="isPlaying"
         @click="triggerMyAIImport"
       >
-        📤 导入我的AI
+        📤 导入AI
       </button>
       <button id="btn-clear-all" :disabled="isPlaying" @click="clearAll">
         🗑️ 清空
+      </button>
+      <button class="btn-record" @click="openBattleRecord">
+        📋 对战记录
       </button>
 
       <input
@@ -186,6 +189,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { aiTanks, gameState } from "../logic/gameState.js";
 import {
   removeAITank,
@@ -198,6 +202,18 @@ import { getAiList, uploadAiScript } from "@/api/ai.js";
 import { getUserInfo } from "@/utils/user.js";
 
 const emit = defineEmits(["import"]);
+const route = useRoute();
+const router = useRouter();
+
+const battleRecordUrl = computed(() => {
+  const tokenStr = new URLSearchParams(location.search).get("token");
+  const query = tokenStr ? { token: tokenStr } : {};
+  return router.resolve({ name: "BattleRecord", query }).href;
+});
+
+function openBattleRecord() {
+  window.open(battleRecordUrl.value, "_blank");
+}
 
 const isPlaying = computed(
   () => gameState.value === "playing" || gameState.value === "paused",
@@ -512,6 +528,16 @@ async function confirmImport() {
 #tank-actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-record {
+  background: #1e2a3a !important;
+  border-color: #3a5a7a !important;
+  color: #8ac0e0 !important;
+}
+
+.btn-record:hover {
+  background: #2a3a4a !important;
 }
 
 /* 弹窗样式 */

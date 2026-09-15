@@ -10,7 +10,7 @@ const testUserUrl = "http://139.155.133.14:8081";
 const prodUserUrl = "http://192.168.151.88:8081"
 
 const SOURCE_MAP = {
-  localhost: prodUserUrl,
+  localhost: testUserUrl,
   // 模拟环境
   "139.155.133.14": testUserUrl,
   "118.112.177.2": testUserUrl,

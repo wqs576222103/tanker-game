@@ -27,6 +27,11 @@ const routes = [
     name: "AiScript",
     component: () => import("../views/AiScript/index.vue"),
   },
+  {
+    path: "/battle-record",
+    name: "BattleRecord",
+    component: () => import("../views/BattleRecord/index.vue"),
+  },
   // 新增：关卡模式路由
   {
     path: "/levels",

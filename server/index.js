@@ -4,6 +4,7 @@ require("dotenv").config();
 const userRouter = require("./api/user");
 const scoreRouter = require("./api/score");
 const aiRouter = require("./api/ai");
+const battleRecordRouter = require("./api/battleRecord");
 
 const app = new Koa();
 const PORT = Number(process.env.PORT) || 3000;
@@ -13,6 +14,7 @@ app.use(bodyParser());
 app.use(userRouter.routes()).use(userRouter.allowedMethods());
 app.use(scoreRouter.routes()).use(scoreRouter.allowedMethods());
 app.use(aiRouter.routes()).use(aiRouter.allowedMethods());
+app.use(battleRecordRouter.routes()).use(battleRecordRouter.allowedMethods());
 
 app.listen(PORT, () => {
   console.log(`server listening on http://localhost:${PORT}`);
