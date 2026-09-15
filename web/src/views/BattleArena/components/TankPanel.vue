@@ -73,6 +73,9 @@
       <button class="btn-record" @click="openBattleRecord">
         📋 对战记录
       </button>
+      <button class="btn-record" @click="openBattleWinRate">
+        🏆 胜率榜
+      </button>
 
       <input
         type="file"
@@ -92,7 +95,7 @@
     >
       <div class="modal-box">
         <div class="modal-header">
-          <span>导入已有AI脚本</span>
+          <span>选择已有AI脚本</span>
           <span class="modal-tip"
             >已选 {{ selectedScripts.length }} 个，当前
             {{ aiTanks.length }}/8</span
@@ -213,6 +216,16 @@ const battleRecordUrl = computed(() => {
 
 function openBattleRecord() {
   window.open(battleRecordUrl.value, "_blank");
+}
+
+const battleWinRateUrl = computed(() => {
+  const tokenStr = new URLSearchParams(location.search).get("token");
+  const query = tokenStr ? { token: tokenStr } : {};
+  return router.resolve({ name: "BattleWinRate", query }).href;
+});
+
+function openBattleWinRate() {
+  window.open(battleWinRateUrl.value, "_blank");
 }
 
 const isPlaying = computed(

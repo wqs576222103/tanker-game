@@ -32,6 +32,11 @@ const routes = [
     name: "BattleRecord",
     component: () => import("../views/BattleRecord/index.vue"),
   },
+  {
+    path: "/battle-win-rate",
+    name: "BattleWinRate",
+    component: () => import("../views/BattleWinRate/index.vue"),
+  },
   // 新增：关卡模式路由
   {
     path: "/levels",

@@ -131,6 +131,59 @@ router.get("/page", async (ctx) => {
   }
 });
 
+router.get("/win-rate", async (ctx) => {
+  const keyword = ctx.query.keyword;
+  const page = Math.max(1, parseInt(ctx.query.page, 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(ctx.query.pageSize, 10) || 20));
+  const offset = (page - 1) * pageSize;
+
+  try {
+    let whereClause = "1=1";
+    const params = [];
+    if (keyword) {
+      whereClause += " AND (d.employee_id LIKE ? OR d.tank_name LIKE ? OR u.username LIKE ?)";
+      params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    }
+
+    const [[totalRows]] = await getPool().execute(
+      `SELECT COUNT(*) AS cnt FROM (
+        SELECT d.employee_id, d.tank_name
+        FROM \`${DETAIL_TABLE}\` d
+        LEFT JOIN \`${USER_TABLE}\` u ON d.employee_id = u.employee_id
+        WHERE ${whereClause}
+        GROUP BY d.employee_id, d.tank_name
+      ) t`,
+      params,
+    );
+
+    const [rows] = await getPool().execute(
+      `SELECT d.employee_id, d.tank_name, ANY_VALUE(u.username) AS username,
+              COUNT(*) AS total_battles,
+              SUM(d.is_winner) AS wins,
+              SUM(d.kills) AS total_kills,
+              SUM(d.deaths) AS total_deaths
+       FROM \`${DETAIL_TABLE}\` d
+       LEFT JOIN \`${USER_TABLE}\` u ON d.employee_id = u.employee_id
+       WHERE ${whereClause}
+       GROUP BY d.employee_id, d.tank_name
+       ORDER BY wins DESC, total_kills DESC
+       LIMIT ${pageSize} OFFSET ${offset}`,
+      params,
+    );
+
+    const list = rows.map((r) => ({
+      ...r,
+      win_rate: r.total_battles > 0 ? Math.round((r.wins / r.total_battles) * 1000) / 10 : 0,
+    }));
+
+    ctx.body = { code: 200, data: { list, total: totalRows.cnt, page, pageSize } };
+  } catch (err) {
+    console.error(`[battleRecord] 查询胜率榜失败: ${err.message}`);
+    ctx.status = 500;
+    ctx.body = { code: 500, message: "查询胜率榜失败" };
+  }
+});
+
 router.get("/:id", async (ctx) => {
   const id = parseInt(ctx.params.id, 10);
   if (!id) {

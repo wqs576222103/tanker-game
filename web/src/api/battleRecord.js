@@ -15,3 +15,7 @@ export function getBattleRecordDetail(id) {
 export function getEmployeeBattleRecords(employeeId, params) {
   return get(`/battle-record/employee/${employeeId}`, params);
 }
+
+export function getBattleWinRate(params) {
+  return get("/battle-record/win-rate", params);
+}
