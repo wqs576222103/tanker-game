@@ -5,7 +5,12 @@ import { setUserInfo, setToken } from "@/utils/user.js";
 const routes = [
   {
     path: "/",
-    redirect: "/tank-game",
+    redirect: "/home",
+  },
+  {
+    path: "/home",
+    name: "Home",
+    component: () => import("../views/Home/index.vue"),
   },
   {
     path: "/tank-game",

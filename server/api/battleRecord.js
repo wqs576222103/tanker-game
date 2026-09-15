@@ -166,7 +166,7 @@ router.get("/win-rate", async (ctx) => {
        LEFT JOIN \`${USER_TABLE}\` u ON d.employee_id = u.employee_id
        WHERE ${whereClause}
        GROUP BY d.employee_id, d.tank_name
-       ORDER BY wins DESC, total_kills DESC
+       ORDER BY CASE WHEN total_battles = 0 THEN 0 ELSE wins / total_battles END DESC, total_kills DESC
        LIMIT ${pageSize} OFFSET ${offset}`,
       params,
     );

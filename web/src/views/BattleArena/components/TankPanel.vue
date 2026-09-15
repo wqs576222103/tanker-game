@@ -110,6 +110,66 @@
           />
         </div>
         <div class="modal-list">
+          <div class="modal-section-title">系统脚本</div>
+          <div
+            v-for="item in systemScripts"
+            :key="item.employee_id"
+            class="modal-item"
+            :class="{
+              'is-dup': isDuplicated(
+                item.file_name,
+                '',
+                item.employee_id,
+              ),
+              'is-full':
+                aiTanks.length >= 8 &&
+                !isDuplicated(
+                  item.file_name,
+                  '',
+                  item.employee_id,
+                ) &&
+                !isSelected(item.employee_id),
+            }"
+          >
+            <label class="modal-item-inner">
+              <input
+                type="checkbox"
+                :checked="isSelected(item.employee_id)"
+                :disabled="
+                  isDuplicated(
+                    item.file_name,
+                    '',
+                    item.employee_id,
+                  ) ||
+                  (aiTanks.length >= 8 && !isSelected(item.employee_id))
+                "
+                @change="toggleSelect(item)"
+              />
+              <span class="modal-item-name" :title="item.file_name">{{
+                item.file_name
+              }}</span>
+              <span class="modal-item-user">{{
+                item.username
+              }}</span>
+              <span
+                v-if="
+                  isDuplicated(
+                    item.file_name,
+                    '',
+                    item.employee_id,
+                  )
+                "
+                class="modal-item-tag tag-dup"
+                >已导入</span
+              >
+              <span
+                v-else-if="aiTanks.length >= 8 && !isSelected(item.employee_id)"
+                class="modal-item-tag tag-full"
+                >已满</span
+              >
+            </label>
+          </div>
+          <div class="modal-section-title">玩家AI脚本</div>
           <div
             v-if="serverAIList.length === 0 && !listLoading"
             class="modal-empty"
@@ -203,6 +263,8 @@ import {
 } from "../logic/aiManager.js";
 import { getAiList, uploadAiScript } from "@/api/ai.js";
 import { getUserInfo } from "@/utils/user.js";
+import systemDefault from "@/views/TankGame/script/ai-tanker/default-tank.js";
+import systemLevel from "@/views/TankGame/script/ai-tanker/level-tank.js";
 
 const emit = defineEmits(["import"]);
 const route = useRoute();
@@ -308,6 +370,11 @@ const searchKeyword = ref("");
 const listLoading = ref(false);
 const importing = ref(false);
 
+const systemScripts = [
+  { file_name: systemDefault.name || "随机游走", scriptModule: systemDefault, employee_id: "XT01", username: "系统" },
+  { file_name: systemLevel.name || "关卡AI", scriptModule: systemLevel, employee_id: "XT02", username: "系统" },
+];
+
 function openServerAILoad() {
   showServerAI.value = true;
   selectedScripts.value = [];
@@ -367,12 +434,16 @@ async function confirmImport() {
   importing.value = true;
   const tasks = selectedScripts.value.map(async (item) => {
     try {
-      await loadAIFromUrl(
-        item.script_path,
-        item.file_name,
-        item.employee_id,
-        item.username,
-      );
+      if (item.scriptModule) {
+        addAITank(item.file_name, item.scriptModule, '', item.employee_id, item.username);
+      } else {
+        await loadAIFromUrl(
+          item.script_path,
+          item.file_name,
+          item.employee_id,
+          item.username,
+        );
+      }
     } catch (err) {
       console.error(`导入 ${item.file_name} 失败:`, err);
     }
@@ -644,6 +715,15 @@ async function confirmImport() {
   color: #6a7a6a;
   padding: 30px 0;
   font-size: 13px;
+}
+
+.modal-section-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #7a9a7a;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 2px;
 }
 
 .modal-item {
