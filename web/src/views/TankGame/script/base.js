@@ -262,8 +262,10 @@ export function playMp3(url) {
 // 背景音乐：仅在未开始游戏（开始/结束界面）时播放，每隔5秒播放一次
 let bgmAudio = null;
 let bgmTimer = null;
+let deathSoundTimer = null; // 坦克死亡后3秒内禁止播放bgm
 export function playBgm() {
   if (!sfxEnabled) return;
+  if (deathSoundTimer) return; // 死亡音效播放中，不播放bgm
   try {
     if (!bgmAudio) {
       bgmAudio = new Audio(bgmMp3);
@@ -273,7 +275,7 @@ export function playBgm() {
     bgmAudio.play().catch(() => { });
     if (!bgmTimer) {
       bgmTimer = setInterval(() => {
-        if (!sfxEnabled || state === "playing") return;
+        if (!sfxEnabled || state === "playing" || deathSoundTimer) return;
         const a = new Audio(bgmMp3);
         a.volume = 0.35;
         a.play().catch(() => { });
@@ -1600,7 +1602,6 @@ export function loop(ts) {
 export function gameOver() {
   state = "over";
   player.alive = false;
-  playBgm();
   spawnExplosion(
     player.x + player.w / 2,
     player.y + player.h / 2,
@@ -1608,6 +1609,11 @@ export function gameOver() {
     "#ff4a3a",
   );
   sfx("over");
+  // 坦克死亡后等待3秒再播放背景音乐，避免与死亡音效重叠
+  deathSoundTimer = setTimeout(() => {
+    deathSoundTimer = null;
+    playBgm();
+  }, 3000);
   if (kills > hiScore) {
     hiScore = kills;
     localStorage.setItem("tank-hi", String(hiScore));
@@ -1664,6 +1670,10 @@ export function startGame() {
   AIPlayer.init();
   state = "playing";
   stopBgm();
+  if (deathSoundTimer) {
+    clearTimeout(deathSoundTimer);
+    deathSoundTimer = null;
+  }
   document.getElementById("ov-start").classList.add("hidden");
   document.getElementById("ov-over").classList.add("hidden");
   document.getElementById("ov-pause").classList.add("hidden");

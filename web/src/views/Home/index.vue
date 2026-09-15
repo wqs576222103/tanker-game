@@ -22,6 +22,11 @@
           <div class="mode-name">AI坦克对决</div>
           <div class="mode-desc">让AI之间展开激烈对决</div>
         </router-link>
+          <!-- <router-link :to="{ path: '/levels', query: { token } }" class="mode-card levels-mode">
+          <div class="mode-icon">🎯</div>
+          <div class="mode-name">关卡模式</div>
+          <div class="mode-desc">挑战不同关卡，逐级突破</div>
+        </router-link> -->
       </div>
     </div>
   </div>
@@ -105,6 +110,12 @@ const token = computed(() => route.query.token || "");
 }
 .rank-mode:hover {
   box-shadow: 0 12px 40px rgba(245, 158, 11, 0.4);
+}
+.levels-mode {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+.levels-mode:hover {
+  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.4);
 }
 .battle-mode {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
