@@ -151,14 +151,10 @@ export function initBattleGame(canvasEl) {
 }
 
 function setupControls() {
-  const btnImport = document.getElementById("btn-import-ai");
   const btnClear = document.getElementById("btn-clear-all");
   const fileInputMulti = document.getElementById("ai-file-multi");
   const btnSpeed = document.getElementById("btn-speed");
   const btnFullscreen = document.getElementById("btn-fullscreen");
-
-  if (btnImport)
-    btnImport.addEventListener("click", () => fileInputMulti.click());
   if (btnClear) btnClear.addEventListener("click", clearAllAITanks);
 
   if (fileInputMulti) {
@@ -240,10 +236,6 @@ export function startBattle() {
     alert("请至少导入 2 个 AI 才能开始对决");
     return;
   }
-  const importBtn = document.getElementById("btn-import-ai");
-  if (importBtn) importBtn.disabled = true;
-  const clearBtn = document.getElementById("btn-clear-all");
-  if (clearBtn) clearBtn.disabled = true;
 
   window.tanks.splice(0, window.tanks.length);
   window.bullets.splice(0, window.bullets.length);
@@ -866,16 +858,16 @@ export function buildBattleContext(ai) {
     boss:
       window.boss && window.boss.alive
         ? {
-            x: window.boss.x,
-            y: window.boss.y,
-            w: window.boss.w,
-            h: window.boss.h,
-            dirName: window.boss.dirName,
-            dir: { x: window.boss.dir.x, y: window.boss.dir.y },
-            speed: window.boss.speed,
-            hp: window.boss.hp,
-            maxHp: window.boss.maxHp,
-          }
+          x: window.boss.x,
+          y: window.boss.y,
+          w: window.boss.w,
+          h: window.boss.h,
+          dirName: window.boss.dirName,
+          dir: { x: window.boss.dir.x, y: window.boss.dir.y },
+          speed: window.boss.speed,
+          hp: window.boss.hp,
+          maxHp: window.boss.maxHp,
+        }
         : null,
     gates: window.gates.map((g) => ({
       cells: g.cells.map((c) => ({ column: c.c, row: c.r })),
@@ -1188,11 +1180,6 @@ export function checkBattleEnd() {
     if (statsEl) statsEl.textContent = stats;
     const ovOver = document.getElementById("ov-over");
     if (ovOver) ovOver.classList.remove("hidden");
-
-    const importBtn = document.getElementById("btn-import-ai");
-    if (importBtn) importBtn.disabled = false;
-    const clearBtn = document.getElementById("btn-clear-all");
-    if (clearBtn) clearBtn.disabled = false;
   }
 }
 

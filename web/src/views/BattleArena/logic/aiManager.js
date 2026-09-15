@@ -59,7 +59,7 @@ export async function loadAIFromUrl(url, name) {
   }
   const obj = (mod && mod.default) || (mod && mod.__AI__);
   if (obj && typeof obj.decide === "function") {
-    addAITank(name || "AI", obj);
+    addAITank(name || "AI", obj, url);
     return;
   }
   delete window.__AI__;
@@ -72,7 +72,7 @@ export async function loadAIFromUrl(url, name) {
   if (!evalObj || typeof evalObj.decide !== "function") {
     throw new Error("未找到有效 AI 对象");
   }
-  addAITank(name || "AI", evalObj);
+  addAITank(name || "AI", evalObj, url);
 }
 
 export async function importAIFiles(files) {
@@ -82,18 +82,19 @@ export async function importAIFiles(files) {
     try {
       const aiModule = await loadAIFile(file);
       const name = aiModule.name || file.name.replace(/\.[^.]+$/, "");
-      addAITank(name, aiModule);
+      addAITank(name, aiModule, file.name);
     } catch (err) {
       alert(`导入 ${file.name} 失败: ${err.message}`);
     }
   }
 }
 
-export function addAITank(name, aiModule) {
+export function addAITank(name, aiModule, scriptPath) {
   const existingIdx = aiTanks.value.findIndex((a) => a.name === name);
   if (existingIdx >= 0) {
     const existing = aiTanks.value[existingIdx];
     existing.aiModule = aiModule;
+    existing.scriptPath = scriptPath || "";
     existing.kills = 0;
     existing.deaths = 0;
     existing.score = 0;
@@ -108,6 +109,7 @@ export function addAITank(name, aiModule) {
     name,
     color,
     aiModule,
+    scriptPath: scriptPath || "",
     tank: null,
     kills: 0,
     deaths: 0,

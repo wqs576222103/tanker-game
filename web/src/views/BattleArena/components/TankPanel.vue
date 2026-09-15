@@ -27,7 +27,7 @@
         </span>
         <span class="tank-score">{{ ai.score }}分</span>
         <span class="tank-stats">{{ ai.kills }}杀/{{ ai.deaths }}死</span>
-        <button class="btn-remove" :v-if="!isPlaying" @click="removeTank(i)">
+        <button class="btn-remove" v-if="!isPlaying" @click="removeTank(i)">
           ✕
         </button>
         <div
@@ -60,6 +60,7 @@
       <button id="btn-clear-all" :disabled="isPlaying" @click="clearAll">
         🗑️ 清空
       </button>
+
       <input
         type="file"
         id="ai-file"
@@ -104,10 +105,10 @@
             :key="item.employee_id"
             class="modal-item"
             :class="{
-              'is-dup': isDuplicated(item.file_name),
+              'is-dup': isDuplicated(item.file_name, item.script_path),
               'is-full':
                 aiTanks.length >= 8 &&
-                !isDuplicated(item.file_name) &&
+                !isDuplicated(item.file_name, item.script_path) &&
                 !isSelected(item.employee_id),
             }"
           >
@@ -116,7 +117,7 @@
                 type="checkbox"
                 :checked="isSelected(item.employee_id)"
                 :disabled="
-                  isDuplicated(item.file_name) ||
+                  isDuplicated(item.file_name, item.script_path) ||
                   (aiTanks.length >= 8 && !isSelected(item.employee_id))
                 "
                 @change="toggleSelect(item)"
@@ -128,7 +129,7 @@
                 item.username || item.employee_id
               }}</span>
               <span
-                v-if="isDuplicated(item.file_name)"
+                v-if="isDuplicated(item.file_name, item.script_path)"
                 class="modal-item-tag tag-dup"
                 >已导入</span
               >
@@ -228,12 +229,14 @@ async function fetchAIList() {
   }
 }
 
-const importedNames = computed(() => {
-  return new Set(aiTanks.value.map((ai) => ai.name));
+const importedKeys = computed(() => {
+  return new Set(
+    aiTanks.value.map((ai) => `${ai.name}\n${ai.scriptPath || ""}`),
+  );
 });
 
-function isDuplicated(fileName) {
-  return importedNames.value.has(fileName);
+function isDuplicated(fileName, scriptPath) {
+  return importedKeys.value.has(`${fileName}\n${scriptPath || ""}`);
 }
 
 function isSelected(employeeId) {
