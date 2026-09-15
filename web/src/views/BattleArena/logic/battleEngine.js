@@ -96,6 +96,13 @@ export function initBattleGame(canvasEl) {
     tank.maxHp = 3;
     tank.speed = 70 + Math.random() * 30;
     tank._aiRef = ai;
+    tank._idleTimer = 0;
+    tank._lastX = x;
+    tank._lastY = y;
+    tank._wobbleCheckX = x;
+    tank._wobbleCheckY = y;
+    tank._wobbleTimer = 0;
+    tank._wobbleDist = 0;
     ai.tank = reactive(tank);
     ai.kills = 0;
     ai.deaths = 0;
@@ -259,6 +266,13 @@ export function startBattle() {
     tank.maxHp = 3;
     tank.speed = 70 + Math.random() * 30;
     tank._aiRef = ai;
+    tank._idleTimer = 0;
+    tank._lastX = x;
+    tank._lastY = y;
+    tank._wobbleCheckX = x;
+    tank._wobbleCheckY = y;
+    tank._wobbleTimer = 0;
+    tank._wobbleDist = 0;
     ai.tank = reactive(tank);
     ai.kills = 0;
     ai.deaths = 0;
@@ -327,6 +341,46 @@ export function updateBattle(dt) {
     if (!t.alive) continue;
     moveBattleTank(t, dt);
     battleFire(t, dt);
+
+    const moved =
+      Math.abs(t.x - t._lastX) > 0.5 || Math.abs(t.y - t._lastY) > 0.5;
+    if (moved) {
+      t._idleTimer = 0;
+      t._wobbleDist += Math.abs(t.x - t._lastX) + Math.abs(t.y - t._lastY);
+      t._lastX = t.x;
+      t._lastY = t.y;
+    } else {
+      t._idleTimer += dt;
+    }
+
+    t._wobbleTimer += dt;
+    if (t._wobbleTimer >= 5) {
+      const netDx = Math.abs(t.x - t._wobbleCheckX);
+      const netDy = Math.abs(t.y - t._wobbleCheckY);
+      const netDisp = netDx + netDy;
+      const isWobbling = t._wobbleDist > 150 && netDisp < 50;
+      const isIdle = t._idleTimer >= 5;
+      if (isWobbling || isIdle) {
+        t.hp -= dt * 2;
+        if (t.hp <= 0) {
+          t.alive = false;
+          const dyingAI = t._aiRef;
+          if (dyingAI) dyingAI.deaths++;
+          spawnExplosion(
+            t.x + t.w / 2,
+            t.y + t.h / 2,
+            34,
+            t.color || "#ff8a5a",
+          );
+          sfx("boom");
+          addFloat(t.x + t.w / 2, t.y, "挂机惩罚", "#ff4444");
+        }
+      }
+      t._wobbleTimer = 0;
+      t._wobbleCheckX = t.x;
+      t._wobbleCheckY = t.y;
+      t._wobbleDist = 0;
+    }
   }
 
   updateBattleBullets(dt);

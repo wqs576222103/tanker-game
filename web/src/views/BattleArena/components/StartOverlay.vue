@@ -10,6 +10,9 @@
       ⬜ 银色砖墙：反弹一次子弹（不可摧毁）　🟨 黄色砖墙：可被子弹击碎<br />
       🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送
     </p>
+    <p class="warn">
+      ⚠️ 挂机惩罚：坦克原地不动、绕圈或来回摇摆超过 5 秒将持续掉血直至死亡！
+    </p>
     <button id="btn-start" @click="$emit('start')">开 始 对 决</button>
   </div>
 </template>
@@ -53,6 +56,11 @@
   padding: 10px 18px;
   border-radius: 10px;
   max-width: 90%;
+}
+
+.overlay .warn {
+  color: #ff6b6b;
+  font-weight: bold;
 }
 
 .overlay button {

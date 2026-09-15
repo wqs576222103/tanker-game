@@ -183,3 +183,52 @@ export default {
 - 所有像素坐标为坦克/对象的**左上角**，中心点为 `x + w/2, y + h/2`。
 - `cellOf` / `mapAt` / `isObstacle` 用的格子下标：c 为列，r 为行，`map[r][c]`。
 - 坦克尺寸为 `w = h = 20px`，实际占据一个格子宽。
+
+---
+
+## 六、挂机惩罚机制
+
+在 AI 对决模式中，系统会检测坦克的**挂机行为**，包括：
+- **原地不动**：坦克位置长时间没有变化
+- **原地绕圈/摇摆**：坦克虽然在移动，但位置始终在小范围内徘徊（如左右摇摆）
+
+### 惩罚规则
+- **静止检测**：坦克位置**连续 5 秒**未发生明显变化（移动距离 < 0.5 像素）
+- **摇摆检测**：5 秒内累计移动超过 150 像素，但净位移小于 50 像素（来回移动）
+- 摇摆检测覆盖：上下、左右、左上、右上、左下、右下等所有方向组合
+- 触发任一条件即持续扣血（每帧扣 `dt * 2` 点生命值，速度较快）
+- 扣血直至死亡，死亡时显示"挂机惩罚"提示
+
+### AI 编写建议
+- **必须持续移动**：避免长时间停留在同一位置
+- **避免无意义移动**：不要在小范围内来回移动或绕圈
+- **合理规划路线**：确保每次移动都有明确目标
+- **注意移动阈值**：每次移动至少超过 0.5 像素才会重置挂机计时器
+- **净位移要求**：每 5 秒至少移动 40 像素的净距离
+
+### 检测逻辑示例
+```javascript
+// 每帧检测静止和摇摆
+const moved = Math.abs(t.x - t._lastX) > 0.5 || Math.abs(t.y - t._lastY) > 0.5;
+if (moved) {
+  t._idleTimer = 0;
+  t._wobbleDist += Math.abs(t.x - t._lastX) + Math.abs(t.y - t._lastY);
+} else {
+  t._idleTimer += dt;
+}
+
+// 每5秒检查一次摇摆
+t._wobbleTimer += dt;
+if (t._wobbleTimer >= 5) {
+  const netDisp = Math.abs(t.x - t._wobbleCheckX) + Math.abs(t.y - t._wobbleCheckY);
+  const isWobbling = t._wobbleDist > 150 && netDisp < 50;
+  const isIdle = t._idleTimer >= 5;
+  if (isWobbling || isIdle) {
+    t.hp -= dt * 2;  // 快速扣血
+  }
+  t._wobbleTimer = 0;
+  t._wobbleCheckX = t.x;
+  t._wobbleCheckY = t.y;
+  t._wobbleDist = 0;
+}
+```
