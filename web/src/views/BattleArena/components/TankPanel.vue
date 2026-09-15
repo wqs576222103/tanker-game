@@ -60,7 +60,13 @@
       >
         📥 导入本地AI
       </button> -->
-      <button id="btn-export-all" :disabled="isPlaying">📤 导入我的AI</button>
+      <button
+        id="btn-export-all"
+        :disabled="isPlaying"
+        @click="triggerMyAIImport"
+      >
+        📤 导入我的AI
+      </button>
       <button id="btn-clear-all" :disabled="isPlaying" @click="clearAll">
         🗑️ 清空
       </button>
@@ -185,8 +191,11 @@ import {
   removeAITank,
   clearAllAITanks,
   loadAIFromUrl,
+  loadAIFile,
+  addAITank,
 } from "../logic/aiManager.js";
-import { getAiList } from "@/api/ai.js";
+import { getAiList, uploadAiScript } from "@/api/ai.js";
+import { getUserInfo } from "@/utils/user.js";
 
 const emit = defineEmits(["import"]);
 
@@ -217,11 +226,49 @@ function clearAll() {
   clearAllAITanks();
 }
 
+let importMyAI = false;
+
+function triggerMyAIImport() {
+  importMyAI = true;
+  document.getElementById("ai-file").click();
+}
+
 function onFileChange(e) {
-  if (e.target.files.length > 0) {
-    emit("import", e.target.files);
+  const files = e.target.files;
+  if (files.length > 0) {
+    if (importMyAI) {
+      importMyAI = false;
+      uploadAndLoadMyAI(files[0]);
+    } else {
+      emit("import", files);
+    }
   }
   e.target.value = "";
+}
+
+async function uploadAndLoadMyAI(file) {
+  const userInfo = getUserInfo();
+  const empId = userInfo?.employeeId;
+  if (!empId) {
+    alert("请先登录");
+    return;
+  }
+  if (aiTanks.value.length >= 8) {
+    alert("AI槽位已满，无法导入");
+    return;
+  }
+  try {
+    await uploadAiScript(empId, file);
+  } catch (err) {
+    console.warn("上传AI脚本到服务器失败:", err);
+  }
+  try {
+    const aiModule = await loadAIFile(file);
+    const name = aiModule.name || file.name.replace(/\.[^.]+$/, "");
+    addAITank(name, aiModule, file.name, empId, userInfo.username);
+  } catch (err) {
+    alert("AI脚本加载失败：" + err.message);
+  }
 }
 
 // --- 服务器AI列表相关 ---

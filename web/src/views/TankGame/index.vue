@@ -9,7 +9,7 @@
         >关卡模式</a
       > -->
       <a class="ranking-link battle" :href="tankBattle" target="_blank"
-        >坦克对决</a
+        >AI坦克对决</a
       >
       <button class="game-intro-btn" @click="openGameIntro">游戏介绍</button>
     </div>
