@@ -56,7 +56,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getToken, getUserInfo } from "@/utils/user";
-import { post } from "@/utils/request";
+import { saveLevelRecord } from "@/api/levelRecord";
 import Map from "@/views/TankGame/components/Map/index.vue";
 import {
   LEVELS,
@@ -98,7 +98,7 @@ function handleLevelComplete(e) {
 
   // 保存关卡通关数据到服务器
   if (employeeId.value) {
-    post("/level-record", {
+    saveLevelRecord({
       employeeId: employeeId.value,
       username: username.value,
       levelId: levelId.value,

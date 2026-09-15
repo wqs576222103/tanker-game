@@ -163,6 +163,7 @@ export function checkFlagCapture() {
 }
 
 export function showLevelComplete() {
+  window.levelCompleted = true;
   const event = new CustomEvent("levelComplete", {
     detail: {
       levelId: window.levelConfig?.id,
@@ -202,6 +203,7 @@ window.levelLastBossKills = 0;
 window.flagCaptured = false;
 window.flagCarrier = null;
 window.flagPosition = null;
+window.levelCompleted = false;
 
 window.map = [];
 window.gates = [];
@@ -1716,6 +1718,7 @@ export function gameOver() {
 }
 
 export function startGame() {
+  window.levelCompleted = false;
   resetGame();
   AIPlayer.init();
   state = "playing";

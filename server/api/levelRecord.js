@@ -89,19 +89,22 @@ router.get("/page", async (ctx) => {
   }
 });
 
-router.get("/employee/:employeeId", async (ctx) => {
+router.get("/best/:employeeId", async (ctx) => {
   const employeeId = ctx.params.employeeId;
-  const page = Math.max(1, parseInt(ctx.query.page, 10) || 1);
-  const pageSize = Math.min(100, parseInt(ctx.query.pageSize, 10) || 20);
 
   try {
-    const data = await getLevelRecords({ page, pageSize, levelId: "" });
-    const filteredList = data.list.filter((r) => r.employee_id === employeeId);
-    ctx.body = { code: 200, data: { ...data, list: filteredList } };
+    const [rows] = await getPool().execute(
+      `SELECT lr.level_id, MIN(lr.duration_ms) AS best_time, MIN(lr.id) AS record_id
+       FROM \`${LEVEL_RECORD_TABLE}\` lr
+       WHERE lr.employee_id = ?
+       GROUP BY lr.level_id`,
+      [employeeId],
+    );
+    ctx.body = { code: 200, data: { list: rows } };
   } catch (err) {
-    console.error(`[levelRecord] 查询员工关卡记录失败: ${err.message}`);
+    console.error(`[levelRecord] 查询员工最佳关卡记录失败: ${err.message}`);
     ctx.status = 500;
-    ctx.body = { code: 500, message: "查询员工关卡记录失败" };
+    ctx.body = { code: 500, message: "查询员工最佳关卡记录失败" };
   }
 });
 

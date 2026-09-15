@@ -432,6 +432,8 @@ export const TankActions = {
 
   // 更新敌人
   updateEnemies(dt) {
+    // 关卡模式：通关后停止敌人行动
+    if (window.levelMode && window.levelCompleted) return;
     const alive = tanks.filter((t) => t.alive && !t.isPlayer);
     if (spawnTimer <= 0 && alive.length < maxEnemies()) {
       spawnEnemy(false);
@@ -500,6 +502,8 @@ export const TankActions = {
   // 移动boss
   moveBoss(dt) {
     if (!boss || !boss.alive) return;
+    // 关卡模式：通关后停止boss行动
+    if (window.levelMode && window.levelCompleted) return;
 
     boss.moveTimer -= dt;
     if (boss.moveTimer <= 0) {
@@ -525,6 +529,8 @@ export const TankActions = {
   // boss射击逻辑
   bossFire(dt) {
     if (!boss || !boss.alive) return;
+    // 关卡模式：通关后停止boss射击
+    if (window.levelMode && window.levelCompleted) return;
 
     // 散弹冷却
     boss.spreadCd -= dt;
@@ -574,7 +580,7 @@ export const TankActions = {
   damagePlayer(reason, bullet) {
     if (player.invincible > 0) return;
     // 关卡模式：通关后玩家不再受伤
-    if (window.levelMode && window.flagCaptured) return;
+    if (window.levelMode && window.levelCompleted) return;
     if (player.shieldT > gtMs) {
       if (!bullet) {
         player.shieldT = 0;
@@ -614,6 +620,8 @@ export const TankActions = {
 
   // 更新玩家
   updatePlayer(dt) {
+    // 关卡模式：通关后禁用玩家操作
+    if (window.levelMode && window.levelCompleted) return;
     const k = keys;
     let mx = 0,
       my = 0;

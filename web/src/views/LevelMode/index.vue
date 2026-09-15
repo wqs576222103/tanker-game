@@ -20,9 +20,9 @@
           <span class="obj-icon">🎯</span>
           <span>{{ level.objective.description }}</span>
         </div>
-        <div class="level-stats" v-if="getLevelTime(level.id)">
+        <div class="level-stats" v-if="getLevelBestTime(level.id)">
           <span class="best-time"
-            >⏱ {{ formatTime(getLevelTime(level.id)) }}</span
+            >⏱ {{ formatTime(getLevelBestTime(level.id)) }}</span
           >
         </div>
         <div v-if="!isUnlocked(level.id)" class="lock-overlay">
@@ -45,6 +45,8 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { getToken, getUserInfo } from "@/utils/user";
+import { getUserBestLevelRecords } from "@/api/levelRecord";
 import {
   LEVELS,
   isLevelUnlocked,
@@ -53,9 +55,11 @@ import {
 
 const router = useRouter();
 const levels = ref(LEVELS);
+const userBestTimes = ref({});
+const userUnlockedLevel = ref(1);
 
 function isUnlocked(levelId) {
-  return isLevelUnlocked(levelId);
+  return levelId <= userUnlockedLevel.value;
 }
 
 function selectLevel(level) {
@@ -75,8 +79,43 @@ function formatTime(ms) {
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
 }
 
-onMounted(() => {
-  // 可以在这里加载用户进度
+function getLevelBestTime(levelId) {
+  return userBestTimes.value[levelId] || getLevelTime(levelId);
+}
+
+async function loadUserLevelData() {
+  const token = getToken();
+  if (!token) return;
+
+  try {
+    const userInfo = getUserInfo();
+    const employeeId = userInfo.employeeId;
+    if (!employeeId) return;
+
+    const res = await getUserBestLevelRecords(employeeId);
+    if (res.code === 200 && res.data?.list) {
+      const records = res.data.list;
+      const bestTimes = {};
+      let maxUnlocked = 1;
+
+      for (const record of records) {
+        const levelId = record.level_id;
+        bestTimes[levelId] = record.best_time;
+        if (levelId >= maxUnlocked) {
+          maxUnlocked = levelId + 1;
+        }
+      }
+
+      userBestTimes.value = bestTimes;
+      userUnlockedLevel.value = Math.min(maxUnlocked, LEVELS.length);
+    }
+  } catch (err) {
+    console.error("加载关卡数据失败:", err);
+  }
+}
+
+onMounted(async () => {
+  await loadUserLevelData();
 });
 </script>
 
