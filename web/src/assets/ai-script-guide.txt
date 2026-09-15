@@ -57,11 +57,12 @@ export default {
 
 ## 二、游戏即时信息
 
-| 字段    | 类型   | 说明                                                |
-| ------- | ------ | --------------------------------------------------- |
-| `state` | string | 游戏状态：`"start" / "playing" / "paused" / "over"` |
-| `score` | number | 当前分数                                            |
-| `gtMs`  | number | 本局已进行时间（毫秒）                              |
+| 字段              | 类型   | 说明                                                          |
+| ----------------- | ------ | ------------------------------------------------------------- |
+| `state`           | string | 游戏状态：`"start" / "playing" / "paused" / "over"`           |
+| `score`           | number | 当前分数                                                      |
+| `gtMs`            | number | 本局已进行时间（毫秒）                                        |
+| `lastDeathReason` | string | 上次死亡原因：`""`（未死亡）/ `"punishment"`（挂机惩罚）/ 击杀者名字 |
 
 ### `player`（玩家坦克，死亡时为 `null`）
 

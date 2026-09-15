@@ -103,9 +103,13 @@ export function initBattleGame(canvasEl) {
     tank._wobbleCheckY = y;
     tank._wobbleTimer = 0;
     tank._wobbleDist = 0;
+    tank._lastDeathReason = "";
     ai.tank = reactive(tank);
     ai.kills = 0;
     ai.deaths = 0;
+    ai.score = 0;
+    ai.lastDeathReason = "";
+    ai.deathTime = 0;
     window.tanks.push(tank);
   });
 
@@ -273,9 +277,13 @@ export function startBattle() {
     tank._wobbleCheckY = y;
     tank._wobbleTimer = 0;
     tank._wobbleDist = 0;
+    tank._lastDeathReason = "";
     ai.tank = reactive(tank);
     ai.kills = 0;
     ai.deaths = 0;
+    ai.score = 0;
+    ai.lastDeathReason = "";
+    ai.deathTime = 0;
     window.tanks.push(tank);
   });
 
@@ -364,8 +372,13 @@ export function updateBattle(dt) {
         t.hp -= dt * 2;
         if (t.hp <= 0) {
           t.alive = false;
+          t._lastDeathReason = "punishment";
           const dyingAI = t._aiRef;
-          if (dyingAI) dyingAI.deaths++;
+          if (dyingAI) {
+            dyingAI.deaths++;
+            dyingAI.lastDeathReason = "punishment";
+            dyingAI.deathTime = Date.now();
+          }
           spawnExplosion(
             t.x + t.w / 2,
             t.y + t.h / 2,
@@ -620,6 +633,7 @@ export function buildBattleContext(ai) {
       kills: window.kills,
       gtMs: window.gtMs,
       player: null,
+      lastDeathReason: ownTank ? ownTank._lastDeathReason : "",
       enemies: window.tanks
         .filter((t) => t.alive && t.teamId !== ownTank.teamId)
         .map((t) => ({
@@ -792,6 +806,7 @@ export function buildBattleContext(ai) {
     state: window.state,
     kills: window.kills,
     gtMs: window.gtMs,
+    lastDeathReason: ownTank._lastDeathReason,
     player: {
       x: ownTank.x,
       y: ownTank.y,
@@ -1088,7 +1103,15 @@ function checkBulletCollisions() {
           t.alive = false;
           const dyingAI = t._aiRef;
           const killerAI = b.owner && b.owner._aiRef ? b.owner._aiRef : null;
-          if (killerAI) killerAI.kills++;
+          t._lastDeathReason = killerAI ? killerAI.name : "bullet";
+          if (dyingAI) {
+            dyingAI.lastDeathReason = t._lastDeathReason;
+            dyingAI.deathTime = Date.now();
+          }
+          if (killerAI) {
+            killerAI.kills++;
+            killerAI.score++;
+          }
           if (dyingAI) dyingAI.deaths++;
           spawnExplosion(
             t.x + t.w / 2,
@@ -1149,12 +1172,17 @@ export function checkBattleEnd() {
     const winner = aliveTanks[0];
     const winnerAI = winner?._aiRef || null;
 
+    if (winnerAI) {
+      winnerAI.score += 3;
+    }
+
     const winnerText = winnerAI ? `🏆 胜利者：${winnerAI.name}！` : "平局！";
     const winnerEl = document.getElementById("ov-over-winner");
     if (winnerEl) winnerEl.textContent = winnerText;
 
-    const stats = aiTanks.value
-      .map((ai) => `${ai.name}: ${ai.kills}杀`)
+    const sorted = [...aiTanks.value].sort((a, b) => b.score - a.score);
+    const stats = sorted
+      .map((ai) => `${ai.name}: ${ai.score}分(${ai.kills}杀)`)
       .join("　");
     const statsEl = document.getElementById("ov-over-stats");
     if (statsEl) statsEl.textContent = stats;

@@ -42,6 +42,39 @@ export function loadAIFile(file) {
   });
 }
 
+export async function loadAIFromUrl(url, name) {
+  if (aiTanks.value.length >= 8) return;
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error("脚本拉取失败: " + resp.status);
+  }
+  const text = await resp.text();
+  const blob = new Blob([text], { type: "text/javascript" });
+  const blobUrl = URL.createObjectURL(blob);
+  let mod = null;
+  try {
+    mod = await import(/* @vite-ignore */ blobUrl);
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+  const obj = (mod && mod.default) || (mod && mod.__AI__);
+  if (obj && typeof obj.decide === "function") {
+    addAITank(name || "AI", obj);
+    return;
+  }
+  delete window.__AI__;
+  try {
+    (0, eval)(text);
+  } catch (err) {
+    throw new Error("脚本解析失败：" + err.message);
+  }
+  const evalObj = window.__AI__;
+  if (!evalObj || typeof evalObj.decide !== "function") {
+    throw new Error("未找到有效 AI 对象");
+  }
+  addAITank(name || "AI", evalObj);
+}
+
 export async function importAIFiles(files) {
   const imports = Array.from(files).slice(0, 8 - aiTanks.value.length);
   for (const file of imports) {
@@ -63,6 +96,9 @@ export function addAITank(name, aiModule) {
     existing.aiModule = aiModule;
     existing.kills = 0;
     existing.deaths = 0;
+    existing.score = 0;
+    existing.lastDeathReason = "";
+    existing.deathTime = 0;
     return;
   }
   if (aiTanks.value.length >= 8) return;
@@ -75,14 +111,32 @@ export function addAITank(name, aiModule) {
     tank: null,
     kills: 0,
     deaths: 0,
+    score: 0,
+    lastDeathReason: "",
+    deathTime: 0,
   });
   aiTanks.value.push(aiObj);
 }
 
 export function removeAITank(idx) {
+  const ai = aiTanks.value[idx];
+  if (ai) {
+    ai.kills = 0;
+    ai.deaths = 0;
+    ai.score = 0;
+    ai.lastDeathReason = "";
+    ai.deathTime = 0;
+  }
   aiTanks.value.splice(idx, 1);
 }
 
 export function clearAllAITanks() {
+  aiTanks.value.forEach((ai) => {
+    ai.kills = 0;
+    ai.deaths = 0;
+    ai.score = 0;
+    ai.lastDeathReason = "";
+    ai.deathTime = 0;
+  });
   aiTanks.value = [];
 }

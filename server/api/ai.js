@@ -155,7 +155,7 @@ router.get("/list", async (ctx) => {
     const total = totalRows.cnt;
 
     const [rows] = await getPool().execute(
-      `SELECT a.employee_id, u.username, a.file_name, a.create_time
+      `SELECT a.employee_id, u.username, a.file_name, a.script_path, a.create_time
        FROM \`${AI_TABLE}\` a
        LEFT JOIN \`${USER_TABLE}\` u ON a.employee_id = u.employee_id
        WHERE ${whereClause}
