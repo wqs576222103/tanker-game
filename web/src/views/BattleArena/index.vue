@@ -1,11 +1,13 @@
 <template>
   <div id="wrap">
-    <div id="canvas-wrap">
-      <canvas id="game"></canvas>
+    <div id="game-area">
       <Hud />
-      <StartOverlay @start="handleStart" />
-      <GameOverOverlay @restart="handleRestart" />
-      <PauseOverlay @resume="handleResume" />
+      <div id="canvas-wrap">
+        <canvas id="game"></canvas>
+        <StartOverlay @start="handleStart" />
+        <GameOverOverlay @restart="handleRestart" />
+        <PauseOverlay @resume="handleResume" />
+      </div>
       <ButtonGroup
         @pause="handlePause"
         @restart="handleRestart"
@@ -93,6 +95,15 @@ onUnmounted(() => {
   padding: 16px;
   background: #1a2118;
   overflow: hidden;
+}
+
+#game-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
 }
 
 #canvas-wrap {

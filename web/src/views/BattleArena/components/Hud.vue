@@ -13,10 +13,7 @@
 
 <style scoped>
 #hud {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -24,8 +21,7 @@
   padding: 8px 12px;
   font-size: 14px;
   background: rgba(0, 0, 0, 0.5);
-  border-radius: 6px 6px 0 0;
-  z-index: 10;
+  border-radius: 6px;
   flex-wrap: wrap;
   gap: 4px;
 }

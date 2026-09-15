@@ -140,20 +140,12 @@ export function initBattleGame(canvasEl) {
 }
 
 function setupControls() {
-  const btnRestart = document.getElementById("btn-restart");
-  const btnRestart2 = document.getElementById("btn-restart2");
-  const btnPause = document.getElementById("btn-pause");
-  const btnResume = document.getElementById("btn-resume");
   const btnImport = document.getElementById("btn-import-ai");
   const btnClear = document.getElementById("btn-clear-all");
   const fileInputMulti = document.getElementById("ai-file-multi");
   const btnSpeed = document.getElementById("btn-speed");
   const btnFullscreen = document.getElementById("btn-fullscreen");
 
-  if (btnRestart) btnRestart.addEventListener("click", startBattle);
-  if (btnRestart2) btnRestart2.addEventListener("click", startBattle);
-  if (btnPause) btnPause.addEventListener("click", toggleBattlePause);
-  if (btnResume) btnResume.addEventListener("click", toggleBattlePause);
   if (btnImport)
     btnImport.addEventListener("click", () => fileInputMulti.click());
   if (btnClear) btnClear.addEventListener("click", clearAllAITanks);
@@ -218,8 +210,12 @@ function setupControls() {
 
 function fitCanvas() {
   const pad = 10;
+  const hudEl = document.querySelector("#game-area #hud");
+  const btnGroupEl = document.querySelector("#game-area #btn-group");
+  const hudH = hudEl ? hudEl.offsetHeight : 0;
+  const btnH = btnGroupEl ? btnGroupEl.offsetHeight : 0;
   let availW = window.innerWidth - 320 - pad;
-  let availH = window.innerHeight - pad;
+  let availH = window.innerHeight - hudH - btnH - pad * 3;
   const scale = Math.min(availW / W, availH / H);
   const canvas = document.getElementById("game");
   if (canvas) {
@@ -273,6 +269,7 @@ export function startBattle() {
   window.lastBossKills = 0;
   window.lastTeleport = {};
   window.state = "playing";
+  gameState.value = "playing";
 
   const ovStart = document.getElementById("ov-start");
   if (ovStart) ovStart.classList.add("hidden");
