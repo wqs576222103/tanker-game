@@ -51,7 +51,7 @@
         :disabled="isPlaying"
         @click="openServerAILoad"
       >
-        📥 选择AI
+        ➕ 选择AI
       </button>
       <!-- <button
         id="btn-import-local"
@@ -60,6 +60,7 @@
       >
         📥 导入本地AI
       </button> -->
+      <button id="btn-export-all" :disabled="isPlaying">📤 导入我的AI</button>
       <button id="btn-clear-all" :disabled="isPlaying" @click="clearAll">
         🗑️ 清空
       </button>

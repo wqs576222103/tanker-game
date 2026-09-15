@@ -8,6 +8,9 @@
       <!-- <a class="ranking-link" :href="LevelSelectUrl" target="_blank"
         >关卡模式</a
       > -->
+      <a class="ranking-link battle" :href="tankBattle" target="_blank"
+        >坦克对决</a
+      >
       <button class="game-intro-btn" @click="openGameIntro">游戏介绍</button>
     </div>
     <GameIntro :visible="showIntro" @close="closeGameIntro">
@@ -31,12 +34,6 @@ const employeeId = ref("");
 const username = ref("");
 const showIntro = ref(false);
 
-const LevelSelectUrl = computed(() => {
-  const tokenStr = new URLSearchParams(location.search).get("token");
-  const query = tokenStr ? { token: tokenStr } : {};
-  return router.resolve({ name: "LevelSelect", params: { id: 1 }, query }).href;
-});
-
 const rankingUrl = computed(() => {
   const tokenStr = new URLSearchParams(location.search).get("token");
   const query = tokenStr ? { token: tokenStr } : {};
@@ -46,6 +43,18 @@ const aiScriptUrl = computed(() => {
   const tokenStr = new URLSearchParams(location.search).get("token");
   const query = tokenStr ? { token: tokenStr } : {};
   return router.resolve({ name: "AiScript", query }).href;
+});
+
+const LevelSelectUrl = computed(() => {
+  const tokenStr = new URLSearchParams(location.search).get("token");
+  const query = tokenStr ? { token: tokenStr } : {};
+  return router.resolve({ name: "LevelSelect", params: { id: 1 }, query }).href;
+});
+
+const tankBattle = computed(() => {
+  const tokenStr = new URLSearchParams(location.search).get("token");
+  const query = tokenStr ? { token: tokenStr } : {};
+  return router.resolve({ name: "BattleArena", query }).href;
 });
 
 onMounted(async () => {
@@ -108,6 +117,18 @@ function closeGameIntro() {
 }
 .ranking-link:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+.battle {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  letter-spacing: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 .level-mode-link {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

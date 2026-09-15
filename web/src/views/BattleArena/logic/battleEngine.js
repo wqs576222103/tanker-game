@@ -858,16 +858,16 @@ export function buildBattleContext(ai) {
     boss:
       window.boss && window.boss.alive
         ? {
-          x: window.boss.x,
-          y: window.boss.y,
-          w: window.boss.w,
-          h: window.boss.h,
-          dirName: window.boss.dirName,
-          dir: { x: window.boss.dir.x, y: window.boss.dir.y },
-          speed: window.boss.speed,
-          hp: window.boss.hp,
-          maxHp: window.boss.maxHp,
-        }
+            x: window.boss.x,
+            y: window.boss.y,
+            w: window.boss.w,
+            h: window.boss.h,
+            dirName: window.boss.dirName,
+            dir: { x: window.boss.dir.x, y: window.boss.dir.y },
+            speed: window.boss.speed,
+            hp: window.boss.hp,
+            maxHp: window.boss.maxHp,
+          }
         : null,
     gates: window.gates.map((g) => ({
       cells: g.cells.map((c) => ({ column: c.c, row: c.r })),
@@ -1161,18 +1161,33 @@ export function checkBattleEnd() {
   if (aliveTanks.length <= 1) {
     window.state = "over";
     gameState.value = "over";
-    const winner = aliveTanks[0];
-    const winnerAI = winner?._aiRef || null;
 
-    if (winnerAI) {
-      winnerAI.score += 3;
+    const aliveAI = aliveTanks.map((t) => t._aiRef).filter(Boolean);
+    const sorted = [...aiTanks.value].sort((a, b) => b.score - a.score);
+    const maxScore = sorted[0]?.score || 0;
+
+    let winnerText;
+    const allDead = aliveTanks.length === 0;
+    const allSameScore = sorted.every((ai) => ai.score === maxScore);
+
+    if (allDead && allSameScore) {
+      winnerText = "平局！";
+    } else if (maxScore === 0) {
+      winnerText = "平局！";
+    } else {
+      const winners = sorted.filter(
+        (ai) => ai.score === maxScore && ai.score > 0,
+      );
+      if (winners.length === 1) {
+        winnerText = `🏆 胜利者：${winners[0].name}！`;
+      } else {
+        winnerText = `🏆 并列第一：${winners.map((w) => w.name).join("、")}！`;
+      }
     }
 
-    const winnerText = winnerAI ? `🏆 胜利者：${winnerAI.name}！` : "平局！";
     const winnerEl = document.getElementById("ov-over-winner");
     if (winnerEl) winnerEl.textContent = winnerText;
 
-    const sorted = [...aiTanks.value].sort((a, b) => b.score - a.score);
     const stats = sorted
       .map((ai) => `${ai.name}: ${ai.score}分(${ai.kills}杀)`)
       .join("　");
