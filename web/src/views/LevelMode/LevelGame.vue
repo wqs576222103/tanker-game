@@ -28,6 +28,14 @@
         >
           {{ flagCaptured ? "✓ 已夺取" : "待夺取" }}
         </span>
+        <span
+          class="dog-status"
+          v-if="levelConfig.objective.type === 'rescueDog'"
+        >
+          {{
+            dogRescued ? "✓ 已解救" : dogDoorLocked ? "🔒 门已锁" : "🔓 门已开"
+          }}
+        </span>
       </div>
     </div>
 
@@ -88,6 +96,8 @@ const levelConfig = ref(null);
 const kills = ref(0);
 const levelTime = ref(0);
 const flagCaptured = ref(false);
+const dogRescued = ref(false);
+const dogDoorLocked = ref(true);
 const deathReason = ref("");
 
 // 初始化关卡模式：须在 Map 子组件挂载并调用 initGame 之前完成，确保关卡地图被正确加载
@@ -126,6 +136,16 @@ function handleLevelComplete(e) {
 
   // 显示完成界面
   document.getElementById("ov-level-complete").classList.remove("hidden");
+}
+
+// 更新小狗状态（解救小狗关卡）
+let dogStatusInterval = null;
+function updateDogStatus() {
+  if (levelConfig.value?.objective.type === "rescueDog") {
+    dogRescued.value = window.dogRescued || false;
+    dogDoorLocked.value = window.dogDoorLocked || false;
+    kills.value = window.kills || 0;
+  }
 }
 
 // 监听关卡失败事件
@@ -196,6 +216,11 @@ onMounted(async () => {
   window.addEventListener("levelComplete", handleLevelComplete);
   window.addEventListener("levelFailed", handleLevelFailed);
 
+  // 解救小狗关卡：启动状态更新定时器
+  if (levelConfig.value?.objective.type === "rescueDog") {
+    dogStatusInterval = setInterval(updateDogStatus, 200);
+  }
+
   // 初始化并自动开始游戏（Map 组件已调用 initGame，此处确保游戏倍速初始化正确）
   initGame();
   startGame();
@@ -204,6 +229,10 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener("levelComplete", handleLevelComplete);
   window.removeEventListener("levelFailed", handleLevelFailed);
+  if (dogStatusInterval) {
+    clearInterval(dogStatusInterval);
+    dogStatusInterval = null;
+  }
   clearLevelMode();
 });
 </script>
@@ -280,6 +309,11 @@ onUnmounted(() => {
 
 .flag-status {
   color: #ffd76e;
+  font-weight: bold;
+}
+
+.dog-status {
+  color: #7de07d;
   font-weight: bold;
 }
 

@@ -1,11 +1,18 @@
 const Router = require("@koa/router");
 const { getPool, assertIdentifier } = require("../db");
 
-const LEVEL_RECORD_TABLE = process.env.DB_LEVEL_RECORD_TABLE || "t_level_record";
+const LEVEL_RECORD_TABLE =
+  process.env.DB_LEVEL_RECORD_TABLE || "t_level_record";
 
 assertIdentifier(LEVEL_RECORD_TABLE);
 
-async function saveLevelRecord({ employeeId, username, levelId, kills, durationMs }) {
+async function saveLevelRecord({
+  employeeId,
+  username,
+  levelId,
+  kills,
+  durationMs,
+}) {
   return getPool().execute(
     `INSERT INTO \`${LEVEL_RECORD_TABLE}\` (employee_id, username, level_id, kills, duration_ms, create_time)
      VALUES (?, ?, ?, ?, ?, NOW())`,
@@ -19,7 +26,12 @@ async function saveLevelRecord({ employeeId, username, levelId, kills, durationM
   );
 }
 
-async function getLevelRecords({ page = 1, pageSize = 10, keyword = "", levelId = "" }) {
+async function getLevelRecords({
+  page = 1,
+  pageSize = 10,
+  keyword = "",
+  levelId = "",
+}) {
   const offset = (page - 1) * pageSize;
   let whereClause = "1=1";
   const params = [];
@@ -55,7 +67,8 @@ async function getLevelRecords({ page = 1, pageSize = 10, keyword = "", levelId 
 const router = new Router({ prefix: "/tank-game-api/level-record" });
 
 router.post("/", async (ctx) => {
-  const { employeeId, username, levelId, kills, durationMs } = ctx.request.body || {};
+  const { employeeId, username, levelId, kills, durationMs } =
+    ctx.request.body || {};
 
   if (!employeeId || !levelId) {
     ctx.status = 400;
@@ -75,7 +88,10 @@ router.post("/", async (ctx) => {
 
 router.get("/page", async (ctx) => {
   const page = Math.max(1, parseInt(ctx.query.page, 10) || 1);
-  const pageSize = Math.min(100, Math.max(1, parseInt(ctx.query.pageSize, 10) || 10));
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(ctx.query.pageSize, 10) || 10),
+  );
   const keyword = ctx.query.keyword;
   const levelId = ctx.query.levelId;
 
@@ -86,6 +102,26 @@ router.get("/page", async (ctx) => {
     console.error(`[levelRecord] 分页查询失败: ${err.message}`);
     ctx.status = 500;
     ctx.body = { code: 500, message: "查询关卡记录失败" };
+  }
+});
+
+router.get("/global-best", async (ctx) => {
+  try {
+    const [rows] = await getPool().execute(
+      `SELECT lr.level_id, lr.username, lr.duration_ms AS best_time
+       FROM \`${LEVEL_RECORD_TABLE}\` lr
+       INNER JOIN (
+         SELECT level_id, MIN(duration_ms) AS min_time
+         FROM \`${LEVEL_RECORD_TABLE}\`
+         GROUP BY level_id
+       ) best ON lr.level_id = best.level_id AND lr.duration_ms = best.min_time
+       ORDER BY lr.level_id ASC`,
+    );
+    ctx.body = { code: 200, data: { list: rows } };
+  } catch (err) {
+    console.error(`[levelRecord] 查询全局最佳记录失败: ${err.message}`);
+    ctx.status = 500;
+    ctx.body = { code: 500, message: "查询全局最佳记录失败" };
   }
 });
 

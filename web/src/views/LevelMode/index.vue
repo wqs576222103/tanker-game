@@ -20,18 +20,37 @@
           <span class="obj-icon">🎯</span>
           <span>{{ level.objective.description }}</span>
         </div>
-        <div class="level-stats" v-if="getLevelBestTime(level.id)">
-          <span class="best-time"
-            >⏱ {{ formatTime(getLevelBestTime(level.id)) }}</span
-          >
-        </div>
-        <div v-if="!isUnlocked(level.id)" class="lock-overlay">
-          <span class="lock-icon">🔒</span>
-          <span class="lock-text">锁定</span>
-        </div>
-        <div v-else class="unlock-overlay">
-          <span class="play-icon">▶</span>
-          <span class="play-text">开始</span>
+        <div class="level-bottom">
+          <div class="level-stats" v-if="globalBestRecords[level.id]">
+            <div class="global-best">
+              <span class="best-label">🏆最佳记录</span>
+              <span class="best-separator">·</span>
+              <span class="best-username">{{
+                globalBestRecords[level.id].username
+              }}</span>
+              <span class="best-time"
+                >用时：{{
+                  formatTime(globalBestRecords[level.id].bestTime)
+                }}</span
+              >
+            </div>
+          </div>
+          <div class="level-stats" v-else-if="getLevelBestTime(level.id)">
+            <span class="personal-best"
+              >⏱ 个人最佳 用时：{{
+                formatTime(getLevelBestTime(level.id))
+              }}</span
+            >
+          </div>
+          <div v-else class="level-stats">
+            <span class="no-record">暂无记录</span>
+          </div>
+          <div class="level-action" v-if="!isUnlocked(level.id)">
+            <span class="lock-icon">🔒</span>
+          </div>
+          <div class="level-action play" v-else>
+            <span class="play-icon">▶</span>
+          </div>
         </div>
       </div>
     </div>
@@ -46,7 +65,10 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { getToken, getUserInfo } from "@/utils/user";
-import { getUserBestLevelRecords } from "@/api/levelRecord";
+import {
+  getUserBestLevelRecords,
+  getGlobalBestLevelRecords,
+} from "@/api/levelRecord";
 import {
   LEVELS,
   isLevelUnlocked,
@@ -57,6 +79,7 @@ const router = useRouter();
 const levels = ref(LEVELS);
 const userBestTimes = ref({});
 const userUnlockedLevel = ref(1);
+const globalBestRecords = ref({});
 
 function isUnlocked(levelId) {
   return levelId <= userUnlockedLevel.value;
@@ -72,10 +95,10 @@ function goBack() {
 }
 
 function formatTime(ms) {
-  if (!ms) return "";
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  if (ms == null) return "";
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
 }
 
@@ -114,8 +137,27 @@ async function loadUserLevelData() {
   }
 }
 
+async function loadGlobalBestRecords() {
+  try {
+    const res = await getGlobalBestLevelRecords();
+    if (res.code === 200 && res.data?.list) {
+      const records = res.data.list;
+      const bestMap = {};
+      for (const record of records) {
+        bestMap[record.level_id] = {
+          username: record.username,
+          bestTime: record.best_time,
+        };
+      }
+      globalBestRecords.value = bestMap;
+    }
+  } catch (err) {
+    console.error("加载全局最佳记录失败:", err);
+  }
+}
+
 onMounted(async () => {
-  await loadUserLevelData();
+  await Promise.all([loadUserLevelData(), loadGlobalBestRecords()]);
 });
 </script>
 
@@ -237,45 +279,80 @@ onMounted(async () => {
   color: #7de07d;
 }
 
-.best-time {
-  font-weight: bold;
+.level-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.lock-overlay,
-.unlock-overlay {
-  position: absolute;
-  inset: 0;
+.level-action {
+  width: 36px;
+  height: 36px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 14px;
-  gap: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.level-action.play {
+  background: rgba(74, 222, 128, 0.2);
+}
+
+.global-best {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 215, 110, 0.15);
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.best-label {
+  font-size: 12px;
+  color: #ffd76e;
+  white-space: nowrap;
+}
+
+.best-separator {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.best-username {
+  color: #cfe3cf;
+  font-size: 12px;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.best-time {
+  color: #7de07d;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.personal-best {
+  font-size: 12px;
+  color: #9fb6a6;
 }
 
 .lock-icon,
 .play-icon {
-  font-size: 36px;
+  font-size: 18px;
 }
 
 .play-icon {
   color: #4ade80;
 }
 
-.lock-text,
-.play-text {
-  font-size: 16px;
-  font-weight: bold;
-  letter-spacing: 2px;
-}
-
-.lock-text {
+.lock-icon {
   color: #ff6b6b;
-}
-
-.play-text {
-  color: #4ade80;
 }
 
 .tips {

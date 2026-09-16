@@ -1,6 +1,7 @@
 import playerSvg from "@/assets/player.svg";
 import enemySvg from "@/assets/enemy.svg";
 import bossSvg from "@/assets/enemy-boss.svg";
+import dogSvg from "@/assets/dog.svg";
 import bgmMp3 from "@/assets/mp3/tank/background.mp3";
 import bonusMp3 from "@/assets/mp3/tank/bonus.mp3";
 import deathMp3 from "@/assets/mp3/tank/death.mp3";
@@ -35,6 +36,9 @@ enemyImg.src = enemySvg;
 
 export const bossImg = new Image();
 bossImg.src = bossSvg;
+
+export const dogImg = new Image();
+dogImg.src = dogSvg;
 
 export const EMPTY = 0,
   WALL = 1,
@@ -78,6 +82,12 @@ export function setLevelMode(levelConfig) {
       team: levelConfig.flag.team,
     };
   }
+  // 解救小狗关卡初始化
+  if (levelConfig.objective.type === "rescueDog") {
+    window.dogRescued = false;
+    window.dogDoorLocked = true;
+    window.bossKeyDropped = false;
+  }
   // 保存关卡配置到 localStorage
   try {
     localStorage.setItem(LEVEL_MODE_KEYS.config, JSON.stringify(levelConfig));
@@ -95,6 +105,10 @@ export function clearLevelMode() {
   window.flagCaptured = false;
   window.flagCarrier = null;
   window.flagPosition = null;
+  // 解救小狗关卡状态重置
+  window.dogRescued = false;
+  window.dogDoorLocked = true;
+  window.bossKeyDropped = false;
   // 退出关卡模式后，下次进入普通模式时重新随机生成地图，避免复用关卡预设地图
   window.mapGenerated = false;
 }
@@ -142,6 +156,9 @@ export function checkLevelWin() {
       return window.gtMs >= (objective.duration || 60) * 1000;
     case "killBoss":
       return window.bossKills > (window.levelLastBossKills || 0);
+    case "rescueDog":
+      // 解救小狗：需要击杀boss获取钥匙，然后打开门解救小狗
+      return window.dogRescued;
     default:
       return false;
   }
@@ -206,6 +223,11 @@ window.flagCaptured = false;
 window.flagCarrier = null;
 window.flagPosition = null;
 window.levelCompleted = false;
+
+// 解救小狗关卡状态
+window.dogRescued = false;
+window.dogDoorLocked = true;
+window.bossKeyDropped = false;
 
 window.map = [];
 window.gates = [];
@@ -637,6 +659,13 @@ export function resetGame() {
   baseEnemyHp = window.levelConfig?.baseEnemyHp || 2;
   window.levelLastBossKills = 0;
 
+  // 解救小狗关卡状态重置
+  if (window.levelMode && window.levelConfig?.objective.type === "rescueDog") {
+    window.dogRescued = false;
+    window.dogDoorLocked = true;
+    window.bossKeyDropped = false;
+  }
+
   // 关卡模式：重置关卡相关状态
   if (window.levelMode && window.levelConfig) {
     window.levelObjective = window.levelConfig.objective.type;
@@ -891,7 +920,16 @@ export function killEnemy(t) {
 export function checkSpawnBoss() {
   if (boss && boss.alive) return;
 
-  // 关卡模式：不生成boss
+  // 解救小狗关卡：击杀达标后生成boss
+  if (window.levelMode && window.levelConfig?.objective.type === "rescueDog") {
+    const threshold = window.levelConfig.bossThreshold || 10;
+    if (kills >= threshold && !boss) {
+      spawnBoss();
+    }
+    return;
+  }
+
+  // 关卡模式：不生成boss（其他类型）
   if (window.levelMode) return;
 
   // 原有逻辑：boss出现击杀数为 10 20 40 80 ... 每个翻倍
@@ -914,11 +952,24 @@ export function killBoss() {
   addFloat(boss.x + boss.w / 2, boss.y + boss.h / 2, "BOSS已击败！", "#ee5253");
   // 防止击杀数超过阈值立即刷新下一个boss
   lastBossKills = Math.max(lastBossKills, kills);
-  // 掉落高级道具
-  for (let i = 0; i < 3; i++) {
+
+  // 解救小狗关卡：Boss掉落钥匙
+  if (
+    window.levelMode &&
+    window.levelConfig?.objective.type === "rescueDog" &&
+    !window.bossKeyDropped
+  ) {
+    window.bossKeyDropped = true;
     setTimeout(() => {
-      spawnItemAtPosition(boss.x + boss.w / 2, boss.y + boss.h / 2);
-    }, i * 500);
+      spawnKeyItem(boss.x + boss.w / 2, boss.y + boss.h / 2);
+    }, 500);
+  } else {
+    // 掉落高级道具
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        spawnItemAtPosition(boss.x + boss.w / 2, boss.y + boss.h / 2);
+      }, i * 500);
+    }
   }
   updateHud();
 }
@@ -937,6 +988,70 @@ export function spawnItemAtPosition(x, y) {
     life: 12000,
     dead: false,
   });
+}
+
+// 在指定位置生成钥匙道具（解救小狗关卡）
+export function spawnKeyItem(x, y) {
+  const cc = cellOf(x, y);
+  if (map[cc.r][cc.c] !== EMPTY) return;
+  items.push({
+    def: { id: "key", icon: "🔑", name: "钥匙", color: "#ffd700", max: 1 },
+    x: cc.c * CELL,
+    y: cc.r * CELL,
+    size: CELL,
+    age: 0,
+    life: 30000, // 钥匙存在30秒
+    dead: false,
+  });
+  addFloat(x, y - 10, "钥匙已掉落！", "#ffd700");
+}
+
+// 解锁小狗牢笼的门
+export function unlockDogDoor() {
+  if (!window.dogDoorLocked) return;
+  window.dogDoorLocked = false;
+
+  const cfg = window.levelConfig;
+  if (!cfg?.dogCage?.cageDoor) return;
+
+  const door = cfg.dogCage.cageDoor;
+  // 将门位置改为空地
+  if (map[door.r] && map[door.r][door.c] !== undefined) {
+    map[door.r][door.c] = EMPTY;
+  }
+
+  addFloat(door.c * CELL + CELL / 2, door.r * CELL, "门已打开！", "#ffd700");
+  sfx("pickup");
+}
+
+// 解救小狗（玩家触碰小狗）
+export function rescueDog() {
+  if (window.dogRescued) return;
+  if (window.dogDoorLocked) return; // 门还锁着不能解救
+
+  const cfg = window.levelConfig;
+  if (!cfg?.dogCage?.dogPosition) return;
+
+  const dogPos = cfg.dogCage.dogPosition;
+  const dogX = dogPos.c * CELL + CELL / 2;
+  const dogY = dogPos.r * CELL + CELL / 2;
+
+  // 检查玩家是否在小狗附近
+  if (!player || !player.alive) return;
+  const playerCx = player.x + player.w / 2;
+  const playerCy = player.y + player.h / 2;
+  const dist = Math.hypot(playerCx - dogX, playerCy - dogY);
+
+  if (dist < CELL * 2) {
+    window.dogRescued = true;
+    addFloat(dogX, dogY - 20, "小狗已解救！", "#7de07d");
+    sfx("pickup");
+    spawnExplosion(dogX, dogY, 30, "#7de07d");
+    // 触发关卡完成
+    if (checkLevelWin()) {
+      showLevelComplete();
+    }
+  }
 }
 
 // ====================== 道具 ======================
@@ -1035,6 +1150,10 @@ export function pickupItem(it) {
   addFloat(it.x + CELL / 2, it.y - 8, it.def.name + " UP", it.def.color);
   spawnExplosion(it.x + CELL / 2, it.y + CELL / 2, 20, it.def.color);
   switch (id) {
+    case "key":
+      // 钥匙：解锁小狗牢笼的门
+      unlockDogDoor();
+      break;
     case "drone":
       if (player.drones < ITEMS[0].max) {
         player.drones++;
@@ -1140,6 +1259,11 @@ export function update(dt) {
 
   // 关卡模式：检测旗帜拾取
   checkFlagCapture();
+
+  // 解救小狗关卡：检测玩家是否触碰小狗
+  if (window.levelMode && window.levelConfig?.objective.type === "rescueDog") {
+    rescueDog();
+  }
 
   // 更新boss
   if (boss && boss.alive) {
@@ -1427,6 +1551,96 @@ export function drawBoss() {
   ctx.globalAlpha = 1;
 }
 
+// 绘制小狗和牢笼（解救小狗关卡）
+export function drawDogCage() {
+  if (!window.levelMode || window.levelConfig?.objective.type !== "rescueDog")
+    return;
+
+  const cfg = window.levelConfig;
+  if (!cfg?.dogCage) return;
+
+  const { dogPosition, cageDoor } = cfg.dogCage;
+
+  // 绘制锁住的门
+  if (window.dogDoorLocked && cageDoor) {
+    const doorX = cageDoor.c * CELL;
+    const doorY = cageDoor.r * CELL;
+    const pulse = 0.5 + 0.5 * Math.sin(gtMs / 300);
+
+    // 绘制锁的背景
+    ctx.fillStyle = `rgba(139, 69, 19, ${0.6 + pulse * 0.3})`;
+    ctx.fillRect(doorX, doorY, CELL, CELL);
+
+    // 绘制锁的图案
+    ctx.fillStyle = "#8B4513";
+    ctx.fillRect(doorX + 4, doorY + 4, CELL - 8, CELL - 8);
+
+    // 绘制锁孔
+    ctx.fillStyle = "#FFD700";
+    ctx.beginPath();
+    ctx.arc(doorX + CELL / 2, doorY + CELL / 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 绘制锁环
+    ctx.strokeStyle = "#FFD700";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(doorX + CELL / 2, doorY + CELL / 2 - 4, 6, 0, Math.PI, true);
+    ctx.stroke();
+
+    // 显示锁图标
+    ctx.font = "16px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("🔒", doorX + CELL / 2, doorY + CELL / 2);
+  }
+
+  // 绘制小狗（始终显示在牢笼内）
+  if (dogPosition && !window.dogRescued) {
+    const dogX = dogPosition.c * CELL;
+    const dogY = dogPosition.r * CELL;
+    const cx = dogX + CELL / 2;
+    const cy = dogY + CELL / 2;
+
+    // 绘制小狗光圈（门打开后更亮）
+    const pulse = 0.5 + 0.5 * Math.sin(gtMs / 200);
+    const glowAlpha = window.dogDoorLocked ? 0.15 : 0.3 + pulse * 0.2;
+    ctx.fillStyle = `rgba(125, 224, 125, ${glowAlpha})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, CELL * 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 绘制小狗
+    if (dogImg && dogImg.complete && dogImg.naturalWidth > 0) {
+      ctx.drawImage(dogImg, dogX, dogY, CELL, CELL);
+    } else {
+      // 备用绘制
+      ctx.fillStyle = "#8B4513";
+      ctx.beginPath();
+      ctx.arc(cx, cy, CELL / 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.arc(cx - 3, cy - 3, 2, 0, Math.PI * 2);
+      ctx.arc(cx + 3, cy - 3, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 显示小狗图标
+    ctx.font = "18px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("🐕", cx, cy);
+
+    // 提示文字（门打开后显示）
+    if (!window.dogDoorLocked) {
+      ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
+      ctx.fillStyle = "#7de07d";
+      ctx.fillText("靠近解救", cx, cy + CELL + 10);
+    }
+  }
+}
+
 export function drawPlayer() {
   drawTank(player);
   if (player.shieldT > gtMs) {
@@ -1647,6 +1861,7 @@ export function loop(ts) {
   drawBullets();
   for (const t of tanks) if (t !== player) drawTank(t);
   drawBoss();
+  drawDogCage();
   drawPlayer();
   drawGrassOverlay();
   drawParticles();

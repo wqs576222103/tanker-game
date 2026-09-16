@@ -11,3 +11,7 @@ export function getLevelRecordPage(params) {
 export function getUserBestLevelRecords(employeeId) {
   return get(`/level-record/best/${employeeId}`);
 }
+
+export function getGlobalBestLevelRecords() {
+  return get("/level-record/global-best");
+}
