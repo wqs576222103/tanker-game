@@ -53,6 +53,11 @@ const routes = [
     name: "LevelGame",
     component: () => import("../views/LevelMode/LevelGame.vue"),
   },
+  {
+    path: "/user-list",
+    name: "UserList",
+    component: () => import("../views/UserList/index.vue"),
+  },
 ];
 
 const router = createRouter({

@@ -4,15 +4,17 @@
     <div class="top-right">
       <div v-if="username" class="user-info">姓名：{{ username }}</div>
       <a class="ranking-link" :href="rankingUrl" target="_blank">排行榜</a>
-      <a class="ranking-link" :href="aiScriptUrl" target="_blank">玩家脚本</a>
+      <!-- <a class="ranking-link" :href="aiScriptUrl" target="_blank">玩家脚本</a> -->
       <!-- <a class="ranking-link" :href="LevelSelectUrl" target="_blank"
         >关卡模式</a
       > -->
       <!-- <a class="ranking-link battle" :href="tankBattle" target="_blank"
         >AI坦克对决</a
       > -->
-      <button class="game-intro-btn" @click="openGameIntro">游戏介绍</button>
-      <button class="game-intro-btn" @click="goBack">返回主菜单</button>
+      <button class="ranking-link battle" @click="openGameIntro">
+        游戏介绍
+      </button>
+      <button class="ranking-link battle" @click="goBack">更多模式🌟</button>
     </div>
     <GameIntro :visible="showIntro" @close="closeGameIntro">
       <button class="close-btn" @click="closeGameIntro">关 闭</button>

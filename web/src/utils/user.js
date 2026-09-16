@@ -1,9 +1,9 @@
 export const getToken = () => {
-    return localStorage.getItem("tanke-userToken");
+    return localStorage.getItem("tanke-userToken") || '';
 };
 
 export const setToken = (token) => {
-    localStorage.setItem("tanke-userToken", token);
+    localStorage.setItem("tanke-userToken", token || '');
 };
 
 export const getUserInfo = () => {

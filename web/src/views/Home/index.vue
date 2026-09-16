@@ -12,7 +12,7 @@
           class="mode-card kill-mode"
         >
           <div class="mode-icon">💥</div>
-          <div class="mode-name">击杀模式</div>
+          <div class="mode-name">基础模式</div>
           <div class="mode-desc">
             击败敌人，提升你的击杀数。训练你的AI坦克战斗技巧
           </div>

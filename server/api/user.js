@@ -7,7 +7,7 @@ const TABLE_NAME = process.env.DB_TABLE || "t_user_sync";
 assertIdentifier(TABLE_NAME);
 
 const testUserUrl = "http://139.155.133.14:8081";
-const prodUserUrl = "http://192.168.151.88:8081"
+const prodUserUrl = "http://192.168.151.88:8081";
 
 const SOURCE_MAP = {
   localhost: testUserUrl,
@@ -123,6 +123,52 @@ router.get("/infoByToken", async (ctx) => {
   }
 
   await forward(ctx, targetBase, token);
+});
+
+router.get("/list", async (ctx) => {
+  try {
+    const page = Math.max(1, parseInt(ctx.query.page) || 1);
+    const pageSize = Math.min(
+      100,
+      Math.max(1, parseInt(ctx.query.pageSize) || 10),
+    );
+    const keyword = ctx.query.keyword || "";
+    const offset = (page - 1) * pageSize;
+
+    let whereClause = "";
+    const params = [];
+
+    if (keyword) {
+      whereClause =
+        "WHERE username LIKE ? OR employee_id LIKE ? OR phone LIKE ?";
+      params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    }
+
+    const [countResult] = await getPool().execute(
+      `SELECT COUNT(*) as total FROM \`${TABLE_NAME}\` ${whereClause}`,
+      params,
+    );
+    const total = countResult[0].total;
+
+    const [rows] = await getPool().execute(
+      `SELECT * FROM \`${TABLE_NAME}\` ${whereClause} ORDER BY create_time DESC LIMIT ? OFFSET ?`,
+      [...params, String(pageSize), String(offset)],
+    );
+
+    ctx.body = {
+      code: 200,
+      data: {
+        list: rows,
+        total,
+        page,
+        pageSize,
+      },
+    };
+  } catch (err) {
+    console.error(`[user] 查询用户列表失败: ${err.message}`);
+    ctx.status = 500;
+    ctx.body = { code: 500, message: `查询失败: ${err.message}` };
+  }
 });
 
 module.exports = router;
