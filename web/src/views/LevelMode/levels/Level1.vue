@@ -5,6 +5,7 @@
       :hideSpeed="true"
       :hideImportAi="true"
       :hideDeathLog="true"
+      :title="config.name"
     />
 
     <div class="game-timer">{{ format(elapsed) }}</div>

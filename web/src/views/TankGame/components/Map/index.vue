@@ -13,7 +13,7 @@
     <div id="canvas-wrap">
       <canvas id="game"></canvas>
       <div class="overlay" id="ov-start">
-        <h1>坦 克 训 练 师</h1>
+        <h1>{{ title }}</h1>
         <p>
           方向键 / WASD 移动，空格 / J 射击，K 放置地雷<br />
           敌人从左上、右上角不断进攻，击杀敌人
@@ -143,6 +143,10 @@ const props = defineProps({
   hideDeathLog: {
     type: Boolean,
     default: false,
+  },
+  title: {
+    type: String,
+    default: "坦 克 训 练 师",
   },
 });
 
