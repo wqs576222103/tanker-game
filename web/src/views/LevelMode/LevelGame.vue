@@ -98,6 +98,9 @@ function nextLevel() {
     router.push({ name: "LevelSelect" });
     return;
   }
+  window.flagPosition = null;
+  window.flagCaptured = false;
+  window.flagCarrier = null;
   router.push({ name: "LevelGame", params: { id: nextId } });
 }
 

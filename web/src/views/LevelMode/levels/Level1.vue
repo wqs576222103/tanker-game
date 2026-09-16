@@ -158,7 +158,7 @@ onUnmounted(() => {
 }
 .level-hud {
   position: absolute;
-  bottom: 20px;
+  top: 100px;
   left: 20px;
   z-index: 20;
   display: flex;
