@@ -7,6 +7,8 @@
       :hideDeathLog="true"
     />
 
+    <div class="game-timer">{{ format(elapsed) }}</div>
+
     <div class="level-hud">
       <div class="objective-bar">
         <span class="level-tag">{{ config.id }}. {{ config.name }}</span>
@@ -34,8 +36,10 @@ import {
   ROWS,
   protectedKey,
 } from "@/views/TankGame/script/base.js";
+import { useGameTimer } from "./useGameTimer.js";
 
 const emit = defineEmits(["level-complete", "level-failed"]);
+const { elapsed, start, stop, format } = useGameTimer();
 
 const level2Map = (() => {
   const R = 30,
@@ -143,14 +147,17 @@ function updateDogStatus() {
 
 function handleLevelComplete(e) {
   kills.value = e.detail.kills;
-  emit("level-complete", e.detail);
+  const time = stop();
+  emit("level-complete", { ...e.detail, time });
 }
 
 function handleLevelFailed(e) {
+  stop();
   emit("level-failed", e.detail);
 }
 
 onMounted(() => {
+  start();
   window.addEventListener("levelComplete", handleLevelComplete);
   window.addEventListener("levelFailed", handleLevelFailed);
   dogStatusInterval = setInterval(updateDogStatus, 200);
@@ -170,6 +177,21 @@ onUnmounted(() => {
 .level-wrap {
   position: absolute;
   inset: 0;
+}
+.game-timer {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.5);
+  color: #ffd76e;
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  border: 1px solid rgba(255, 215, 110, 0.3);
 }
 .level-hud {
   position: absolute;
