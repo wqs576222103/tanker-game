@@ -861,16 +861,16 @@ export function buildBattleContext(ai) {
     boss:
       window.boss && window.boss.alive
         ? {
-          x: window.boss.x,
-          y: window.boss.y,
-          w: window.boss.w,
-          h: window.boss.h,
-          dirName: window.boss.dirName,
-          dir: { x: window.boss.dir.x, y: window.boss.dir.y },
-          speed: window.boss.speed,
-          hp: window.boss.hp,
-          maxHp: window.boss.maxHp,
-        }
+            x: window.boss.x,
+            y: window.boss.y,
+            w: window.boss.w,
+            h: window.boss.h,
+            dirName: window.boss.dirName,
+            dir: { x: window.boss.dir.x, y: window.boss.dir.y },
+            speed: window.boss.speed,
+            hp: window.boss.hp,
+            maxHp: window.boss.maxHp,
+          }
         : null,
     gates: window.gates.map((g) => ({
       cells: g.cells.map((c) => ({ column: c.c, row: c.r })),
@@ -1166,6 +1166,7 @@ export function checkBattleEnd() {
     gameState.value = "over";
 
     const aliveAI = aliveTanks.map((t) => t._aiRef).filter(Boolean);
+    aliveAI.forEach((ai) => (ai.score += 3));
     const sorted = [...aiTanks.value].sort((a, b) => b.score - a.score);
     const maxScore = sorted[0]?.score || 0;
 
