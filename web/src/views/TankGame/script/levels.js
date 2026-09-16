@@ -254,34 +254,3 @@ export function unlockNextLevel(currentLevelId) {
     return currentLevelId + 1;
   }
 }
-
-// 保存关卡完成时间
-export function saveLevelTime(levelId, timeMs) {
-  try {
-    const progress = JSON.parse(
-      localStorage.getItem("tank-level-progress") || "{}",
-    );
-    if (!progress.levels) progress.levels = {};
-    const currentTime = progress.levels[levelId]?.time ?? Infinity;
-    progress.levels[levelId] = {
-      time: Math.min(currentTime, timeMs),
-      completed: true,
-      completedAt: Date.now(),
-    };
-    localStorage.setItem("tank-level-progress", JSON.stringify(progress));
-  } catch (e) {
-    console.warn("保存关卡时间失败:", e);
-  }
-}
-
-// 获取关卡完成时间
-export function getLevelTime(levelId) {
-  try {
-    const progress = JSON.parse(
-      localStorage.getItem("tank-level-progress") || "{}",
-    );
-    return progress.levels?.[levelId]?.time;
-  } catch {
-    return null;
-  }
-}

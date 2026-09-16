@@ -67,15 +67,11 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute, useRouter, onBeforeRouteUpdate } from "vue-router";
 import { getToken, getUserInfo } from "@/utils/user";
 import { saveLevelRecord } from "@/api/levelRecord";
 import Map from "@/views/TankGame/components/Map/index.vue";
-import {
-  LEVELS,
-  unlockNextLevel,
-  saveLevelTime,
-} from "@/views/TankGame/script/levels.js";
+import { LEVELS, unlockNextLevel } from "@/views/TankGame/script/levels.js";
 import {
   setLevelMode,
   clearLevelMode,
@@ -110,6 +106,21 @@ if (!cfg) {
   setLevelMode(cfg);
 }
 
+// 监听路由参数变化：Vue Router 复用组件时 setup 不重跑，需手动重新初始化关卡
+onBeforeRouteUpdate((to) => {
+  const newId = parseInt(to.params.id);
+  const newCfg = LEVELS.find((l) => l.id === newId);
+  if (!newCfg) {
+    clearLevelMode();
+    router.replace({ name: "LevelSelect" });
+    return;
+  }
+  clearLevelMode();
+  levelConfig.value = newCfg;
+  setLevelMode(newCfg);
+  startGame();
+});
+
 // 监听关卡完成事件
 function handleLevelComplete(e) {
   levelTime.value = e.detail.time;
@@ -117,9 +128,6 @@ function handleLevelComplete(e) {
 
   // 解锁下一关
   const nextLevel = unlockNextLevel(levelId.value);
-
-  // 保存关卡时间
-  saveLevelTime(levelId.value, e.detail.time);
 
   // 保存关卡通关数据到服务器
   if (employeeId.value) {
@@ -158,7 +166,6 @@ function nextLevel() {
   const nextId = levelId.value + 1;
   const nextLevel = LEVELS.find((l) => l.id === nextId);
   if (!nextLevel) {
-    // 所有关卡完成，返回选择页
     router.push({ name: "LevelSelect" });
     return;
   }

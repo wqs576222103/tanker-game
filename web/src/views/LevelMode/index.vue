@@ -69,11 +69,7 @@ import {
   getUserBestLevelRecords,
   getGlobalBestLevelRecords,
 } from "@/api/levelRecord";
-import {
-  LEVELS,
-  isLevelUnlocked,
-  getLevelTime,
-} from "../TankGame/script/levels.js";
+import { LEVELS, isLevelUnlocked } from "../TankGame/script/levels.js";
 
 const router = useRouter();
 const levels = ref(LEVELS);
@@ -103,7 +99,7 @@ function formatTime(ms) {
 }
 
 function getLevelBestTime(levelId) {
-  return userBestTimes.value[levelId] || getLevelTime(levelId);
+  return userBestTimes.value[levelId];
 }
 
 async function loadUserLevelData() {
