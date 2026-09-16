@@ -30,11 +30,13 @@
 
 <script setup>
 import { ref } from "vue";
-import { AIPlayer } from "../script/ai-player.js";
-import { uploadAiScript } from "@/api/ai.js";
 
 const props = defineProps({
-  employeeId: {
+  onImport: {
+    type: Function,
+    required: true,
+  },
+  disabledHint: {
     type: String,
     default: "",
   },
@@ -54,30 +56,14 @@ async function handleImport() {
     return;
   }
 
+  if (props.disabledHint) {
+    scriptError.value = props.disabledHint;
+    return;
+  }
+
   loading.value = true;
   try {
-    const blob = new Blob([scriptContent.value], {
-      type: "text/javascript",
-    });
-    const file = new File([blob], "custom-ai.js", {
-      type: "text/javascript",
-    });
-
-    if (props.employeeId) {
-      try {
-        await uploadAiScript(props.employeeId, file);
-      } catch (err) {
-        console.warn("[AI] 上传脚本到服务器失败:", err);
-      }
-    }
-
-    const obj = await AIPlayer.parseFromSource(scriptContent.value);
-    AIPlayer.loadAI(obj);
-    if (!AIPlayer.enabled) {
-      AIPlayer.toggle();
-    }
-    AIPlayer.updateUI();
-
+    await props.onImport(scriptContent.value);
     scriptContent.value = "";
     scriptError.value = "";
     emit("close");

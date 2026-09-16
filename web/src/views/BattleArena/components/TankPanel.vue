@@ -75,6 +75,8 @@
     <!-- 脚本导入弹窗 -->
     <ScriptImportModal
       v-if="showScriptImport"
+      :on-import="battleArenaOnImport"
+      :disabled-hint="aiTanks.length >= 8 ? 'AI槽位已满，无法导入' : ''"
       @close="showScriptImport = false"
     />
   </div>
@@ -87,9 +89,12 @@ import { aiTanks, gameState } from "../logic/gameState.js";
 import {
   removeAITank,
   clearAllAITanks,
+  loadAIFile,
+  addAITank,
 } from "../logic/aiManager.js";
-import { getToken } from "@/utils/user.js";
-import ScriptImportModal from "./ScriptImportModal.vue";
+import { getToken, getUserInfo } from "@/utils/user.js";
+import { generateFingerprint } from "@/utils/fingerprint.js";
+import ScriptImportModal from "@/components/ScriptImportModal.vue";
 import ServerAIModal from "./ServerAIModal.vue";
 
 const route = useRoute();
@@ -147,6 +152,20 @@ const showScriptImport = ref(false);
 
 function openServerAILoad() {
   showServerAI.value = true;
+}
+
+async function battleArenaOnImport(scriptContent) {
+  const userInfo = getUserInfo();
+  let empId = userInfo?.employeeId;
+  if (!empId) {
+    empId = generateFingerprint();
+  }
+
+  const blob = new Blob([scriptContent], { type: "text/javascript" });
+  const file = new File([blob], "custom-ai.js", { type: "text/javascript" });
+  const aiModule = await loadAIFile(file);
+  const name = aiModule.name || "自定义AI";
+  addAITank(name, aiModule, "custom-script", empId, userInfo.username);
 }
 </script>
 

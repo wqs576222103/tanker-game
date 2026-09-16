@@ -109,7 +109,7 @@
     </div>
     <ScriptImportModal
       v-if="showScriptImport"
-      :employee-id="employeeId"
+      :on-import="tankGameOnImport"
       @close="showScriptImport = false"
     />
   </div>
@@ -119,13 +119,13 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 import { getToken, getUserInfo } from "@/utils/user";
-import { getAiScript } from "@/api/ai.js";
+import { getAiScript, uploadAiScript } from "@/api/ai.js";
 import { initGame, stopGameLoop } from "../../script/base.js";
 import { AIPlayer } from "../../script/ai-player.js";
 import SurvivalAI from "../../script/ai-tanker/survival-tank.js";
 import DefaultAI from "../../script/ai-tanker/default-tank.js";
 import LevelAI from "../../script/ai-tanker/level-tank.js";
-import ScriptImportModal from "../ScriptImportModal.vue";
+import ScriptImportModal from "@/components/ScriptImportModal.vue";
 
 const props = defineProps({
   hideAi: {
@@ -211,6 +211,26 @@ const ai = route.query.ai;
 AIPlayer.setDefault(
   ai === "wangqs" ? SurvivalAI : window.levelMode ? LevelAI : DefaultAI,
 );
+
+async function tankGameOnImport(scriptContent) {
+  const blob = new Blob([scriptContent], { type: "text/javascript" });
+  const file = new File([blob], "custom-ai.js", { type: "text/javascript" });
+
+  if (employeeId.value) {
+    try {
+      await uploadAiScript(employeeId.value, file);
+    } catch (err) {
+      console.warn("[AI] 上传脚本到服务器失败:", err);
+    }
+  }
+
+  const obj = await AIPlayer.parseFromSource(scriptContent);
+  AIPlayer.loadAI(obj);
+  if (!AIPlayer.enabled) {
+    AIPlayer.toggle();
+  }
+  AIPlayer.updateUI();
+}
 </script>
 
 <style scoped>
