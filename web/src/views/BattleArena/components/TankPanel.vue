@@ -239,7 +239,7 @@ import {
   loadAIFile,
   addAITank,
 } from "../logic/aiManager.js";
-import { getAiList, uploadAiScript } from "@/api/ai.js";
+import { getAiList } from "@/api/ai.js";
 import { getUserInfo, getToken } from "@/utils/user.js";
 import systemDefault from "@/views/TankGame/script/ai-tanker/default-tank.js";
 import systemLevel from "@/views/TankGame/script/ai-tanker/level-tank.js";
@@ -309,7 +309,9 @@ function onFileChange(e) {
   if (files.length > 0) {
     if (importMyAI) {
       importMyAI = false;
-      uploadAndLoadMyAI(files[0]);
+      for (const file of files) {
+        loadMyAI(file);
+      }
     } else {
       emit("import", files);
     }
@@ -317,7 +319,7 @@ function onFileChange(e) {
   e.target.value = "";
 }
 
-async function uploadAndLoadMyAI(file) {
+async function loadMyAI(file) {
   const userInfo = getUserInfo();
   const empId = userInfo?.employeeId;
   if (!empId) {
@@ -327,11 +329,6 @@ async function uploadAndLoadMyAI(file) {
   if (aiTanks.value.length >= 8) {
     alert("AI槽位已满，无法导入");
     return;
-  }
-  try {
-    await uploadAiScript(empId, file);
-  } catch (err) {
-    console.warn("上传AI脚本到服务器失败:", err);
   }
   try {
     const aiModule = await loadAIFile(file);
