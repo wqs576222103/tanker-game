@@ -6,21 +6,47 @@
         <span>导入AI脚本</span>
       </div>
       <div class="modal-body">
-        <div class="modal-tip-text">请复制粘贴脚本内容到下方文本框，并点击确认导入按钮：</div>
-        <textarea
-          v-model="scriptContent"
-          placeholder="在此粘贴AI脚本代码..."
-          class="script-textarea"
-        ></textarea>
+        <div class="modal-tip-text">
+          <strong>第一步：获取AI提示词</strong>
+          <div class="action-buttons">
+            <button class="btn-action" @click="downloadPrompt">
+              <span class="icon">⬇️</span> 下载提示词文件
+            </button>
+            <span class="action-or">或者</span>
+            <button class="btn-action" @click="copyPromptToClipboard">
+              <span class="icon">📋</span> 复制提示词到剪贴板
+            </button>
+          </div>
+          <div v-if="copySuccess" class="copy-success">✅ 已复制到剪贴板</div>
+        </div>
+
+        <div class="modal-tip-text">
+          <strong>第二步：使用AI生成脚本</strong>
+          <div class="ai-sites">
+            打开其中一个网站：<div class="site-links">
+              <a href="https://tongyi.aliyun.com/qianwen" target="_blank" class="site-link">通义千问</a>
+              <a href="https://chat.openai.com" target="_blank" class="site-link">ChatGPT</a>
+              <a href="https://claude.ai" target="_blank" class="site-link">Claude</a>
+              <a href="https://yiyan.baidu.com" target="_blank" class="site-link">文心一言</a>
+              <!-- deepseek -->
+               <a href="https://chat.deepseek.com/" target="_blank" class="site-link">DeepSeek</a>
+            </div>
+            <br/>
+            <span>将提示词发送给AI，并追加说明：
+              "我想要生成一个xxx的坦克"。来获取脚本代码。</span>
+            
+          </div>
+        </div>
+
+        <div class="modal-tip-text">
+          <strong>第三步：粘贴脚本并确认导入</strong>
+        </div>
+        <textarea v-model="scriptContent" placeholder="将AI生成的脚本代码粘贴到此处..." class="script-textarea"></textarea>
         <div v-if="scriptError" class="modal-error">{{ scriptError }}</div>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" @click="$emit('close')">取消</button>
-        <button
-          class="btn-confirm"
-          :disabled="!scriptContent.trim() || loading"
-          @click="handleImport"
-        >
+        <button class="btn-confirm" :disabled="!scriptContent.trim() || loading" @click="handleImport">
           {{ loading ? "导入中..." : "确认导入" }}
         </button>
       </div>
@@ -30,6 +56,7 @@
 
 <script setup>
 import { ref } from "vue";
+import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 
 const props = defineProps({
   onImport: {
@@ -47,6 +74,31 @@ const emit = defineEmits(["close"]);
 const scriptContent = ref("");
 const scriptError = ref("");
 const loading = ref(false);
+const copySuccess = ref(false);
+
+function downloadPrompt() {
+  const link = document.createElement("a");
+  link.href = aiGuideUrl;
+  link.download = "ai-script-guide.txt";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+async function copyPromptToClipboard() {
+  try {
+    const response = await fetch(aiGuideUrl);
+    const text = await response.text();
+    await navigator.clipboard.writeText(text);
+    copySuccess.value = true;
+    setTimeout(() => {
+      copySuccess.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error("复制失败:", err);
+    scriptError.value = "复制失败，请手动下载提示词文件";
+  }
+}
 
 async function handleImport() {
   scriptError.value = "";
@@ -91,7 +143,7 @@ async function handleImport() {
   background: #1e2b22;
   border: 1px solid #4a5a4a;
   border-radius: 10px;
-  width: 440px;
+  width: 480px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -127,17 +179,106 @@ async function handleImport() {
 
 .modal-body {
   padding: 16px;
+  overflow-y: auto;
 }
 
 .modal-tip-text {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-size: 13px;
   color: #9fb6a6;
+  line-height: 1.5;
+}
+
+.modal-tip-text strong {
+  color: #ffd76e;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.action-or {
+  color: #6a7a6a;
+  font-size: 12px;
+}
+
+.btn-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #2a3a2a;
+  color: #9fb6a6;
+  border: 1px solid #4a5a4a;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action:hover {
+  background: #3a4a3a;
+  color: #cfe3cf;
+}
+
+.btn-action .icon {
+  font-size: 14px;
+}
+
+.copy-success {
+  color: #4ade80;
+  font-size: 12px;
+  margin-top: 8px;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.ai-sites {
+  margin-top: 8px;
+}
+
+.site-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.site-link {
+  display: inline-block;
+  background: #2a3a2a;
+  color: #4ade80;
+  border: 1px solid #4a5a4a;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.site-link:hover {
+  background: #3a4a3a;
+  color: #86efac;
+  border-color: #4ade80;
 }
 
 .script-textarea {
   width: 100%;
-  height: 300px;
+  height: 200px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid #3a4a3a;
   border-radius: 6px;
