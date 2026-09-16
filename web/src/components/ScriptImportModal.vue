@@ -6,7 +6,7 @@
         <span>导入AI脚本</span>
       </div>
       <div class="modal-body">
-        <div class="modal-tip-text">请粘贴JS脚本内容，支持直接复制：</div>
+        <div class="modal-tip-text">请复制粘贴脚本内容到下方文本框，并点击确认导入按钮：</div>
         <textarea
           v-model="scriptContent"
           placeholder="在此粘贴AI脚本代码..."
