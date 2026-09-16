@@ -83,7 +83,11 @@ function isUnlocked(levelId) {
 
 function selectLevel(level) {
   if (!isUnlocked(level.id)) return;
-  router.push({ name: "LevelGame", params: { id: level.id } });
+  router.push({
+    name: "LevelGame",
+    params: { id: level.id },
+    query: { token: getToken() },
+  });
 }
 
 function goBack() {
@@ -102,9 +106,31 @@ function getLevelBestTime(levelId) {
   return userBestTimes.value[levelId];
 }
 
+function loadLocalLevelRecords() {
+  try {
+    const records = JSON.parse(
+      localStorage.getItem("tank-level-records") || "[]",
+    );
+    const bestTimes = {};
+    for (const record of records) {
+      const levelId = record.levelId;
+      if (!bestTimes[levelId] || record.durationMs < bestTimes[levelId]) {
+        bestTimes[levelId] = record.durationMs;
+      }
+    }
+    return bestTimes;
+  } catch {
+    return {};
+  }
+}
+
 async function loadUserLevelData() {
   const token = getToken();
-  if (!token) return;
+  if (!token) {
+    const localBestTimes = loadLocalLevelRecords();
+    userBestTimes.value = localBestTimes;
+    return;
+  }
 
   try {
     const userInfo = getUserInfo();

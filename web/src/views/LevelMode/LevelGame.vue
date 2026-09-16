@@ -72,19 +72,38 @@ function onLevelComplete(detail) {
   finalKills.value = detail.kills;
   unlockNextLevel(levelId.value);
 
+  const record = {
+    employeeId: employeeId.value,
+    username: username.value,
+    levelId: levelId.value,
+    kills: detail.kills,
+    durationMs: detail.time,
+  };
+
   if (employeeId.value) {
-    saveLevelRecord({
-      employeeId: employeeId.value,
-      username: username.value,
-      levelId: levelId.value,
-      kills: detail.kills,
-      durationMs: detail.time,
-    }).catch((err) => {
+    saveLevelRecord(record).catch((err) => {
       console.error("保存关卡记录失败:", err);
     });
+  } else {
+    saveLevelRecordToLocal(record);
   }
 
   document.getElementById("ov-level-complete").classList.remove("hidden");
+}
+
+function saveLevelRecordToLocal(record) {
+  try {
+    const records = JSON.parse(
+      localStorage.getItem("tank-level-records") || "[]",
+    );
+    records.push({
+      ...record,
+      create_time: new Date().toISOString(),
+    });
+    localStorage.setItem("tank-level-records", JSON.stringify(records));
+  } catch (err) {
+    console.error("保存本地关卡记录失败:", err);
+  }
 }
 
 function onLevelFailed(detail) {
