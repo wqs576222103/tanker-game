@@ -68,7 +68,7 @@ function selectLevel(level) {
 }
 
 function goBack() {
-  router.push({ name: "TankGame" });
+  router.push({ name: "Home", query: { token: getToken() } });
 }
 
 function formatTime(ms) {

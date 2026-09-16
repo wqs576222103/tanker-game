@@ -2,27 +2,38 @@
   <div class="home-wrap">
     <div class="home-content">
       <div class="logo-section">
-        <div class="tank-icon">🎯</div>
+        <div class="tank-icon"></div>
         <h1 class="game-title">坦克训练师</h1>
         <p class="game-desc">选择你的战场，开始坦克对决！</p>
       </div>
       <div class="mode-list">
-        <router-link :to="{ path: '/tank-game', query: { token } }" class="mode-card kill-mode">
+        <router-link
+          :to="{ path: '/tank-game', query: { token } }"
+          class="mode-card kill-mode"
+        >
           <div class="mode-icon">💥</div>
           <div class="mode-name">击杀模式</div>
-          <div class="mode-desc">击败敌人，提升你的击杀数。训练你的AI坦克战斗技巧</div>
+          <div class="mode-desc">
+            击败敌人，提升你的击杀数。训练你的AI坦克战斗技巧
+          </div>
         </router-link>
         <!-- <router-link :to="{ path: '/ranking', query: { token } }" class="mode-card rank-mode">
           <div class="mode-icon">🏆</div>
           <div class="mode-name">击杀排名</div>
           <div class="mode-desc">查看你的排名，争夺榜首</div>
         </router-link> -->
-        <router-link :to="{ path: '/battle-arena', query: { token } }" class="mode-card battle-mode">
+        <router-link
+          :to="{ path: '/battle-arena', query: { token } }"
+          class="mode-card battle-mode"
+        >
           <div class="mode-icon">🤖</div>
           <div class="mode-name">AI坦克对决</div>
           <div class="mode-desc">让AI之间展开激烈对决</div>
         </router-link>
-          <router-link :to="{ path: '/levels', query: { token } }" class="mode-card levels-mode">
+        <router-link
+          :to="{ path: '/levels', query: { token } }"
+          class="mode-card levels-mode"
+        >
           <div class="mode-icon">🎯</div>
           <div class="mode-name">关卡模式</div>
           <div class="mode-desc">挑战不同关卡，逐级突破</div>
@@ -63,8 +74,13 @@ const token = computed(() => route.query.token || "");
   animation: float 3s ease-in-out infinite;
 }
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 .game-title {
   font-size: 48px;

@@ -70,12 +70,10 @@
       <button id="btn-clear-all" :disabled="isPlaying" @click="clearAll">
         🗑️ 清空
       </button>
-      <button class="btn-record" @click="openBattleRecord">
-        📋 对战记录
-      </button>
-      <button class="btn-record" @click="openBattleWinRate">
-        🏆 胜率榜
-      </button>
+      <button class="btn-record" @click="openBattleRecord">📋 对战记录</button>
+      <button class="btn-record" @click="openBattleWinRate">🏆 胜率榜</button>
+
+      <button class="game-intro-btn" @click="goBack">返回主菜单</button>
 
       <input
         type="file"
@@ -116,18 +114,10 @@
             :key="item.employee_id"
             class="modal-item"
             :class="{
-              'is-dup': isDuplicated(
-                item.file_name,
-                '',
-                item.employee_id,
-              ),
+              'is-dup': isDuplicated(item.file_name, '', item.employee_id),
               'is-full':
                 aiTanks.length >= 8 &&
-                !isDuplicated(
-                  item.file_name,
-                  '',
-                  item.employee_id,
-                ) &&
+                !isDuplicated(item.file_name, '', item.employee_id) &&
                 !isSelected(item.employee_id),
             }"
           >
@@ -136,11 +126,7 @@
                 type="checkbox"
                 :checked="isSelected(item.employee_id)"
                 :disabled="
-                  isDuplicated(
-                    item.file_name,
-                    '',
-                    item.employee_id,
-                  ) ||
+                  isDuplicated(item.file_name, '', item.employee_id) ||
                   (aiTanks.length >= 8 && !isSelected(item.employee_id))
                 "
                 @change="toggleSelect(item)"
@@ -148,17 +134,9 @@
               <span class="modal-item-name" :title="item.file_name">{{
                 item.file_name
               }}</span>
-              <span class="modal-item-user">{{
-                item.username
-              }}</span>
+              <span class="modal-item-user">{{ item.username }}</span>
               <span
-                v-if="
-                  isDuplicated(
-                    item.file_name,
-                    '',
-                    item.employee_id,
-                  )
-                "
+                v-if="isDuplicated(item.file_name, '', item.employee_id)"
                 class="modal-item-tag tag-dup"
                 >已导入</span
               >
@@ -262,7 +240,7 @@ import {
   addAITank,
 } from "../logic/aiManager.js";
 import { getAiList, uploadAiScript } from "@/api/ai.js";
-import { getUserInfo } from "@/utils/user.js";
+import { getUserInfo, getToken } from "@/utils/user.js";
 import systemDefault from "@/views/TankGame/script/ai-tanker/default-tank.js";
 import systemLevel from "@/views/TankGame/script/ai-tanker/level-tank.js";
 
@@ -308,7 +286,9 @@ const sortedAiTanks = computed(() => {
 function triggerImport() {
   document.getElementById("ai-file").click();
 }
-
+function goBack() {
+  router.push({ name: "Home", query: { token: getToken() } });
+}
 function removeTank(idx) {
   removeAITank(idx);
 }
@@ -371,8 +351,18 @@ const listLoading = ref(false);
 const importing = ref(false);
 
 const systemScripts = [
-  { file_name: systemDefault.name || "随机游走", scriptModule: systemDefault, employee_id: "XT01", username: "系统" },
-  { file_name: systemLevel.name || "关卡AI", scriptModule: systemLevel, employee_id: "XT02", username: "系统" },
+  {
+    file_name: systemDefault.name || "随机游走",
+    scriptModule: systemDefault,
+    employee_id: "XT01",
+    username: "系统",
+  },
+  {
+    file_name: systemLevel.name || "关卡AI",
+    scriptModule: systemLevel,
+    employee_id: "XT02",
+    username: "系统",
+  },
 ];
 
 function openServerAILoad() {
@@ -435,7 +425,13 @@ async function confirmImport() {
   const tasks = selectedScripts.value.map(async (item) => {
     try {
       if (item.scriptModule) {
-        addAITank(item.file_name, item.scriptModule, '', item.employee_id, item.username);
+        addAITank(
+          item.file_name,
+          item.scriptModule,
+          "",
+          item.employee_id,
+          item.username,
+        );
       } else {
         await loadAIFromUrl(
           item.script_path,
