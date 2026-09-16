@@ -1,6 +1,11 @@
 <template>
   <div class="level-game-wrap" :class="{ 'level-mode': levelConfig }">
-    <Map></Map>
+    <Map
+      :hideAi="true"
+      :hideSpeed="true"
+      :hideImportAi="true"
+      :hideDeathLog="true"
+    ></Map>
 
     <!-- 返回按钮 -->
     <button class="btn-back-top" @click="backToSelect">返回</button>
@@ -179,6 +184,11 @@ onMounted(async () => {
     }
   }
 
+  // 如果在其他页面开启了AI模式，回到关卡页面时关闭AI
+  if (AIPlayer.enabled) {
+    AIPlayer.toggle();
+  }
+
   // 关卡模式使用专属AI
   AIPlayer.setDefault(LevelAI);
 
@@ -186,8 +196,9 @@ onMounted(async () => {
   window.addEventListener("levelComplete", handleLevelComplete);
   window.addEventListener("levelFailed", handleLevelFailed);
 
-  // 初始化游戏（Map 组件已调用 initGame，此处确保游戏倍速初始化正确）
+  // 初始化并自动开始游戏（Map 组件已调用 initGame，此处确保游戏倍速初始化正确）
   initGame();
+  startGame();
 });
 
 onUnmounted(() => {

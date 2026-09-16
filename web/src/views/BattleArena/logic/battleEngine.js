@@ -236,7 +236,7 @@ function fitCanvas() {
 
 export function startBattle() {
   if (aiTanks.value.length < 2) {
-    alert("请至少导入 2 个 AI 才能开始对决");
+    alert("请至少选择或导入2个AI才能开始对决");
     return;
   }
 
@@ -861,16 +861,16 @@ export function buildBattleContext(ai) {
     boss:
       window.boss && window.boss.alive
         ? {
-            x: window.boss.x,
-            y: window.boss.y,
-            w: window.boss.w,
-            h: window.boss.h,
-            dirName: window.boss.dirName,
-            dir: { x: window.boss.dir.x, y: window.boss.dir.y },
-            speed: window.boss.speed,
-            hp: window.boss.hp,
-            maxHp: window.boss.maxHp,
-          }
+          x: window.boss.x,
+          y: window.boss.y,
+          w: window.boss.w,
+          h: window.boss.h,
+          dirName: window.boss.dirName,
+          dir: { x: window.boss.dir.x, y: window.boss.dir.y },
+          speed: window.boss.speed,
+          hp: window.boss.hp,
+          maxHp: window.boss.maxHp,
+        }
         : null,
     gates: window.gates.map((g) => ({
       cells: g.cells.map((c) => ({ column: c.c, row: c.r })),

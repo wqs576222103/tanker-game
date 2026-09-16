@@ -627,6 +627,7 @@ export function makeTank(x, y, dirName, isPlayer) {
 }
 
 export function resetGame() {
+  state = "start";
   gtMs = 0;
   kills = 0;
   bossKills = 0;
@@ -1763,6 +1764,7 @@ export function initGame() {
     window.gameSpeed = 1;
     const btnSpeed = document.getElementById("btn-speed");
     if (btnSpeed) btnSpeed.textContent = "⏩ 1x";
+    resetGame();
     return;
   }
   window.__tankGameInited = true;
