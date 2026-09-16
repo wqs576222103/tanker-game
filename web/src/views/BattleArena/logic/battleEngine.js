@@ -28,6 +28,7 @@ import {
   spawnRandomItem,
 } from "../../TankGame/script/base.js";
 import { reactive } from "vue";
+import { getUserInfo } from "@/utils/user";
 import { aiTanks, gameState } from "./gameState.js";
 import { setBattleCtx, drawBattle } from "./draw.js";
 import { clearAllAITanks, importAIFiles } from "./aiManager.js";
@@ -1283,16 +1284,19 @@ export function checkBattleEnd() {
         winner.employeeId === ai.employeeId,
     }));
 
-    saveBattleRecord({
-      winnerName: winner ? winner.name : "",
-      winnerEmployeeId: winner ? winner.employeeId : "",
-      totalPlayers: aiTanks.value.length,
-      gameDurationMs,
-      isDraw,
-      players,
-    }).catch((err) => {
-      console.error("[battleEngine] 保存战斗记录失败:", err);
-    });
+    const userInfo = getUserInfo();
+    if (userInfo && userInfo.employeeId) {
+      saveBattleRecord({
+        winnerName: winner ? winner.name : "",
+        winnerEmployeeId: winner ? winner.employeeId : "",
+        totalPlayers: aiTanks.value.length,
+        gameDurationMs,
+        isDraw,
+        players,
+      }).catch((err) => {
+        console.error("[battleEngine] 保存战斗记录失败:", err);
+      });
+    }
   }
 }
 
