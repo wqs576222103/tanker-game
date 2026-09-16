@@ -8,7 +8,7 @@
     ></Map>
 
     <!-- 返回按钮 -->
-    <button class="btn-back-top" @click="backToSelect">返回</button>
+    <button class="btn-back-top" @click="backToSelect">返回关卡选择</button>
 
     <!-- 关卡目标HUD -->
     <div class="level-hud" v-if="levelConfig">
@@ -47,7 +47,7 @@
         用时: {{ formatTime(levelTime) }}
       </p>
       <button id="btn-next-level" @click="nextLevel">下一关</button>
-      <button id="btn-retry" @click="retryLevel">重试</button>
+      <button id="btn-retry" @click="retryLevel">重新挑战</button>
       <button id="btn-back" class="secondary" @click="backToSelect">
         返回关卡选择
       </button>
@@ -251,7 +251,7 @@ onUnmounted(() => {
   background: rgba(0, 0, 0, 0.5);
   color: #cfe3cf;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 8px 20px;
+  padding: 8px;
   font-size: 14px;
   border-radius: 20px;
   cursor: pointer;
@@ -358,13 +358,14 @@ button {
   background: #e0a93a;
   color: #1c1408;
   border: none;
-  padding: 12px 40px;
+  padding: 12px;
   font-size: 18px;
   font-weight: bold;
   border-radius: 24px;
   cursor: pointer;
   letter-spacing: 3px;
   transition: all 0.3s;
+  width: 200px;
 }
 
 button:hover {
@@ -403,7 +404,7 @@ button.secondary:hover {
   }
 
   button {
-    padding: 10px 30px;
+    padding: 12px;
     font-size: 16px;
   }
 }
