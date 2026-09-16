@@ -453,6 +453,20 @@ export const AIPlayer = {
       isPathClear: (x1, y1, x2, y2) => ctxIsPathClear(x1, y1, x2, y2),
       isBlocked: (dir) => ctxIsBlocked(dir),
       getFreeDistance: (dir) => ctxGetFreeDistance(dir),
+      isEnemyBullet: (bullet) => {
+        // 在坦克游戏模式中，owner是字符串"player"或"enemy"
+        // 在AI对决模式中，owner是数字teamId
+        if (typeof bullet.owner === 'string') {
+          return bullet.owner === 'enemy';
+        } else {
+          // AI对决模式，需要与当前坦克的teamId比较
+          // 但是，在坦克游戏模式中，没有teamId，所以返回false
+          // 实际上，在坦克游戏模式中，owner是字符串，所以不会进入这个分支
+          // 为了安全起见，返回false
+          return false;
+        }
+      },
+      selfTeamId: 'player', // 在坦克游戏模式中，玩家坦克的teamId是"player"
     };
     return ctx;
   },
