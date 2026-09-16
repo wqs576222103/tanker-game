@@ -211,64 +211,10 @@
     </div>
 
     <!-- 脚本导入弹窗 -->
-    <div
+    <ScriptImportModal
       v-if="showScriptImport"
-      class="modal-mask"
-      @click.self="showScriptImport = false"
-    >
-      <div class="modal-box modal-box-script">
-        <button
-          class="modal-close modal-close-tr"
-          @click="showScriptImport = false"
-        >
-          ✕
-        </button>
-        <div class="modal-header">
-          <span>导入AI脚本</span>
-        </div>
-        <div class="modal-list" style="padding: 16px">
-          <div style="margin-bottom: 8px; font-size: 13px; color: #9fb6a6">
-            请粘贴JS脚本内容，支持直接复制：
-          </div>
-          <textarea
-            v-model="scriptContent"
-            placeholder="在此粘贴AI脚本代码..."
-            style="
-              width: 100%;
-              height: 300px;
-              background: rgba(255, 255, 255, 0.06);
-              border: 1px solid #3a4a3a;
-              border-radius: 6px;
-              padding: 12px;
-              font-size: 12px;
-              font-family: &quot;Consolas&quot;, &quot;Monaco&quot;, monospace;
-              color: #cfe3cf;
-              outline: none;
-              box-sizing: border-box;
-              resize: vertical;
-            "
-          ></textarea>
-          <div
-            v-if="scriptError"
-            style="color: #ff6b6b; font-size: 12px; margin-top: 8px"
-          >
-            {{ scriptError }}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="showScriptImport = false">
-            取消
-          </button>
-          <button
-            class="btn-confirm"
-            :disabled="!scriptContent.trim()"
-            @click="confirmScriptImport"
-          >
-            确认导入
-          </button>
-        </div>
-      </div>
-    </div>
+      @close="showScriptImport = false"
+    />
   </div>
 </template>
 
@@ -280,14 +226,13 @@ import {
   removeAITank,
   clearAllAITanks,
   loadAIFromUrl,
-  loadAIFile,
   addAITank,
 } from "../logic/aiManager.js";
 import { getAiList } from "@/api/ai.js";
 import { getUserInfo, getToken } from "@/utils/user.js";
-import { generateFingerprint } from "@/utils/fingerprint.js";
 import systemDefault from "@/views/TankGame/script/ai-tanker/default-tank.js";
 import systemLevel from "@/views/TankGame/script/ai-tanker/level-tank.js";
+import ScriptImportModal from "./ScriptImportModal.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -392,44 +337,7 @@ const importedEmployeeIds = computed(() => {
   return new Set(aiTanks.value.map((ai) => ai.employeeId).filter(Boolean));
 });
 
-// 脚本导入弹窗相关
 const showScriptImport = ref(false);
-const scriptContent = ref("");
-const scriptError = ref("");
-
-async function confirmScriptImport() {
-  scriptError.value = "";
-
-  if (!scriptContent.value.trim()) {
-    scriptError.value = "脚本内容不能为空";
-    return;
-  }
-
-  if (aiTanks.value.length >= 8) {
-    scriptError.value = "AI槽位已满，无法导入";
-    return;
-  }
-
-  try {
-    const userInfo = getUserInfo();
-    let empId = userInfo?.employeeId;
-    if (!empId) {
-      empId = generateFingerprint();
-    }
-
-    const blob = new Blob([scriptContent.value], { type: "text/javascript" });
-    const file = new File([blob], "custom-ai.js", { type: "text/javascript" });
-    const aiModule = await loadAIFile(file);
-    const name = aiModule.name || "自定义AI";
-    addAITank(name, aiModule, "custom-script", empId, userInfo.username);
-
-    scriptContent.value = "";
-    scriptError.value = "";
-    showScriptImport.value = false;
-  } catch (err) {
-    scriptError.value = "导入失败: " + err.message;
-  }
-}
 
 function isDuplicated(fileName, scriptPath, employeeId) {
   if (employeeId && importedEmployeeIds.value.has(employeeId)) {
@@ -707,17 +615,6 @@ async function confirmImport() {
 
 .modal-close:hover {
   color: #ff6b6b;
-}
-
-.modal-box-script {
-  position: relative;
-}
-
-.modal-close-tr {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 1;
 }
 
 .modal-search {
