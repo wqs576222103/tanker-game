@@ -4,41 +4,44 @@
 
 ### 新增文件（4个）
 
-| 文件 | 大小 | 说明 |
-|------|------|------|
-| `web/src/views/LevelMode/index.vue` | 5KB | 关卡选择页面 |
-| `web/src/views/LevelMode/LevelGame.vue` | 7KB | 关卡游戏页面 |
+| 文件                                      | 大小  | 说明                |
+| ----------------------------------------- | ----- | ------------------- |
+| `web/src/views/LevelMode/index.vue`       | 5KB   | 关卡选择页面        |
+| `web/src/views/LevelMode/LevelGame.vue`   | 7KB   | 关卡游戏分发页面    |
+| `web/src/views/LevelMode/levels/*.vue`    | -     | 关卡页面            |
 | `web/src/views/TankGame/script/levels.js` | 7.3KB | 关卡配置（含第1关） |
-| `web/docs/LEVEL_MODE_DEVELOPMENT.md` | 10KB | 关卡开发文档 |
+| `web/docs/LEVEL_MODE_DEVELOPMENT.md`      | 10KB  | 关卡开发文档        |
 
 ### 修改文件（3个）
 
-| 文件 | 修改内容 |
-|------|---------|
+| 文件                                    | 修改内容                            |
+| --------------------------------------- | ----------------------------------- |
 | `web/src/views/TankGame/script/base.js` | 添加关卡模式支持（约100行新增代码） |
-| `web/src/router/index.js` | 新增 `/levels` 和 `/level/:id` 路由 |
-| `web/src/views/TankGame/index.vue` | 添加"关卡模式"入口按钮 |
+| `web/src/router/index.js`               | 新增 `/levels` 和 `/level/:id` 路由 |
 
 ---
 
 ## 第一关：夺旗精英
 
 ### 地图设计
+
 - **尺寸**: 45列 × 30行
 - **布局**: 迷宫式结构，多层防御墙
-- **特色**: 
+- **特色**:
   - 敌方堡垒在顶部（第3行）
   - 玩家基地在底部（第26-27行）
   - 中央走廊作为主要通道
   - 两侧有草丛掩护区域
 
 ### 胜利条件
+
 - **类型**: captureFlag（夺旗）
 - **目标**: 夺取敌方旗帜
 - **旗帜位置**: (c:22, r:3) - 敌方堡垒中央
 - **基地位置**: (c:22, r:26) - 玩家重生区
 
 ### 难度参数
+
 - 最大敌人数量: 6
 - 敌人基础血量: 2
 - 敌人速度: 60
@@ -49,17 +52,20 @@
 ## 访问方式
 
 ### 开发环境
+
 ```bash
 cd web
 npm run dev
 ```
 
 然后访问：
+
 - 关卡选择页: `http://localhost:5173/levels`
 - 第1关: `http://localhost:5173/level/1`
 - 第2关: `http://localhost:5173/level/2`
 
 ### 主游戏入口
+
 在主游戏页面右上角找到 **"关卡模式"** 按钮，点击即可进入。
 
 ---
@@ -67,6 +73,7 @@ npm run dev
 ## 测试步骤
 
 1. **启动测试**
+
    ```bash
    cd web && npm run dev
    ```
@@ -96,9 +103,10 @@ npm run dev
 ## 第二关：解救小狗
 
 ### 地图设计
+
 - **尺寸**: 45列 × 30行
 - **布局**: 中央有小狗牢笼，四周有掩体
-- **特色**: 
+- **特色**:
   - 小狗牢笼位于地图中央 (c:22, r:8)
   - 牢笼三面用墙包围，下方有锁住的门
   - 击杀10个敌人后Boss出现
@@ -106,18 +114,21 @@ npm run dev
   - 拾取钥匙打开门，靠近小狗即可解救
 
 ### 胜利条件
+
 - **类型**: rescueDog（解救小狗）
 - **目标**: 击杀Boss获取钥匙，解救被困的小狗
 - **小狗位置**: (c:22, r:8) - 牢笼中央
 - **牢笼门**: (c:22, r:10) - 需要钥匙打开
 
 ### 难度参数
+
 - 最大敌人数量: 6
 - 敌人基础血量: 2
 - 敌人速度: 55
 - Boss触发: 击杀10个敌人后出现
 
 ### 游戏流程
+
 1. 击杀敌人累积击杀数
 2. 击杀10个敌人后Boss出现
 3. 击杀Boss获得钥匙
@@ -135,6 +146,7 @@ cd web && npm run build
 ```
 
 输出显示：
+
 - ✅ LevelMode 组件编译成功
 - ✅ LevelGame 组件编译成功
 - ✅ levels.js 编译成功

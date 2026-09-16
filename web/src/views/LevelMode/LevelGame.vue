@@ -1,48 +1,18 @@
 <template>
-  <div class="level-game-wrap" :class="{ 'level-mode': levelConfig }">
-    <Map
-      :hideAi="true"
-      :hideSpeed="true"
-      :hideImportAi="true"
-      :hideDeathLog="true"
-    ></Map>
+  <div class="level-game-wrap">
+    <component
+      v-if="levelComponent"
+      :is="levelComponent"
+      :key="retryKey"
+      @level-complete="onLevelComplete"
+      @level-failed="onLevelFailed"
+    />
 
-    <!-- 返回按钮 -->
     <button class="btn-back-top" @click="backToSelect">返回关卡选择</button>
 
-    <!-- 关卡目标HUD -->
-    <div class="level-hud" v-if="levelConfig">
-      <div class="objective-bar">
-        <span class="level-tag"
-          >{{ levelConfig.id }}. {{ levelConfig.name }}</span
-        >
-      </div>
-      <div class="objective-text">
-        {{ levelConfig.objective.description }}
-      </div>
-      <div class="progress-bar">
-        <span class="kills">击杀: {{ kills }}</span>
-        <span
-          class="flag-status"
-          v-if="levelConfig.objective.type === 'captureFlag'"
-        >
-          {{ flagCaptured ? "✓ 已夺取" : "待夺取" }}
-        </span>
-        <span
-          class="dog-status"
-          v-if="levelConfig.objective.type === 'rescueDog'"
-        >
-          {{
-            dogRescued ? "✓ 已解救" : dogDoorLocked ? "🔒 门已锁" : "🔓 门已开"
-          }}
-        </span>
-      </div>
-    </div>
-
-    <!-- 关卡完成遮罩 -->
     <div class="overlay hidden" id="ov-level-complete">
       <h1>关 卡 完 成 ！</h1>
-      <p class="stats">击杀数: {{ kills }}</p>
+      <p class="stats">击杀数: {{ finalKills }}</p>
       <p class="stats" v-if="levelTime > 0">
         用时: {{ formatTime(levelTime) }}
       </p>
@@ -53,7 +23,6 @@
       </button>
     </div>
 
-    <!-- 关卡失败遮罩 -->
     <div class="overlay hidden" id="ov-level-failed">
       <h2>关 卡 失 败</h2>
       <p id="ov-level-failed-reason">{{ deathReason }}</p>
@@ -66,20 +35,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRoute, useRouter, onBeforeRouteUpdate } from "vue-router";
+import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { getToken, getUserInfo } from "@/utils/user";
 import { saveLevelRecord } from "@/api/levelRecord";
-import Map from "@/views/TankGame/components/Map/index.vue";
 import { LEVELS, unlockNextLevel } from "@/views/TankGame/script/levels.js";
-import {
-  setLevelMode,
-  clearLevelMode,
-  startGame,
-} from "@/views/TankGame/script/base.js";
-import { initGame } from "@/views/TankGame/script/base.js";
+import { clearLevelMode } from "@/views/TankGame/script/base.js";
 import { AIPlayer } from "@/views/TankGame/script/ai-player.js";
 import LevelAI from "@/views/TankGame/script/ai-tanker/level-tank.js";
+import Level1 from "./levels/Level1.vue";
+import Level2 from "./levels/Level2.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -88,84 +53,48 @@ const levelId = computed(() => parseInt(route.params.id));
 const employeeId = ref("");
 const username = ref("");
 
-const levelConfig = ref(null);
-const kills = ref(0);
-const levelTime = ref(0);
-const flagCaptured = ref(false);
-const dogRescued = ref(false);
-const dogDoorLocked = ref(true);
-const deathReason = ref("");
+const levelComponents = { 1: Level1, 2: Level2 };
+const levelComponent = computed(() => levelComponents[levelId.value]);
 
-// 初始化关卡模式：须在 Map 子组件挂载并调用 initGame 之前完成，确保关卡地图被正确加载
-const cfg = LEVELS.find((l) => l.id === levelId.value);
-if (!cfg) {
+const levelConfig = computed(() => LEVELS.find((l) => l.id === levelId.value));
+const levelTime = ref(0);
+const finalKills = ref(0);
+const deathReason = ref("");
+const retryKey = ref(0);
+
+if (!levelConfig.value) {
   clearLevelMode();
   router.replace({ name: "LevelSelect" });
-} else {
-  levelConfig.value = cfg;
-  setLevelMode(cfg);
 }
 
-// 监听路由参数变化：Vue Router 复用组件时 setup 不重跑，需手动重新初始化关卡
-onBeforeRouteUpdate((to) => {
-  const newId = parseInt(to.params.id);
-  const newCfg = LEVELS.find((l) => l.id === newId);
-  if (!newCfg) {
-    clearLevelMode();
-    router.replace({ name: "LevelSelect" });
-    return;
-  }
-  clearLevelMode();
-  levelConfig.value = newCfg;
-  setLevelMode(newCfg);
-  startGame();
-});
+function onLevelComplete(detail) {
+  levelTime.value = detail.time;
+  finalKills.value = detail.kills;
+  unlockNextLevel(levelId.value);
 
-// 监听关卡完成事件
-function handleLevelComplete(e) {
-  levelTime.value = e.detail.time;
-  kills.value = e.detail.kills;
-
-  // 解锁下一关
-  const nextLevel = unlockNextLevel(levelId.value);
-
-  // 保存关卡通关数据到服务器
   if (employeeId.value) {
     saveLevelRecord({
       employeeId: employeeId.value,
       username: username.value,
       levelId: levelId.value,
-      kills: e.detail.kills,
-      durationMs: e.detail.time,
+      kills: detail.kills,
+      durationMs: detail.time,
     }).catch((err) => {
       console.error("保存关卡记录失败:", err);
     });
   }
 
-  // 显示完成界面
   document.getElementById("ov-level-complete").classList.remove("hidden");
 }
 
-// 更新小狗状态（解救小狗关卡）
-let dogStatusInterval = null;
-function updateDogStatus() {
-  if (levelConfig.value?.objective.type === "rescueDog") {
-    dogRescued.value = window.dogRescued || false;
-    dogDoorLocked.value = window.dogDoorLocked || false;
-    kills.value = window.kills || 0;
-  }
-}
-
-// 监听关卡失败事件
-function handleLevelFailed(e) {
-  deathReason.value = e.detail.reason;
+function onLevelFailed(detail) {
+  deathReason.value = detail.reason;
   document.getElementById("ov-level-failed").classList.remove("hidden");
 }
 
 function nextLevel() {
   const nextId = levelId.value + 1;
-  const nextLevel = LEVELS.find((l) => l.id === nextId);
-  if (!nextLevel) {
+  if (!LEVELS.find((l) => l.id === nextId)) {
     router.push({ name: "LevelSelect" });
     return;
   }
@@ -173,16 +102,9 @@ function nextLevel() {
 }
 
 function retryLevel() {
-  // 重置关卡状态
-  clearLevelMode();
-  setLevelMode(levelConfig.value);
-
-  // 重新开始游戏
-  startGame();
-
-  // 隐藏遮罩
   document.getElementById("ov-level-complete").classList.add("hidden");
   document.getElementById("ov-level-failed").classList.add("hidden");
+  retryKey.value++;
 }
 
 function backToSelect() {
@@ -211,36 +133,10 @@ onMounted(async () => {
     }
   }
 
-  // 如果在其他页面开启了AI模式，回到关卡页面时关闭AI
   if (AIPlayer.enabled) {
     AIPlayer.toggle();
   }
-
-  // 关卡模式使用专属AI
   AIPlayer.setDefault(LevelAI);
-
-  // 监听事件
-  window.addEventListener("levelComplete", handleLevelComplete);
-  window.addEventListener("levelFailed", handleLevelFailed);
-
-  // 解救小狗关卡：启动状态更新定时器
-  if (levelConfig.value?.objective.type === "rescueDog") {
-    dogStatusInterval = setInterval(updateDogStatus, 200);
-  }
-
-  // 初始化并自动开始游戏（Map 组件已调用 initGame，此处确保游戏倍速初始化正确）
-  initGame();
-  startGame();
-});
-
-onUnmounted(() => {
-  window.removeEventListener("levelComplete", handleLevelComplete);
-  window.removeEventListener("levelFailed", handleLevelFailed);
-  if (dogStatusInterval) {
-    clearInterval(dogStatusInterval);
-    dogStatusInterval = null;
-  }
-  clearLevelMode();
 });
 </script>
 
@@ -270,58 +166,6 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 215, 110, 0.5);
   color: #ffd76e;
-}
-
-.level-hud {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 12px 24px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 215, 110, 0.3);
-}
-
-.objective-bar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.level-tag {
-  font-size: 14px;
-  color: #ffd76e;
-  font-weight: bold;
-  letter-spacing: 2px;
-}
-
-.objective-text {
-  font-size: 13px;
-  color: #cfe3cf;
-}
-
-.progress-bar {
-  display: flex;
-  gap: 16px;
-  font-size: 13px;
-}
-
-.kills {
-  color: #7de07d;
-}
-
-.flag-status {
-  color: #ffd76e;
-  font-weight: bold;
-}
-
-.dog-status {
-  color: #7de07d;
-  font-weight: bold;
 }
 
 .overlay {
@@ -395,17 +239,6 @@ button.secondary:hover {
 }
 
 @media (max-width: 768px) {
-  .level-hud {
-    width: 90%;
-    padding: 8px 16px;
-  }
-
-  .objective-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
   .overlay h1 {
     font-size: 28px;
   }

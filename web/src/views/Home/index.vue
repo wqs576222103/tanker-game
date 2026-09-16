@@ -36,7 +36,7 @@
         >
           <div class="mode-icon">🎯</div>
           <div class="mode-name">关卡模式</div>
-          <div class="mode-desc">挑战不同关卡，逐级突破</div>
+          <div class="mode-desc">挑战关卡，体验不同的战斗场景</div>
         </router-link>
       </div>
     </div>
