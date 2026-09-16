@@ -95,6 +95,8 @@ export function clearLevelMode() {
   window.flagCaptured = false;
   window.flagCarrier = null;
   window.flagPosition = null;
+  // 退出关卡模式后，下次进入普通模式时重新随机生成地图，避免复用关卡预设地图
+  window.mapGenerated = false;
 }
 
 export function isLevelMode() {
@@ -273,9 +275,9 @@ export function playMp3(url) {
   try {
     const a = new Audio(url);
     a.volume = 0.6;
-    a.play().catch(() => { });
+    a.play().catch(() => {});
     return a;
-  } catch (e) { }
+  } catch (e) {}
 }
 
 // 背景音乐：仅在未开始游戏（开始/结束界面）时播放，每隔5秒播放一次
@@ -291,16 +293,16 @@ export function playBgm() {
       bgmAudio.volume = 0.35;
     }
     bgmAudio.currentTime = 0;
-    bgmAudio.play().catch(() => { });
+    bgmAudio.play().catch(() => {});
     if (!bgmTimer) {
       bgmTimer = setInterval(() => {
         if (!sfxEnabled || state === "playing" || deathSoundTimer) return;
         const a = new Audio(bgmMp3);
         a.volume = 0.35;
-        a.play().catch(() => { });
+        a.play().catch(() => {});
       }, 5000);
     }
-  } catch (e) { }
+  } catch (e) {}
 }
 export function stopBgm() {
   try {
@@ -312,7 +314,7 @@ export function stopBgm() {
       bgmAudio.pause();
       bgmAudio.currentTime = 0;
     }
-  } catch (e) { }
+  } catch (e) {}
 }
 
 export function sfx(type) {
@@ -345,7 +347,7 @@ export function sfx(type) {
     g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
     o.start(t);
     o.stop(t + p[1]);
-  } catch (e) { }
+  } catch (e) {}
 }
 
 // ====================== 地图 ======================
@@ -1613,7 +1615,7 @@ export function updateHud() {
     if (player.drones > 0)
       arr.push(
         "🚁×" +
-        Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
+          Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
       );
     if (player.bounces) arr.push("🔄");
     buff.textContent = arr.length ? arr.join(" ") : "";
@@ -1622,6 +1624,14 @@ export function updateHud() {
 
 // ====================== 主循环 ======================
 window.lastTime = 0;
+let rafId = null;
+export function stopGameLoop() {
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  window.__tankGameInited = false;
+}
 export function loop(ts) {
   const dt = Math.min(0.033, (ts - lastTime) / 1000 || 0.016);
   lastTime = ts;
@@ -1647,7 +1657,7 @@ export function loop(ts) {
     ctx.strokeRect(2, 2, W - 4, H - 4);
   }
 
-  requestAnimationFrame(loop);
+  rafId = requestAnimationFrame(loop);
 }
 
 // ====================== 流程 ======================
@@ -1748,6 +1758,14 @@ export function togglePause() {
 
 // ====================== UI 初始化 ======================
 export function initGame() {
+  // 防止重复初始化：重复进入页面时不重复注册事件、不启动多个游戏循环，仅重置游戏倍速
+  if (window.__tankGameInited) {
+    window.gameSpeed = 1;
+    const btnSpeed = document.getElementById("btn-speed");
+    if (btnSpeed) btnSpeed.textContent = "⏩ 1x";
+    return;
+  }
+  window.__tankGameInited = true;
   initCanvas();
 
   // ====================== 输入 ======================
@@ -1914,34 +1932,37 @@ export function initGame() {
         .map(
           (r, i) => `
       <div class="log-item">
-        <div class="log-header">淘汰 #${i + 1} - ${r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
-            } - ${r.deathReason}</div>
+        <div class="log-header">淘汰 #${i + 1} - ${
+          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
+        } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">Boss击杀: <span>${r.bossKills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        ${r.type === "ai"
-              ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
-              : ""
-            }
+        ${
+          r.type === "ai"
+            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+            : ""
+        }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
         ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
-        ${r.type === "ai" && r.decisionLog.length > 0
-              ? `
+        ${
+          r.type === "ai" && r.decisionLog.length > 0
+            ? `
           <div class="log-decisions">
             <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
             ${r.decisionLog
-                .slice(-5)
-                .map(
-                  (d) => `
+              .slice(-5)
+              .map(
+                (d) => `
               <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
-                )
-                .join("")}
+              )
+              .join("")}
           </div>
         `
-              : ""
-            }
+            : ""
+        }
       </div>
     `,
         )
@@ -2045,6 +2066,8 @@ export function initGame() {
   resetGame();
   updateHud();
   loadHighScore();
+  // 进入页面时重置游戏倍速，避免受其他页面（如AI坦克对决）影响
+  window.gameSpeed = 1;
   document.getElementById("btn-speed").textContent = "⏩ 1x";
 
   // 未开始时播放背景音乐（浏览器可能拦截自动播放，首次交互时补播）
@@ -2057,8 +2080,8 @@ export function initGame() {
   window.addEventListener("pointerdown", resumeBgm);
   window.addEventListener("keydown", resumeBgm);
 
-  requestAnimationFrame((t) => {
+  rafId = requestAnimationFrame((t) => {
     lastTime = t;
-    requestAnimationFrame(loop);
+    rafId = requestAnimationFrame(loop);
   });
 }

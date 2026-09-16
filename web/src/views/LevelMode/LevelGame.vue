@@ -85,6 +85,16 @@ const levelTime = ref(0);
 const flagCaptured = ref(false);
 const deathReason = ref("");
 
+// 初始化关卡模式：须在 Map 子组件挂载并调用 initGame 之前完成，确保关卡地图被正确加载
+const cfg = LEVELS.find((l) => l.id === levelId.value);
+if (!cfg) {
+  clearLevelMode();
+  router.replace({ name: "LevelSelect" });
+} else {
+  levelConfig.value = cfg;
+  setLevelMode(cfg);
+}
+
 // 监听关卡完成事件
 function handleLevelComplete(e) {
   levelTime.value = e.detail.time;
@@ -157,6 +167,8 @@ function formatTime(ms) {
 }
 
 onMounted(async () => {
+  if (!levelConfig.value) return;
+
   if (token) {
     try {
       const userInfo = getUserInfo();
@@ -167,15 +179,6 @@ onMounted(async () => {
     }
   }
 
-  // 加载关卡配置
-  levelConfig.value = LEVELS.find((l) => l.id === levelId.value);
-  if (!levelConfig.value) {
-    router.push({ name: "LevelSelect" });
-    return;
-  }
-
-  // 设置关卡模式
-  setLevelMode(levelConfig.value);
   // 关卡模式使用专属AI
   AIPlayer.setDefault(LevelAI);
 
@@ -183,7 +186,7 @@ onMounted(async () => {
   window.addEventListener("levelComplete", handleLevelComplete);
   window.addEventListener("levelFailed", handleLevelFailed);
 
-  // 初始化游戏
+  // 初始化游戏（Map 组件已调用 initGame，此处确保游戏倍速初始化正确）
   initGame();
 });
 

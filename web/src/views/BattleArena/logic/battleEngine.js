@@ -123,6 +123,8 @@ export function initBattleGame(canvasEl) {
   window.itemSpawnTimer = 3;
   window.state = "start";
   gameState.value = "start";
+  // 进入页面时重置游戏倍速，避免受其他页面影响
+  window.gameSpeed = 1;
   updateBattleHud();
 
   setupControls();
@@ -1212,7 +1214,10 @@ export function checkBattleEnd() {
       kills: ai.kills || 0,
       deaths: ai.deaths || 0,
       deathReason: ai.lastDeathReason || "",
-      isWinner: winner && winner.name === ai.name && winner.employeeId === ai.employeeId,
+      isWinner:
+        winner &&
+        winner.name === ai.name &&
+        winner.employeeId === ai.employeeId,
     }));
 
     saveBattleRecord({

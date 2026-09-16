@@ -4,7 +4,9 @@
       <div class="l">
         <span class="bar" id="hud-heart"></span>
         <span class="bar">击杀 <b id="hud-score">0</b></span>
-        <span class="bar" v-if="!levelMode">Boss击杀 <b id="hud-boss-score">0</b></span>
+        <span class="bar" v-if="!levelMode"
+          >Boss击杀 <b id="hud-boss-score">0</b></span
+        >
         <span class="bar" id="hud-buff"></span>
       </div>
     </div>
@@ -23,12 +25,14 @@
         <p>
           ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />
           🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
-         <template v-if="!levelMode"> 可通过导入AI脚本自动运行坦克，<a
-            style="color: green"
-            :href="aiGuideUrl"
-            download
-            >下载提示词</a
-          >，定制化你的AI坦克吧！</template>
+          <template v-if="!levelMode">
+            可通过导入AI脚本自动运行坦克，<a
+              style="color: green"
+              :href="aiGuideUrl"
+              download
+              >下载提示词</a
+            >，定制化你的AI坦克吧！</template
+          >
         </p>
         <button id="btn-start">开 始 游 戏</button>
       </div>
@@ -99,7 +103,7 @@ import { useRoute } from "vue-router";
 import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 import { getToken, getUserInfo } from "@/utils/user";
 import { getAiScript } from "@/api/ai.js";
-import { initGame } from "../../script/base.js";
+import { initGame, stopGameLoop } from "../../script/base.js";
 import { AIPlayer } from "../../script/ai-player.js";
 import SurvivalAI from "../../script/ai-tanker/survival-tank.js";
 import DefaultAI from "../../script/ai-tanker/default-tank.js";
@@ -138,6 +142,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (stateCheckInterval) clearInterval(stateCheckInterval);
+  // 离开页面时停止游戏循环，避免残留循环与其他页面互相影响（倍速叠加）
+  stopGameLoop();
 });
 
 // 加载该员工上次导入并保存在服务器的 AI 脚本作为默认AI
