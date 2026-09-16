@@ -1,7 +1,7 @@
 <template>
   <div class="overlay" id="ov-start">
     <h1>AI坦克对决</h1>
-    <p>导入多个 AI 脚本，让它们在战场上对决！最多支持 8 个 AI 同时战斗。</p>
+    <p>导入多个 AI 脚本，让它们在战场上对决！支持 2~8 个 AI 同时战斗。</p>
     <div class="items">
       🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />
       🛡️ 护盾 &nbsp;💣 地雷 &nbsp;❤️ 生命恢复

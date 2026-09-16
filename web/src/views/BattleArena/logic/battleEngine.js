@@ -234,9 +234,11 @@ function fitCanvas() {
   }
 }
 
-export function startBattle() {
+export function startBattle(onError) {
   if (aiTanks.value.length < 2) {
-    alert("请至少选择或导入2个AI才能开始对决");
+    if (onError) {
+      onError("请至少选择或导入2个AI才能开始对决");
+    }
     return;
   }
 

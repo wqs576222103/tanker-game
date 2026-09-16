@@ -321,10 +321,9 @@ function onFileChange(e) {
 
 async function loadMyAI(file) {
   const userInfo = getUserInfo();
-  const empId = userInfo?.employeeId;
+  let empId = userInfo?.employeeId;
   if (!empId) {
-    alert("请先登录");
-    return;
+    empId = `TEMP_${Date.now()}`;
   }
   if (aiTanks.value.length >= 8) {
     alert("AI槽位已满，无法导入");

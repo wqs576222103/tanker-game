@@ -22,11 +22,17 @@
       multiple
       style="display: none"
     />
+    <GameModal
+      :visible="modalVisible"
+      :message="modalMessage"
+      @confirm="modalVisible = false"
+      @close="modalVisible = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import {
   initBattleGame,
   startBattle,
@@ -39,13 +45,22 @@ import GameOverOverlay from "./components/GameOverOverlay.vue";
 import PauseOverlay from "./components/PauseOverlay.vue";
 import TankPanel from "./components/TankPanel.vue";
 import ButtonGroup from "./components/ButtonGroup.vue";
+import GameModal from "./components/GameModal.vue";
+
+const modalVisible = ref(false);
+const modalMessage = ref("");
+
+function showModal(message) {
+  modalMessage.value = message;
+  modalVisible.value = true;
+}
 
 function handleStart() {
-  startBattle();
+  startBattle(showModal);
 }
 
 function handleRestart() {
-  startBattle();
+  startBattle(showModal);
 }
 
 function handlePause() {
@@ -60,7 +75,7 @@ function handleFullscreen() {
   const reqFs = document.documentElement.requestFullscreen;
   const webkitReqFs = document.documentElement.webkitRequestFullscreen;
   const exitFs = document.exitFullscreen;
-  const webkitExitFs = document.webkitExitFullscreen;
+  const webkitExitFs = document.documentElement.webkitExitFullscreen;
   if (!document.fullscreenElement) {
     (reqFs || webkitReqFs).call(document.documentElement);
   } else {
