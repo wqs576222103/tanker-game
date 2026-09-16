@@ -11,7 +11,6 @@ import { TankActions } from "./tank-actions.js";
 import { AILogger } from "./ai-logger.js";
 import { AIPlayer } from "./ai-player.js";
 import { saveGameKills, addDeath, getScore } from "@/api/score.js";
-import { uploadAiScript } from "@/api/ai.js";
 import { getToken, getUserInfo } from "@/utils/user";
 
 // ====================== 基础 ======================
@@ -2091,40 +2090,6 @@ export function initGame() {
   }
   btnSpeed.addEventListener("click", () => {
     cycleSpeed();
-  });
-
-  // ====================== 导入自定义 AI 脚本 ======================
-  const btnImportAI = document.getElementById("btn-import-ai");
-  const aiFileInput = document.getElementById("ai-file");
-
-  btnImportAI.addEventListener("click", () => aiFileInput.click());
-
-  aiFileInput.addEventListener("change", async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    try {
-      // 有用户信息时，将脚本上传到服务器并存档 employeeId 与脚本路径
-      const userInfo = getUserInfo();
-      if (userInfo.employeeId) {
-        try {
-          await uploadAiScript(userInfo.employeeId, file);
-        } catch (err) {
-          console.warn("[AI] 上传脚本到服务器失败:", err);
-        }
-      }
-      const name = await AIPlayer.loadFromFile(file);
-      if (!AIPlayer.enabled) {
-        AIPlayer.toggle();
-        btnAI.classList.toggle("active", true);
-      }
-      // 若已开启AI，刷新按钮/状态文案
-      AIPlayer.updateUI();
-      void name;
-    } catch (err) {
-      alert("AI 脚本加载失败：" + err.message);
-    } finally {
-      aiFileInput.value = "";
-    }
   });
 
   function toggleAI() {

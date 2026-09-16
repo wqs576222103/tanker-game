@@ -93,6 +93,7 @@
         id="btn-import-ai"
         class="btn-import-ai-btn"
         v-show="!hideImportAi"
+        @click="showScriptImport = true"
       >
         📥 导入AI
       </button>
@@ -106,7 +107,11 @@
         📋 淘汰日志
       </button>
     </div>
-    <input type="file" id="ai-file" accept=".js" style="display: none" />
+    <ScriptImportModal
+      v-if="showScriptImport"
+      :employee-id="employeeId"
+      @close="showScriptImport = false"
+    />
   </div>
 </template>
 <script setup>
@@ -120,6 +125,7 @@ import { AIPlayer } from "../../script/ai-player.js";
 import SurvivalAI from "../../script/ai-tanker/survival-tank.js";
 import DefaultAI from "../../script/ai-tanker/default-tank.js";
 import LevelAI from "../../script/ai-tanker/level-tank.js";
+import ScriptImportModal from "../ScriptImportModal.vue";
 
 const props = defineProps({
   hideAi: {
@@ -143,6 +149,7 @@ const props = defineProps({
 const employeeId = ref("");
 const gameState = ref("start");
 const levelMode = ref(false);
+const showScriptImport = ref(false);
 let stateCheckInterval = null;
 const token = getToken();
 const route = useRoute();
