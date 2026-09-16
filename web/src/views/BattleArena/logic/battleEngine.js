@@ -773,6 +773,20 @@ export function buildBattleContext(ai) {
               };
             });
         },
+        getEnemyPositions() {
+          return window.tanks
+            .filter((t) => t.alive && t.teamId !== ownTank.teamId)
+            .map((t) => ({
+              id: t.id,
+              x: t.x,
+              y: t.y,
+              w: t.w,
+              h: t.h,
+              dir: { x: t.dir.x, y: t.dir.y },
+              dirName: t.dirName,
+              speed: t.speed,
+            }));
+        },
         isPositionOccupied(x, y, excludeTankId) {
           for (const t of window.tanks) {
             if (!t.alive || t.id === excludeTankId || t.id === ownTank.id)
@@ -787,6 +801,22 @@ export function buildBattleContext(ai) {
             }
           }
           return false;
+        },
+        getGrassPositions() {
+          const grass = [];
+          for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+              if (window.map[r][c] === GRASS) {
+                grass.push({
+                  x: c * CELL,
+                  y: r * CELL,
+                  column: c,
+                  row: r,
+                });
+              }
+            }
+          }
+          return grass;
         },
       },
     };
@@ -985,6 +1015,20 @@ export function buildBattleContext(ai) {
             };
           });
       },
+      getEnemyPositions() {
+        return window.tanks
+          .filter((t) => t.alive && t.teamId !== ownTank.teamId)
+          .map((t) => ({
+            id: t.id,
+            x: t.x,
+            y: t.y,
+            w: t.w,
+            h: t.h,
+            dir: { x: t.dir.x, y: t.dir.y },
+            dirName: t.dirName,
+            speed: t.speed,
+          }));
+      },
       isPositionOccupied(x, y, excludeTankId) {
         for (const t of window.tanks) {
           if (!t.alive || t.id === excludeTankId || t.id === ownTank.id)
@@ -999,6 +1043,22 @@ export function buildBattleContext(ai) {
           }
         }
         return false;
+      },
+      getGrassPositions() {
+        const grass = [];
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            if (window.map[r][c] === GRASS) {
+              grass.push({
+                x: c * CELL,
+                y: r * CELL,
+                column: c,
+                row: r,
+              });
+            }
+          }
+        }
+        return grass;
       },
     },
   };

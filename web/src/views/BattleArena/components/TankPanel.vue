@@ -241,6 +241,7 @@ import {
 } from "../logic/aiManager.js";
 import { getAiList } from "@/api/ai.js";
 import { getUserInfo, getToken } from "@/utils/user.js";
+import { generateFingerprint } from "@/utils/fingerprint.js";
 import systemDefault from "@/views/TankGame/script/ai-tanker/default-tank.js";
 import systemLevel from "@/views/TankGame/script/ai-tanker/level-tank.js";
 
@@ -323,7 +324,7 @@ async function loadMyAI(file) {
   const userInfo = getUserInfo();
   let empId = userInfo?.employeeId;
   if (!empId) {
-    empId = `TEMP_${Date.now()}`;
+    empId = generateFingerprint();
   }
   if (aiTanks.value.length >= 8) {
     alert("AI槽位已满，无法导入");
