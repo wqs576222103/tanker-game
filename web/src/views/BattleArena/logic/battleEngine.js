@@ -819,6 +819,16 @@ export function buildBattleContext(ai) {
           }
           return grass;
         },
+        getItemPositions() {
+          return window.items
+            .filter((it) => !it.dead)
+            .map((it) => ({
+              x: it.x,
+              y: it.y,
+              type: it.def.id,
+              name: it.def.name,
+            }));
+        },
       },
     };
   }
@@ -1060,6 +1070,16 @@ export function buildBattleContext(ai) {
           }
         }
         return grass;
+      },
+      getItemPositions() {
+        return window.items
+          .filter((it) => !it.dead)
+          .map((it) => ({
+            x: it.x,
+            y: it.y,
+            type: it.def.id,
+            name: it.def.name,
+          }));
       },
     },
   };
