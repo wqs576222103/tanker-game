@@ -42,6 +42,8 @@ import { setBattleCtx, drawBattle } from "./draw.js";
 import { clearAllAITanks, importAIFiles } from "./aiManager.js";
 import { saveBattleRecord } from "@/api/battleRecord.js";
 
+let onErrorCallback = null;
+
 function makeSpawnPoints(count) {
   const rows = [1, Math.floor(ROWS / 3), Math.floor((2 * ROWS) / 3), ROWS - 2];
   const cols = [1, Math.floor(COLS / 3), Math.floor((2 * COLS) / 3), COLS - 2];
@@ -244,9 +246,10 @@ function fitCanvas() {
 }
 
 export function startBattle(onError) {
+  onErrorCallback = onError || null;
   if (aiTanks.value.length < 2) {
-    if (onError) {
-      onError("请至少选择或导入2个AI才能开始对决");
+    if (onErrorCallback) {
+      onErrorCallback("请至少选择或导入2个AI才能开始对决");
     }
     return;
   }
@@ -347,7 +350,18 @@ export function updateBattle(dt) {
     if (!ai.tank || !ai.tank.alive) continue;
     const ctx = buildBattleContext(ai);
     ctx.selfTeamId = ai.tank.teamId;
-    const action = ai.aiModule.decide(ctx, dt);
+    let action;
+    try {
+      action = ai.aiModule.decide(ctx, dt);
+    } catch (e) {
+      console.error(`AI [${ai.name}] decide 报错:`, e);
+      if (onErrorCallback) {
+        onErrorCallback(
+          `AI「${ai.name}」脚本运行报错：${e.message}\n请检查并优化该AI脚本`,
+        );
+      }
+      continue;
+    }
     applyBattleAction(ai.tank, action);
   }
 
