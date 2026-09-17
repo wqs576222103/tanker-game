@@ -1327,6 +1327,7 @@ export function update(dt) {
     window.tutorialSpawnEnemies = false;
     spawnEnemy(true);
     spawnEnemy(true);
+    window.tutorialEnemyReady = true;
   }
 }
 

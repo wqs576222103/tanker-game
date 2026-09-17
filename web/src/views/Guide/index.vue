@@ -34,6 +34,8 @@ import {
   CELL,
   CRACK,
   GRASS,
+  W,
+  H,
   spawnItemAtCell,
 } from "@/views/TankGame/script/base.js";
 
@@ -49,6 +51,7 @@ const shieldPickedUp = ref(false);
 let mineSpawned = false;
 let shieldSpawned = false;
 let enemiesSpawned = false;
+let enemyReady = ref(false);
 
 // ── 坐标常量 ──
 const TARGET_MOVE = { r: 15, c: 33 };
@@ -103,6 +106,8 @@ const steps = [
     text: "找到并击中敌方坦克，消灭全部敌人完成教学",
     target: null,
     validate: () => {
+      // 必须敌人已实际生成后，全部被消灭才算完成
+      if (!enemyReady.value) return false;
       const alive = (window.tanks || []).filter((t) => !t.isPlayer && t.alive);
       return alive.length === 0;
     },
@@ -191,6 +196,11 @@ function tutorialUpdate() {
     window.tutorialSpawnEnemies = true;
   }
 
+  // 检测敌人是否已实际生成
+  if (enemiesSpawned && !enemyReady.value && window.tutorialEnemyReady) {
+    enemyReady.value = true;
+  }
+
   const p = window.player;
   if (!p || !p.alive) return;
 
@@ -223,12 +233,19 @@ function tutorialUpdate() {
 function tutorialRender(ctx) {
   if (window.state !== "playing" || completed.value) return;
   const s = steps[step.value];
+  const currentStep = step.value;
 
   const t = performance.now();
   const pulse = Math.sin(t / 300) * 0.3 + 0.7;
 
   // 当前步骤目标标记（有 target 时）
-  if (s?.target) {
+  // 拾取地雷/护盾后不再显示绿框（对应 validate 已通过）
+  const shouldShowTarget = s?.target && !(
+    (currentStep === 2 && minePickedUp.value) ||
+    (currentStep === 3 && shieldPickedUp.value)
+  );
+
+  if (shouldShowTarget) {
     const x = s.target.c * CELL;
     const y = s.target.r * CELL;
 
@@ -252,7 +269,7 @@ function tutorialRender(ctx) {
   }
 
   // 消灭敌人步骤：显示敌人位置标记
-  if (step.value === 5) {
+  if (currentStep === 5 && enemyReady.value) {
     const aliveEnemies = (window.tanks || []).filter((t) => !t.isPlayer && t.alive);
     for (const enemy of aliveEnemies) {
       const cx = enemy.x + enemy.w / 2;
@@ -281,6 +298,17 @@ function tutorialRender(ctx) {
       ctx.restore();
     }
   }
+
+  // 放置地雷步骤：拾取后显示"按 K 放置"提示
+  if (currentStep === 2 && minePickedUp.value && !minePlaced.value) {
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = "#4ade80";
+    ctx.font = "bold 16px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("按 K 放置地雷", W / 2, H / 2 - 30);
+    ctx.restore();
+  }
 }
 
 // ── 操作 ──
@@ -298,6 +326,7 @@ function cleanup() {
   window.tutorialEnemySpawns = null;
   window.tutorialHooks = { update: null, render: null };
   window.tutorialSpawnEnemies = false;
+  window.tutorialEnemyReady = false;
 }
 
 function startFreePlay() {
