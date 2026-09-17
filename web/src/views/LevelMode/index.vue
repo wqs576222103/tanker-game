@@ -21,29 +21,34 @@
           <span>{{ level.objective.description }}</span>
         </div>
         <div class="level-bottom">
-          <div class="level-stats" v-if="globalBestRecords[level.id]">
-            <div class="global-best">
-              <span class="best-label">🏆最佳记录</span>
-              <span class="best-separator">·</span>
-              <span class="best-username">{{
-                globalBestRecords[level.id].username
-              }}</span>
-              <span class="best-time"
-                >用时：{{
-                  formatTime(globalBestRecords[level.id].bestTime)
+          <template v-if="employeeId">
+            <div class="level-stats" v-if="globalBestRecords[level.id]">
+              <div class="global-best">
+                <span class="best-label">🏆最佳记录</span>
+                <span class="best-separator">·</span>
+                <span class="best-username">{{
+                  globalBestRecords[level.id].username
+                }}</span>
+                <span class="best-time"
+                  >用时：{{
+                    formatTime(globalBestRecords[level.id].bestTime)
+                  }}</span
+                >
+              </div>
+            </div>
+            <div class="level-stats" v-else-if="getLevelBestTime(level.id)">
+              <span class="personal-best"
+                >⏱ 个人最佳 用时：{{
+                  formatTime(getLevelBestTime(level.id))
                 }}</span
               >
             </div>
-          </div>
-          <div class="level-stats" v-else-if="getLevelBestTime(level.id)">
-            <span class="personal-best"
-              >⏱ 个人最佳 用时：{{
-                formatTime(getLevelBestTime(level.id))
-              }}</span
-            >
-          </div>
-          <div v-else class="level-stats">
-            <span class="no-record">暂无记录</span>
+            <div v-else class="level-stats">
+              <span class="no-record">暂无记录</span>
+            </div>
+          </template>
+          <div class="level-stats" v-else>
+            <span class="no-record"></span>
           </div>
           <div class="level-action" v-if="!isUnlocked(level.id)">
             <span class="lock-icon">🔒</span>
@@ -62,7 +67,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { getToken, getUserInfo } from "@/utils/user";
 import {
@@ -72,6 +77,8 @@ import {
 import { LEVELS, isLevelUnlocked } from "../TankGame/script/levels.js";
 
 const router = useRouter();
+const userInfo = computed(() => getUserInfo());
+const employeeId = computed(() => userInfo.value?.employeeId);
 const levels = ref(LEVELS);
 const userBestTimes = ref({});
 const userUnlockedLevel = ref(1);

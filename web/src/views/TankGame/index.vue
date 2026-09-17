@@ -3,7 +3,12 @@
     <Map></Map>
     <div class="top-right">
       <div v-if="username" class="user-info">姓名：{{ username }}</div>
-      <a class="ranking-link" @click.prevent="openWindow(rankingUrl)">排行榜</a>
+      <a
+        v-if="employeeId"
+        class="ranking-link"
+        @click.prevent="openWindow(rankingUrl)"
+        >排行榜</a
+      >
       <!-- <a class="ranking-link" @click.prevent="openWindow(aiScriptUrl)"
         >玩家脚本</a
       >

@@ -56,71 +56,73 @@
             >
           </label>
         </div>
-        <div class="modal-section-title">玩家AI脚本</div>
-        <div
-          v-if="serverAIList.length === 0 && !listLoading"
-          class="modal-empty"
-        >
-          暂无AI脚本
-        </div>
-        <div
-          v-for="item in serverAIList"
-          :key="item.employee_id"
-          class="modal-item"
-          :class="{
-            'is-dup': isDuplicated(
-              item.file_name,
-              item.script_path,
-              item.employee_id,
-            ),
-            'is-full':
-              aiTanks.length >= 8 &&
-              !isDuplicated(
+        <template v-if="employeeId">
+          <div class="modal-section-title">玩家AI脚本</div>
+          <div
+            v-if="serverAIList.length === 0 && !listLoading"
+            class="modal-empty"
+          >
+            暂无AI脚本
+          </div>
+          <div
+            v-for="item in serverAIList"
+            :key="item.employee_id"
+            class="modal-item"
+            :class="{
+              'is-dup': isDuplicated(
                 item.file_name,
                 item.script_path,
                 item.employee_id,
-              ) &&
-              !isSelected(item.employee_id),
-          }"
-        >
-          <label class="modal-item-inner">
-            <input
-              type="checkbox"
-              :checked="isSelected(item.employee_id)"
-              :disabled="
-                isDuplicated(
+              ),
+              'is-full':
+                aiTanks.length >= 8 &&
+                !isDuplicated(
                   item.file_name,
                   item.script_path,
                   item.employee_id,
-                ) ||
-                (aiTanks.length >= 8 && !isSelected(item.employee_id))
-              "
-              @change="toggleSelect(item)"
-            />
-            <span class="modal-item-name" :title="item.file_name">{{
-              item.file_name
-            }}</span>
-            <span class="modal-item-user">{{
-              item.username || item.employee_id
-            }}</span>
-            <span
-              v-if="
-                isDuplicated(
-                  item.file_name,
-                  item.script_path,
-                  item.employee_id,
-                )
-              "
-              class="modal-item-tag tag-dup"
-              >已导入</span
-            >
-            <span
-              v-else-if="aiTanks.length >= 8 && !isSelected(item.employee_id)"
-              class="modal-item-tag tag-full"
-              >已满</span
-            >
-          </label>
-        </div>
+                ) &&
+                !isSelected(item.employee_id),
+            }"
+          >
+            <label class="modal-item-inner">
+              <input
+                type="checkbox"
+                :checked="isSelected(item.employee_id)"
+                :disabled="
+                  isDuplicated(
+                    item.file_name,
+                    item.script_path,
+                    item.employee_id,
+                  ) ||
+                  (aiTanks.length >= 8 && !isSelected(item.employee_id))
+                "
+                @change="toggleSelect(item)"
+              />
+              <span class="modal-item-name" :title="item.file_name">{{
+                item.file_name
+              }}</span>
+              <span class="modal-item-user">{{
+                item.username || item.employee_id
+              }}</span>
+              <span
+                v-if="
+                  isDuplicated(
+                    item.file_name,
+                    item.script_path,
+                    item.employee_id,
+                  )
+                "
+                class="modal-item-tag tag-dup"
+                >已导入</span
+              >
+              <span
+                v-else-if="aiTanks.length >= 8 && !isSelected(item.employee_id)"
+                class="modal-item-tag tag-full"
+                >已满</span
+              >
+            </label>
+          </div>
+        </template>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" @click="$emit('close')">取消</button>
@@ -141,10 +143,14 @@ import { ref, computed } from "vue";
 import { aiTanks } from "../logic/gameState.js";
 import { loadAIFromUrl, addAITank } from "../logic/aiManager.js";
 import { getAiList } from "@/api/ai.js";
+import { getUserInfo } from "@/utils/user.js";
 import systemDefault from "@/views/TankGame/script/ai-tanker/default-tank.js";
 import systemLevel from "@/views/TankGame/script/ai-tanker/level-tank.js";
 
 const emit = defineEmits(["close"]);
+
+const userInfo = computed(() => getUserInfo());
+const employeeId = computed(() => userInfo.value?.employeeId);
 
 const serverAIList = ref([]);
 const selectedScripts = ref([]);
