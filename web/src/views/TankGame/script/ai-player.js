@@ -163,7 +163,7 @@ export const AIPlayer = {
     if (this.ai && this.ai !== moduleObj && this.ai.onUnload) {
       try {
         this.ai.onUnload();
-      } catch (e) { }
+      } catch (e) {}
     }
     this.ai = moduleObj;
     this.aiName = moduleObj.name || "自定义AI";
@@ -283,7 +283,7 @@ export const AIPlayer = {
       keys.right =
       keys.fire =
       keys.mine =
-      false;
+        false;
   },
 
   notifyDeath(reason) {
@@ -328,6 +328,7 @@ export const AIPlayer = {
       // 游戏即时信息
       state,
       kills,
+      score: kills,
       gtMs,
       // 关卡模式信息
       levelMode: window.levelMode,
@@ -342,22 +343,22 @@ export const AIPlayer = {
       player:
         player && player.alive
           ? {
-            x: player.x,
-            y: player.y,
-            w: player.w,
-            h: player.h,
-            dirName: player.dirName,
-            dir: { x: player.dir.x, y: player.dir.y },
-            hp: player.hp,
-            maxHp: player.maxHp,
-            shieldT: player.shieldT,
-            fireT: player.fireT,
-            speedT: player.speedT,
-            spreadT: player.spreadT,
-            drones: player.drones,
-            mines: player.mines,
-            inGrass: isInGrass(player),
-          }
+              x: player.x,
+              y: player.y,
+              w: player.w,
+              h: player.h,
+              dirName: player.dirName,
+              dir: { x: player.dir.x, y: player.dir.y },
+              hp: player.hp,
+              maxHp: player.maxHp,
+              shieldT: player.shieldT,
+              fireT: player.fireT,
+              speedT: player.speedT,
+              spreadT: player.spreadT,
+              drones: player.drones,
+              mines: player.mines,
+              inGrass: isInGrass(player),
+            }
           : null,
 
       enemies: tanks
@@ -408,16 +409,16 @@ export const AIPlayer = {
       boss:
         boss && boss.alive
           ? {
-            x: boss.x,
-            y: boss.y,
-            w: boss.w,
-            h: boss.h,
-            dirName: boss.dirName,
-            dir: { x: boss.dir.x, y: boss.dir.y },
-            speed: boss.speed,
-            hp: boss.hp,
-            maxHp: boss.maxHp,
-          }
+              x: boss.x,
+              y: boss.y,
+              w: boss.w,
+              h: boss.h,
+              dirName: boss.dirName,
+              dir: { x: boss.dir.x, y: boss.dir.y },
+              speed: boss.speed,
+              hp: boss.hp,
+              maxHp: boss.maxHp,
+            }
           : null,
 
       gates: gates.map((g) => ({
@@ -456,8 +457,8 @@ export const AIPlayer = {
       isEnemyBullet: (bullet) => {
         // 在坦克游戏模式中，owner是字符串"player"或"enemy"
         // 在AI对决模式中，owner是数字teamId
-        if (typeof bullet.owner === 'string') {
-          return bullet.owner === 'enemy';
+        if (typeof bullet.owner === "string") {
+          return bullet.owner === "enemy";
         } else {
           // AI对决模式，需要与当前坦克的teamId比较
           // 但是，在坦克游戏模式中，没有teamId，所以返回false
@@ -466,7 +467,7 @@ export const AIPlayer = {
           return false;
         }
       },
-      selfTeamId: 'player', // 在坦克游戏模式中，玩家坦克的teamId是"player"
+      selfTeamId: "player", // 在坦克游戏模式中，玩家坦克的teamId是"player"
     };
     return ctx;
   },

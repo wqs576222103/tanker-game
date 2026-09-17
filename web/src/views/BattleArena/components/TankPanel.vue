@@ -63,8 +63,20 @@
       <button id="btn-clear-all" :disabled="isPlaying" @click="clearAll">
         🗑️ 清空
       </button>
-      <button class="btn-record" @click="openBattleRecord">📋 对战记录</button>
-      <button class="btn-record" @click="openBattleWinRate">🏆 胜率榜</button>
+      <button
+        v-if="userInfo?.employeeId"
+        class="btn-record"
+        @click="openBattleRecord"
+      >
+        📋 对战记录
+      </button>
+      <button
+        v-if="userInfo?.employeeId"
+        class="btn-record"
+        @click="openBattleWinRate"
+      >
+        🏆 胜率榜
+      </button>
 
       <button class="game-intro-btn" @click="goBack">返回主菜单</button>
     </div>
@@ -129,6 +141,8 @@ const battleWinRateUrl = computed(() => {
 function openBattleWinRate() {
   openWindow(battleWinRateUrl.value);
 }
+
+const userInfo = computed(() => getUserInfo());
 
 const isPlaying = computed(
   () => gameState.value === "playing" || gameState.value === "paused",

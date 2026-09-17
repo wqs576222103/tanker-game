@@ -28,6 +28,14 @@ import {
   spawnRandomItem,
 } from "../../TankGame/script/base.js";
 import { reactive } from "vue";
+
+function isInGrass(tank) {
+  const cx = Math.floor((tank.x + tank.w / 2) / CELL);
+  const cy = Math.floor((tank.y + tank.h / 2) / CELL);
+  return (
+    cy >= 0 && cy < ROWS && cx >= 0 && cx < COLS && window.map[cy][cx] === GRASS
+  );
+}
 import { getUserInfo } from "@/utils/user";
 import { aiTanks, gameState } from "./gameState.js";
 import { setBattleCtx, drawBattle } from "./draw.js";
@@ -628,7 +636,8 @@ export function buildBattleContext(ai) {
       DIRS,
       TILE: { EMPTY, WALL, GATE, BORDER, CRACK, GRASS },
       state: window.state,
-      kills: window.kills,
+      kills: ai.kills || 0,
+      score: ai.score || 0,
       gtMs: window.gtMs,
       player: null,
       lastDeathReason: ownTank ? ownTank._lastDeathReason : "",
@@ -671,8 +680,12 @@ export function buildBattleContext(ai) {
       mines: window.mines
         .filter((m) => !m.dead)
         .map((m) => ({ x: m.x, y: m.y })),
+      enemiesInGrass: window.tanks
+        .filter((t) => t.alive && t.teamId !== ownTank.teamId && isInGrass(t))
+        .map((t) => t.id),
       map: window.map,
       cellOf: (x, y) => ({ c: Math.floor(x / CELL), r: Math.floor(y / CELL) }),
+      centerOf: (c, r) => ({ x: c * CELL + CELL / 2, y: r * CELL + CELL / 2 }),
       distance: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
       mapAt: (c, r) =>
         r < 0 || r >= ROWS || c < 0 || c >= COLS ? BORDER : window.map[r][c],
@@ -681,6 +694,7 @@ export function buildBattleContext(ai) {
         const v = window.map[r][c];
         return v === WALL || v === BORDER || v === CRACK;
       },
+      crackHpAt: (c, r) => window.crackHp[`${c},${r}`] || 0,
       isEnemyBullet: (bullet) => bullet.owner !== ownTank.teamId,
       isPathClear(x1, y1, x2, y2) {
         if (y1 === y2) {
@@ -755,6 +769,87 @@ export function buildBattleContext(ai) {
         return dist;
       },
       utils: {
+        getTankPositions() {
+          return window.tanks
+            .filter((t) => t.alive)
+            .map((t) => ({
+              id: t.id,
+              x: t.x,
+              y: t.y,
+              isPlayer: t.teamId === ownTank.teamId,
+              inGrass: isInGrass(t),
+            }));
+        },
+        getPlayerPosition() {
+          if (!ownTank || !ownTank.alive) return null;
+          return {
+            id: ownTank.id,
+            x: ownTank.x,
+            y: ownTank.y,
+            inGrass: isInGrass(ownTank),
+          };
+        },
+        getEnemyPositions() {
+          return window.tanks
+            .filter((t) => t.alive && t.teamId !== ownTank.teamId)
+            .map((t) => ({
+              id: t.id,
+              x: t.x,
+              y: t.y,
+              w: t.w,
+              h: t.h,
+              dir: { x: t.dir.x, y: t.dir.y },
+              dirName: t.dirName,
+              speed: t.speed,
+              inGrass: isInGrass(t),
+            }));
+        },
+        predictEnemyPositions(frames = 1, dt = 0.016) {
+          return this.getEnemyPositions().map((e) => ({
+            ...e,
+            nextX: e.x + e.dir.x * e.speed * dt * frames,
+            nextY: e.y + e.dir.y * e.speed * dt * frames,
+          }));
+        },
+        getBulletPositions(frames = 1, dt = 0.016) {
+          return window.bullets
+            .filter((b) => !b.dead)
+            .map((b) => {
+              const speed = b.speed || 140;
+              const dx = b.dx || 0;
+              const dy = b.dy || 0;
+              return {
+                x: b.x,
+                y: b.y,
+                dir: { x: dx, y: dy },
+                speed,
+                nextX: b.x + dx * speed * dt * frames,
+                nextY: b.y + dy * speed * dt * frames,
+                isPlayerBullet: (b.owner && b.owner.teamId) === ownTank.teamId,
+                damage: b.dmg,
+              };
+            });
+        },
+        getPlayerBullets(frames = 1, dt = 0.016) {
+          return window.bullets
+            .filter(
+              (b) => !b.dead && (b.owner && b.owner.teamId) === ownTank.teamId,
+            )
+            .map((b) => {
+              const speed = b.speed || 140;
+              const dx = b.dx || 0;
+              const dy = b.dy || 0;
+              return {
+                x: b.x,
+                y: b.y,
+                dir: { x: dx, y: dy },
+                speed,
+                nextX: b.x + dx * speed * dt * frames,
+                nextY: b.y + dy * speed * dt * frames,
+                damage: b.dmg,
+              };
+            });
+        },
         getEnemyBullets(frames = 1, dt = 0.016) {
           const teamId = ownTank.teamId;
           return window.bullets
@@ -774,34 +869,56 @@ export function buildBattleContext(ai) {
               };
             });
         },
-        getEnemyPositions() {
-          return window.tanks
-            .filter((t) => t.alive && t.teamId !== ownTank.teamId)
-            .map((t) => ({
-              id: t.id,
-              x: t.x,
-              y: t.y,
-              w: t.w,
-              h: t.h,
-              dir: { x: t.dir.x, y: t.dir.y },
-              dirName: t.dirName,
-              speed: t.speed,
-            }));
-        },
-        isPositionOccupied(x, y, excludeTankId) {
-          for (const t of window.tanks) {
-            if (!t.alive || t.id === excludeTankId || t.id === ownTank.id)
-              continue;
-            if (
-              x < t.x + t.w &&
-              x + CELL > t.x &&
-              y < t.y + t.h &&
-              y + CELL > t.y
-            ) {
-              return true;
+        getObstaclePositions() {
+          const obstacles = [];
+          for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+              const v = window.map[r][c];
+              if (v === WALL || v === CRACK) {
+                obstacles.push({
+                  x: c * CELL,
+                  y: r * CELL,
+                  type: v === WALL ? "wall" : "crack",
+                  column: c,
+                  row: r,
+                });
+              }
             }
           }
-          return false;
+          return obstacles;
+        },
+        getDestructibleObstacles() {
+          const obstacles = [];
+          for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+              if (window.map[r][c] === CRACK) {
+                obstacles.push({
+                  x: c * CELL,
+                  y: r * CELL,
+                  hp: window.crackHp[`${c},${r}`] || 1,
+                  column: c,
+                  row: r,
+                });
+              }
+            }
+          }
+          return obstacles;
+        },
+        getIndestructibleObstacles() {
+          const obstacles = [];
+          for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+              if (window.map[r][c] === WALL) {
+                obstacles.push({
+                  x: c * CELL,
+                  y: r * CELL,
+                  column: c,
+                  row: r,
+                });
+              }
+            }
+          }
+          return obstacles;
         },
         getGrassPositions() {
           const grass = [];
@@ -819,6 +936,52 @@ export function buildBattleContext(ai) {
           }
           return grass;
         },
+        getTanksInGrass() {
+          return window.tanks
+            .filter((t) => t.alive && isInGrass(t))
+            .map((t) => ({
+              id: t.id,
+              isPlayer: t.teamId === ownTank.teamId,
+            }));
+        },
+        getTanksInRange(x, y, range) {
+          return window.tanks
+            .filter(
+              (t) =>
+                t.alive &&
+                Math.hypot(t.x + t.w / 2 - x, t.y + t.h / 2 - y) <= range,
+            )
+            .map((t) => ({
+              id: t.id,
+              x: t.x,
+              y: t.y,
+              isPlayer: t.teamId === ownTank.teamId,
+              inGrass: isInGrass(t),
+            }));
+        },
+        getGatePositions() {
+          const gatePositions = [];
+          for (const g of window.gates) {
+            const cells = g.cells.map((c) => ({
+              x: c.c * CELL,
+              y: c.r * CELL,
+              column: c.c,
+              row: c.r,
+            }));
+            gatePositions.push({
+              cells,
+              partnerCells: g.partner
+                ? g.partner.cells.map((c) => ({
+                    x: c.c * CELL,
+                    y: c.r * CELL,
+                    column: c.c,
+                    row: c.r,
+                  }))
+                : [],
+            });
+          }
+          return gatePositions;
+        },
         getItemPositions() {
           return window.items
             .filter((it) => !it.dead)
@@ -828,6 +991,47 @@ export function buildBattleContext(ai) {
               type: it.def.id,
               name: it.def.name,
             }));
+        },
+        getMinePositions() {
+          return window.mines
+            .filter((m) => !m.dead)
+            .map((m) => ({ x: m.x, y: m.y }));
+        },
+        getBossPosition() {
+          if (!window.boss || !window.boss.alive) return null;
+          return {
+            x: window.boss.x,
+            y: window.boss.y,
+            width: window.boss.w,
+            height: window.boss.h,
+          };
+        },
+        isPositionOccupied(x, y, excludeTankId) {
+          for (const t of window.tanks) {
+            if (!t.alive || t.id === excludeTankId || t.id === ownTank.id)
+              continue;
+            if (
+              x < t.x + t.w &&
+              x + CELL > t.x &&
+              y < t.y + t.h &&
+              y + CELL > t.y
+            ) {
+              return true;
+            }
+          }
+          return false;
+        },
+        isPositionObstacle(x, y) {
+          const c = Math.floor(x / CELL);
+          const r = Math.floor(y / CELL);
+          if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+          const v = window.map[r][c];
+          return v === WALL || v === BORDER || v === CRACK;
+        },
+        getCellType(column, row) {
+          if (row < 0 || row >= ROWS || column < 0 || column >= COLS)
+            return BORDER;
+          return window.map[row][column];
         },
       },
     };
@@ -842,7 +1046,8 @@ export function buildBattleContext(ai) {
     DIRS,
     TILE: { EMPTY, WALL, GATE, BORDER, CRACK, GRASS },
     state: window.state,
-    kills: window.kills,
+    kills: ai.kills || 0,
+    score: ai.score || 0,
     gtMs: window.gtMs,
     lastDeathReason: ownTank._lastDeathReason,
     player: {
@@ -858,8 +1063,11 @@ export function buildBattleContext(ai) {
       fireT: ownTank.fireT,
       speedT: ownTank.speedT,
       spreadT: ownTank.spreadT,
-      drones: ownTank.drones,
+      drones: Array.isArray(ownTank.drones)
+        ? ownTank.drones.length
+        : ownTank.drones,
       mines: ownTank.mines,
+      inGrass: isInGrass(ownTank),
     },
     enemies: window.tanks
       .filter((t) => t.alive && t.teamId !== ownTank.teamId)
@@ -883,6 +1091,8 @@ export function buildBattleContext(ai) {
         x: b.x,
         y: b.y,
         dir: { x: b.dx || 0, y: b.dy || 0 },
+        vx: b.dx || 0,
+        vy: b.dy || 0,
         speed: b.speed || 210,
         owner: b.owner && b.owner.teamId,
         dmg: b.dmg,
@@ -921,6 +1131,9 @@ export function buildBattleContext(ai) {
         ? g.partner.cells.map((c) => ({ column: c.c, row: c.r }))
         : [],
     })),
+    enemiesInGrass: window.tanks
+      .filter((t) => t.alive && t.teamId !== ownTank.teamId && isInGrass(t))
+      .map((t) => t.id),
     map: window.map,
     cellOf: (x, y) => ({ c: Math.floor(x / CELL), r: Math.floor(y / CELL) }),
     centerOf: (c, r) => ({ x: c * CELL + CELL / 2, y: r * CELL + CELL / 2 }),
@@ -1007,6 +1220,87 @@ export function buildBattleContext(ai) {
       return dist;
     },
     utils: {
+      getTankPositions() {
+        return window.tanks
+          .filter((t) => t.alive)
+          .map((t) => ({
+            id: t.id,
+            x: t.x,
+            y: t.y,
+            isPlayer: t.teamId === ownTank.teamId,
+            inGrass: isInGrass(t),
+          }));
+      },
+      getPlayerPosition() {
+        if (!ownTank || !ownTank.alive) return null;
+        return {
+          id: ownTank.id,
+          x: ownTank.x,
+          y: ownTank.y,
+          inGrass: isInGrass(ownTank),
+        };
+      },
+      getEnemyPositions() {
+        return window.tanks
+          .filter((t) => t.alive && t.teamId !== ownTank.teamId)
+          .map((t) => ({
+            id: t.id,
+            x: t.x,
+            y: t.y,
+            w: t.w,
+            h: t.h,
+            dir: { x: t.dir.x, y: t.dir.y },
+            dirName: t.dirName,
+            speed: t.speed,
+            inGrass: isInGrass(t),
+          }));
+      },
+      predictEnemyPositions(frames = 1, dt = 0.016) {
+        return this.getEnemyPositions().map((e) => ({
+          ...e,
+          nextX: e.x + e.dir.x * e.speed * dt * frames,
+          nextY: e.y + e.dir.y * e.speed * dt * frames,
+        }));
+      },
+      getBulletPositions(frames = 1, dt = 0.016) {
+        return window.bullets
+          .filter((b) => !b.dead)
+          .map((b) => {
+            const speed = b.speed || 140;
+            const dx = b.dx || 0;
+            const dy = b.dy || 0;
+            return {
+              x: b.x,
+              y: b.y,
+              dir: { x: dx, y: dy },
+              speed,
+              nextX: b.x + dx * speed * dt * frames,
+              nextY: b.y + dy * speed * dt * frames,
+              isPlayerBullet: (b.owner && b.owner.teamId) === ownTank.teamId,
+              damage: b.dmg,
+            };
+          });
+      },
+      getPlayerBullets(frames = 1, dt = 0.016) {
+        return window.bullets
+          .filter(
+            (b) => !b.dead && (b.owner && b.owner.teamId) === ownTank.teamId,
+          )
+          .map((b) => {
+            const speed = b.speed || 140;
+            const dx = b.dx || 0;
+            const dy = b.dy || 0;
+            return {
+              x: b.x,
+              y: b.y,
+              dir: { x: dx, y: dy },
+              speed,
+              nextX: b.x + dx * speed * dt * frames,
+              nextY: b.y + dy * speed * dt * frames,
+              damage: b.dmg,
+            };
+          });
+      },
       getEnemyBullets(frames = 1, dt = 0.016) {
         const teamId = ownTank.teamId;
         return window.bullets
@@ -1026,34 +1320,56 @@ export function buildBattleContext(ai) {
             };
           });
       },
-      getEnemyPositions() {
-        return window.tanks
-          .filter((t) => t.alive && t.teamId !== ownTank.teamId)
-          .map((t) => ({
-            id: t.id,
-            x: t.x,
-            y: t.y,
-            w: t.w,
-            h: t.h,
-            dir: { x: t.dir.x, y: t.dir.y },
-            dirName: t.dirName,
-            speed: t.speed,
-          }));
-      },
-      isPositionOccupied(x, y, excludeTankId) {
-        for (const t of window.tanks) {
-          if (!t.alive || t.id === excludeTankId || t.id === ownTank.id)
-            continue;
-          if (
-            x < t.x + t.w &&
-            x + CELL > t.x &&
-            y < t.y + t.h &&
-            y + CELL > t.y
-          ) {
-            return true;
+      getObstaclePositions() {
+        const obstacles = [];
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const v = window.map[r][c];
+            if (v === WALL || v === CRACK) {
+              obstacles.push({
+                x: c * CELL,
+                y: r * CELL,
+                type: v === WALL ? "wall" : "crack",
+                column: c,
+                row: r,
+              });
+            }
           }
         }
-        return false;
+        return obstacles;
+      },
+      getDestructibleObstacles() {
+        const obstacles = [];
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            if (window.map[r][c] === CRACK) {
+              obstacles.push({
+                x: c * CELL,
+                y: r * CELL,
+                hp: window.crackHp[`${c},${r}`] || 1,
+                column: c,
+                row: r,
+              });
+            }
+          }
+        }
+        return obstacles;
+      },
+      getIndestructibleObstacles() {
+        const obstacles = [];
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            if (window.map[r][c] === WALL) {
+              obstacles.push({
+                x: c * CELL,
+                y: r * CELL,
+                column: c,
+                row: r,
+              });
+            }
+          }
+        }
+        return obstacles;
       },
       getGrassPositions() {
         const grass = [];
@@ -1071,6 +1387,52 @@ export function buildBattleContext(ai) {
         }
         return grass;
       },
+      getTanksInGrass() {
+        return window.tanks
+          .filter((t) => t.alive && isInGrass(t))
+          .map((t) => ({
+            id: t.id,
+            isPlayer: t.teamId === ownTank.teamId,
+          }));
+      },
+      getTanksInRange(x, y, range) {
+        return window.tanks
+          .filter(
+            (t) =>
+              t.alive &&
+              Math.hypot(t.x + t.w / 2 - x, t.y + t.h / 2 - y) <= range,
+          )
+          .map((t) => ({
+            id: t.id,
+            x: t.x,
+            y: t.y,
+            isPlayer: t.teamId === ownTank.teamId,
+            inGrass: isInGrass(t),
+          }));
+      },
+      getGatePositions() {
+        const gatePositions = [];
+        for (const g of window.gates) {
+          const cells = g.cells.map((c) => ({
+            x: c.c * CELL,
+            y: c.r * CELL,
+            column: c.c,
+            row: c.r,
+          }));
+          gatePositions.push({
+            cells,
+            partnerCells: g.partner
+              ? g.partner.cells.map((c) => ({
+                  x: c.c * CELL,
+                  y: c.r * CELL,
+                  column: c.c,
+                  row: c.r,
+                }))
+              : [],
+          });
+        }
+        return gatePositions;
+      },
       getItemPositions() {
         return window.items
           .filter((it) => !it.dead)
@@ -1080,6 +1442,47 @@ export function buildBattleContext(ai) {
             type: it.def.id,
             name: it.def.name,
           }));
+      },
+      getMinePositions() {
+        return window.mines
+          .filter((m) => !m.dead)
+          .map((m) => ({ x: m.x, y: m.y }));
+      },
+      getBossPosition() {
+        if (!window.boss || !window.boss.alive) return null;
+        return {
+          x: window.boss.x,
+          y: window.boss.y,
+          width: window.boss.w,
+          height: window.boss.h,
+        };
+      },
+      isPositionOccupied(x, y, excludeTankId) {
+        for (const t of window.tanks) {
+          if (!t.alive || t.id === excludeTankId || t.id === ownTank.id)
+            continue;
+          if (
+            x < t.x + t.w &&
+            x + CELL > t.x &&
+            y < t.y + t.h &&
+            y + CELL > t.y
+          ) {
+            return true;
+          }
+        }
+        return false;
+      },
+      isPositionObstacle(x, y) {
+        const c = Math.floor(x / CELL);
+        const r = Math.floor(y / CELL);
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+        const v = window.map[r][c];
+        return v === WALL || v === BORDER || v === CRACK;
+      },
+      getCellType(column, row) {
+        if (row < 0 || row >= ROWS || column < 0 || column >= COLS)
+          return BORDER;
+        return window.map[row][column];
       },
     },
   };
