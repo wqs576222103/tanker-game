@@ -99,6 +99,16 @@ import ServerAIModal from "./ServerAIModal.vue";
 
 const route = useRoute();
 const router = useRouter();
+const childWindows = ref({});
+
+function openWindow(url) {
+  const name = url.split("?")[0];
+  if (childWindows.value[name] && !childWindows.value[name].closed) {
+    childWindows.value[name].focus();
+  } else {
+    childWindows.value[name] = window.open(url, name);
+  }
+}
 
 const battleRecordUrl = computed(() => {
   const tokenStr = new URLSearchParams(location.search).get("token");
@@ -107,7 +117,7 @@ const battleRecordUrl = computed(() => {
 });
 
 function openBattleRecord() {
-  window.open(battleRecordUrl.value, "_blank");
+  openWindow(battleRecordUrl.value);
 }
 
 const battleWinRateUrl = computed(() => {
@@ -117,7 +127,7 @@ const battleWinRateUrl = computed(() => {
 });
 
 function openBattleWinRate() {
-  window.open(battleWinRateUrl.value, "_blank");
+  openWindow(battleWinRateUrl.value);
 }
 
 const isPlaying = computed(

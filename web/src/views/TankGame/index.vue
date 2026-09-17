@@ -3,12 +3,14 @@
     <Map></Map>
     <div class="top-right">
       <div v-if="username" class="user-info">姓名：{{ username }}</div>
-      <a class="ranking-link" :href="rankingUrl" target="_blank">排行榜</a>
-      <!-- <a class="ranking-link" :href="aiScriptUrl" target="_blank">玩家脚本</a> -->
-      <!-- <a class="ranking-link" :href="LevelSelectUrl" target="_blank"
+      <a class="ranking-link" @click.prevent="openWindow(rankingUrl)">排行榜</a>
+      <!-- <a class="ranking-link" @click.prevent="openWindow(aiScriptUrl)"
+        >玩家脚本</a
+      >
+      <a class="ranking-link" @click.prevent="openWindow(LevelSelectUrl)"
         >关卡模式</a
-      > -->
-      <!-- <a class="ranking-link battle" :href="tankBattle" target="_blank"
+      >
+      <a class="ranking-link battle" @click.prevent="openWindow(tankBattle)"
         >AI坦克对决</a
       > -->
       <button class="ranking-link battle" @click="openGameIntro">
@@ -36,6 +38,7 @@ const token = getToken();
 const employeeId = ref("");
 const username = ref("");
 const showIntro = ref(false);
+const childWindows = ref({});
 
 const rankingUrl = computed(() => {
   const tokenStr = new URLSearchParams(location.search).get("token");
@@ -59,6 +62,15 @@ const tankBattle = computed(() => {
   const query = tokenStr ? { token: tokenStr } : {};
   return router.resolve({ name: "BattleArena", query }).href;
 });
+
+function openWindow(url) {
+  const name = url.split("?")[0];
+  if (childWindows.value[name] && !childWindows.value[name].closed) {
+    childWindows.value[name].focus();
+  } else {
+    childWindows.value[name] = window.open(url, name);
+  }
+}
 
 function goBack() {
   router.push({ name: "Home", query: { token: getToken() } });

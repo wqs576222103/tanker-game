@@ -35,8 +35,12 @@
             <div class="record-winner">
               <span v-if="item.is_draw" class="draw-badge">平局</span>
               <span v-else>
-                <span class="winner-name">🏆 {{ item.winner_name || "未知" }}</span>
-                <span v-if="item.winner_username" class="winner-username">（{{ item.winner_username }}）</span>
+                <span class="winner-name"
+                  >🏆 {{ item.winner_name || "未知" }}</span
+                >
+                <span v-if="item.winner_username" class="winner-username"
+                  >（{{ item.winner_username }}）</span
+                >
               </span>
             </div>
             <div class="record-meta">
@@ -52,25 +56,39 @@
     <div v-if="totalPages > 1" class="pagination">
       <button :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
       <span class="page-info">{{ page }} / {{ totalPages }}</span>
-      <button :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
+      <button :disabled="page >= totalPages" @click="goPage(page + 1)">
+        下一页
+      </button>
     </div>
 
-    <div class="back-btn" @click="$router.push('/battle-arena')">返回对战</div>
+    <div class="back-btn" @click="goBack">返回对战</div>
 
-    <div v-if="detailVisible" class="detail-mask" @click.self="detailVisible = false">
+    <div
+      v-if="detailVisible"
+      class="detail-mask"
+      @click.self="detailVisible = false"
+    >
       <div class="detail-panel">
         <div class="detail-header">
-          <span class="detail-title">对战详情 #{{ detailData?.record?.id }}</span>
+          <span class="detail-title"
+            >对战详情 #{{ detailData?.record?.id }}</span
+          >
           <span class="detail-close" @click="detailVisible = false">✕</span>
         </div>
         <div v-if="detailLoading" class="loading">加载中...</div>
         <template v-else-if="detailData">
           <div class="detail-info">
             <div v-if="detailData.record.is_draw" class="detail-draw">平局</div>
-            <div v-else class="detail-winner">🏆 获胜者：{{ detailData.record.winner_name }}</div>
+            <div v-else class="detail-winner">
+              🏆 获胜者：{{ detailData.record.winner_name }}
+            </div>
             <div class="detail-meta">
               <span>参与：{{ detailData.record.total_players }} 名</span>
-              <span>时长：{{ formatDuration(detailData.record.game_duration_ms) }}</span>
+              <span
+                >时长：{{
+                  formatDuration(detailData.record.game_duration_ms)
+                }}</span
+              >
             </div>
           </div>
           <div class="detail-players">
@@ -87,7 +105,9 @@
                   <span v-if="p.is_winner" class="win-tag">胜</span>
                   {{ p.tank_name || "未知坦克" }}
                 </div>
-                <div class="player-id">{{ p.username || p.employee_id || "无工号" }}</div>
+                <div class="player-id">
+                  {{ p.username || p.employee_id || "无工号" }}
+                </div>
               </div>
               <div class="player-stats">
                 <span class="stat-score">{{ p.score }}分</span>
@@ -105,7 +125,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { getBattleRecordPage, getBattleRecordDetail } from "@/api/battleRecord.js";
+import {
+  getBattleRecordPage,
+  getBattleRecordDetail,
+} from "@/api/battleRecord.js";
 
 const records = ref([]);
 const loading = ref(false);
@@ -180,6 +203,15 @@ function formatDuration(ms) {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function goBack() {
+  if (window.opener && !window.opener.closed) {
+    window.opener.focus();
+    window.close();
+  } else {
+    window.history.back();
+  }
 }
 
 onMounted(fetchData);

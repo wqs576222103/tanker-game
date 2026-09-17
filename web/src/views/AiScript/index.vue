@@ -50,7 +50,7 @@
       </button>
     </div>
 
-    <div class="back-btn" @click="$router.push('/tank-game')">返回游戏</div>
+    <div class="back-btn" @click="goBack">返回游戏</div>
   </div>
 </template>
 
@@ -106,6 +106,15 @@ function formatTime(t) {
   if (isNaN(d.getTime())) return t;
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function goBack() {
+  if (window.opener && !window.opener.closed) {
+    window.opener.focus();
+    window.close();
+  } else {
+    window.history.back();
+  }
 }
 
 onMounted(fetchData);

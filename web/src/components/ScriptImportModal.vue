@@ -9,10 +9,10 @@
         <div class="modal-tip-text">
           <strong>第一步：获取AI提示词</strong>
           <div class="action-buttons">
-            <button class="btn-action" @click="downloadPrompt">
+            <!-- <button class="btn-action" @click="downloadPrompt">
               <span class="icon">⬇️</span> 下载提示词文件
-            </button>
-            <span class="action-or">或者</span>
+            </button> -->
+            <!-- <span class="action-or">或者</span> -->
             <button class="btn-action" @click="copyPromptToClipboard">
               <span class="icon">📋</span> 复制提示词到剪贴板
             </button>
@@ -23,30 +23,55 @@
         <div class="modal-tip-text">
           <strong>第二步：使用AI生成脚本</strong>
           <div class="ai-sites">
-            打开其中一个网站：<div class="site-links">
-              <a href="https://tongyi.aliyun.com/qianwen" target="_blank" class="site-link">通义千问</a>
-              <a href="https://chat.openai.com" target="_blank" class="site-link">ChatGPT</a>
-              <a href="https://claude.ai" target="_blank" class="site-link">Claude</a>
-              <a href="https://yiyan.baidu.com" target="_blank" class="site-link">文心一言</a>
-              <!-- deepseek -->
-               <a href="https://chat.deepseek.com/" target="_blank" class="site-link">DeepSeek</a>
+            打开一个AI网站，可以为下方链接网址：
+            <div class="site-links">
+              <a
+                href="https://tongyi.aliyun.com/qianwen"
+                target="_blank"
+                class="site-link"
+                >通义千问</a
+              >
+              <a
+                href="https://chat.deepseek.com/"
+                target="_blank"
+                class="site-link"
+                >DeepSeek</a
+              >
+              <a
+                href="https://chat.openai.com"
+                target="_blank"
+                class="site-link"
+                >ChatGPT🪜</a
+              >
+              <a href="https://claude.ai" target="_blank" class="site-link"
+                >Claude🪜</a
+              >
             </div>
-            <br/>
-            <span>将提示词发送给AI，并追加说明：
-              "我想要生成一个xxx的坦克"。来获取脚本代码。</span>
-            
+            <br />
+            <span
+              >将复制提示词发送给AI，并追加定制说明：
+              "我想要生成一个xxx的坦克"。</span
+            >
           </div>
         </div>
 
         <div class="modal-tip-text">
-          <strong>第三步：粘贴脚本并确认导入</strong>
+          <strong>第三步：粘贴AI生成的脚本并确认导入</strong>
         </div>
-        <textarea v-model="scriptContent" placeholder="将AI生成的脚本代码粘贴到此处..." class="script-textarea"></textarea>
+        <textarea
+          v-model="scriptContent"
+          placeholder="将AI生成的脚本代码粘贴到此处..."
+          class="script-textarea"
+        ></textarea>
         <div v-if="scriptError" class="modal-error">{{ scriptError }}</div>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" @click="$emit('close')">取消</button>
-        <button class="btn-confirm" :disabled="!scriptContent.trim() || loading" @click="handleImport">
+        <button
+          class="btn-confirm"
+          :disabled="!scriptContent.trim() || loading"
+          @click="handleImport"
+        >
           {{ loading ? "导入中..." : "确认导入" }}
         </button>
       </div>

@@ -50,7 +50,7 @@
       </button>
     </div>
 
-    <div class="back-btn" @click="$router.push('/tank-game')">返回游戏</div>
+    <div class="back-btn" @click="goBack">返回游戏</div>
   </div>
 </template>
 
@@ -129,6 +129,15 @@ function getRankClass(index) {
   if (index === 1) return "rank-second";
   if (index === 2) return "rank-third";
   return "";
+}
+
+function goBack() {
+  if (window.opener && !window.opener.closed) {
+    window.opener.focus();
+    window.close();
+  } else {
+    window.history.back();
+  }
 }
 
 onMounted(fetchData);

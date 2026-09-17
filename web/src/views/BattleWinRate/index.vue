@@ -33,7 +33,9 @@
               <span v-if="isMe(item)" class="my-tag">我的</span>
               {{ item.tank_name || "未知坦克" }}
             </div>
-            <div class="rank-user">{{ item.username || item.employee_id || "匿名" }}</div>
+            <div class="rank-user">
+              {{ item.username || item.employee_id || "匿名" }}
+            </div>
             <div class="rank-stats">
               <span class="stat-battles">场次: {{ item.total_battles }}</span>
               <span class="stat-wins">胜: {{ item.wins }}</span>
@@ -42,7 +44,9 @@
             </div>
           </div>
           <div class="rank-rate">
-            <div class="rate-val" :class="getRateClass(item.win_rate)">{{ item.win_rate }}%</div>
+            <div class="rate-val" :class="getRateClass(item.win_rate)">
+              {{ item.win_rate }}%
+            </div>
             <div class="rate-label">胜率</div>
           </div>
         </div>
@@ -52,10 +56,12 @@
     <div v-if="totalPages > 1" class="pagination">
       <button :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
       <span class="page-info">{{ page }} / {{ totalPages }}</span>
-      <button :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
+      <button :disabled="page >= totalPages" @click="goPage(page + 1)">
+        下一页
+      </button>
     </div>
 
-    <div class="back-btn" @click="$router.push('/battle-arena')">返回对战</div>
+    <div class="back-btn" @click="goBack">返回对战</div>
   </div>
 </template>
 
@@ -113,7 +119,10 @@ function goPage(p) {
 }
 
 function isMe(item) {
-  return myEmployeeId.value && String(item.employee_id) === String(myEmployeeId.value);
+  return (
+    myEmployeeId.value &&
+    String(item.employee_id) === String(myEmployeeId.value)
+  );
 }
 
 function getMedal(index) {
@@ -134,6 +143,15 @@ function getRateClass(rate) {
   if (rate >= 60) return "rate-high";
   if (rate >= 40) return "rate-mid";
   return "rate-low";
+}
+
+function goBack() {
+  if (window.opener && !window.opener.closed) {
+    window.opener.focus();
+    window.close();
+  } else {
+    window.history.back();
+  }
 }
 
 onMounted(fetchData);
@@ -299,18 +317,30 @@ onMounted(fetchData);
 }
 
 .rank-first {
-  background: linear-gradient(90deg, rgba(200, 168, 78, 0.2), rgba(30, 45, 25, 0.8));
+  background: linear-gradient(
+    90deg,
+    rgba(200, 168, 78, 0.2),
+    rgba(30, 45, 25, 0.8)
+  );
   border-color: #c8a84e;
   box-shadow: 0 0 15px rgba(200, 168, 78, 0.3);
 }
 
 .rank-second {
-  background: linear-gradient(90deg, rgba(192, 192, 192, 0.15), rgba(30, 45, 25, 0.8));
+  background: linear-gradient(
+    90deg,
+    rgba(192, 192, 192, 0.15),
+    rgba(30, 45, 25, 0.8)
+  );
   border-color: #a0a0a0;
 }
 
 .rank-third {
-  background: linear-gradient(90deg, rgba(205, 127, 50, 0.15), rgba(30, 45, 25, 0.8));
+  background: linear-gradient(
+    90deg,
+    rgba(205, 127, 50, 0.15),
+    rgba(30, 45, 25, 0.8)
+  );
   border-color: #cd7f32;
 }
 
