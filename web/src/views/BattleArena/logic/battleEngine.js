@@ -81,6 +81,40 @@ function getSpawnPoints(count) {
   return result;
 }
 
+function isPassableCell(c, r) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+  const v = window.map[r][c];
+  return v === EMPTY || v === GRASS;
+}
+
+function findValidSpawnCell(c, r) {
+  if (isPassableCell(c, r)) return { c, r };
+  const visited = new Set();
+  const queue = [{ c, r, dist: 0 }];
+  visited.add(`${c},${r}`);
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const [dc, dr] of dirs) {
+      const nc = cur.c + dc;
+      const nr = cur.r + dr;
+      const key = `${nc},${nr}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      if (isPassableCell(nc, nr)) return { c: nc, r: nr };
+      if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+        queue.push({ c: nc, r: nr, dist: cur.dist + 1 });
+      }
+    }
+  }
+  return { c, r };
+}
+
 export function initBattleGame(canvasEl) {
   const canvas = canvasEl;
   canvas.width = W;
@@ -96,8 +130,9 @@ export function initBattleGame(canvasEl) {
 
   aiTanks.value.forEach((ai, i) => {
     const sp = spawnPoints[i];
-    const x = sp.c * CELL + 3;
-    const y = sp.r * CELL + 3;
+    const valid = findValidSpawnCell(sp.c, sp.r);
+    const x = valid.c * CELL + 3;
+    const y = valid.r * CELL + 3;
     const tank = makeTank(x, y, "down", false);
     tank.color = ai.color;
     tank.aiName = ai.name;
@@ -267,8 +302,9 @@ export function startBattle(onError) {
 
   aiTanks.value.forEach((ai, i) => {
     const sp = spawnPoints[i];
-    const x = sp.c * CELL + 3;
-    const y = sp.r * CELL + 3;
+    const valid = findValidSpawnCell(sp.c, sp.r);
+    const x = valid.c * CELL + 3;
+    const y = valid.r * CELL + 3;
     const tank = makeTank(x, y, "down", false);
     tank.color = ai.color;
     tank.aiName = ai.name;
@@ -322,6 +358,19 @@ export function toggleBattlePause() {
     if (window.battleOvPause) window.battleOvPause.classList.add("hidden");
     window.battleLastTime = performance.now();
   }
+}
+
+export function terminateBattle() {
+  if (window.state !== "playing" && window.state !== "paused") return;
+  window.state = "over";
+  gameState.value = "over";
+  if (window.battleOvPause) window.battleOvPause.classList.add("hidden");
+  const winnerEl = document.getElementById("ov-over-winner");
+  if (winnerEl) winnerEl.textContent = "比赛已终止";
+  const statsEl = document.getElementById("ov-over-stats");
+  if (statsEl) statsEl.textContent = "本局不记录成绩";
+  const ovOver = document.getElementById("ov-over");
+  if (ovOver) ovOver.classList.remove("hidden");
 }
 
 export function battleLoop(ts) {
