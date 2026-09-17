@@ -47,6 +47,13 @@
     </div>
     <div id="tank-actions">
       <button
+        v-if="isPlaying"
+        class="btn-terminate"
+        @click="$emit('terminate')"
+      >
+        ⏹ 终止比赛
+      </button>
+      <button
         id="btn-import-ai"
         :disabled="isPlaying"
         @click="openServerAILoad"
@@ -108,6 +115,8 @@ import { getToken, getUserInfo } from "@/utils/user.js";
 import { generateFingerprint } from "@/utils/fingerprint.js";
 import ScriptImportModal from "@/components/ScriptImportModal.vue";
 import ServerAIModal from "./ServerAIModal.vue";
+
+defineEmits(["terminate"]);
 
 const route = useRoute();
 const router = useRouter();
@@ -361,5 +370,15 @@ async function battleArenaOnImport(scriptContent) {
 
 .btn-record:hover {
   background: #2a3a4a !important;
+}
+
+.btn-terminate {
+  background: #3a2020 !important;
+  border-color: #7a3a3a !important;
+  color: #ff6b6b !important;
+}
+
+.btn-terminate:hover {
+  background: #4a2a2a !important;
 }
 </style>

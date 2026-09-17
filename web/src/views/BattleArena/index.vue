@@ -14,7 +14,7 @@
         @fullscreen="handleFullscreen"
       />
     </div>
-    <TankPanel @import="handleImport" />
+    <TankPanel @import="handleImport" @terminate="terminateBattle" />
     <input
       type="file"
       id="ai-file-multi"
@@ -37,6 +37,7 @@ import {
   initBattleGame,
   startBattle,
   toggleBattlePause,
+  terminateBattle,
 } from "./logic/battleEngine.js";
 import { importAIFiles } from "./logic/aiManager.js";
 import Hud from "./components/Hud.vue";
