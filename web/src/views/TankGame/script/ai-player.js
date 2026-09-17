@@ -45,7 +45,7 @@ import {
   GRASS,
   cellOf,
   centerOf,
-} from "./base.js";
+} from "./base/index.js";
 
 // ---------------- 本地实现的路径/判定工具（不依赖 DefaultAI） ----------------
 const ctxCellOf = (x, y) => ({

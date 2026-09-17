@@ -8,7 +8,7 @@ import {
   GRASS,
   BORDER,
   protectedKey,
-} from "./base.js";
+} from "./base/index.js";
 
 export const GameUtils = {
   // 获取所有存活坦克的位置

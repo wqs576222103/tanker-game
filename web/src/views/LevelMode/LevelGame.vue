@@ -40,7 +40,7 @@ import { useRoute, useRouter } from "vue-router";
 import { getToken, getUserInfo } from "@/utils/user";
 import { saveLevelRecord } from "@/api/levelRecord";
 import { LEVELS, unlockNextLevel } from "@/views/TankGame/script/levels.js";
-import { clearLevelMode } from "@/views/TankGame/script/base.js";
+import { clearLevelMode } from "@/views/TankGame/script/base/index.js";
 import { AIPlayer } from "@/views/TankGame/script/ai-player.js";
 import LevelAI from "@/views/TankGame/script/ai-tanker/level-tank.js";
 import Level1 from "./levels/Level1.vue";

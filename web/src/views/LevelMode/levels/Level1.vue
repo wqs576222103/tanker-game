@@ -28,7 +28,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
 import Map from "@/views/TankGame/components/Map/index.vue";
-import { setLevelMode } from "@/views/TankGame/script/base.js";
+import { setLevelMode } from "@/views/TankGame/script/base/index.js";
 import { useGameTimer } from "./useGameTimer.js";
 
 const emit = defineEmits(["level-complete", "level-failed"]);

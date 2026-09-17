@@ -27,7 +27,7 @@ import {
   gameOver,
   updateHud,
   sfx,
-} from "./base.js";
+} from "./base/index.js";
 
 export const TankActions = {
   // 移动坦克

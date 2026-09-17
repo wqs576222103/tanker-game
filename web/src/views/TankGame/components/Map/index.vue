@@ -115,7 +115,7 @@ import { useRoute } from "vue-router";
 import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 import { getToken, getUserInfo } from "@/utils/user";
 import { getAiScript, uploadAiScript } from "@/api/ai.js";
-import { initGame, stopGameLoop } from "../../script/base.js";
+import { initGame, stopGameLoop } from "../../script/base/index.js";
 import { AIPlayer } from "../../script/ai-player.js";
 import SurvivalAI from "../../script/ai-tanker/survival-tank.js";
 import DefaultAI from "../../script/ai-tanker/default-tank.js";

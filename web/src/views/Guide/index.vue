@@ -37,7 +37,7 @@ import {
   W,
   H,
   spawnItemAtCell,
-} from "@/views/TankGame/script/base.js";
+} from "@/views/TankGame/script/base/index.js";
 
 const router = useRouter();
 const mapRef = ref(null);
