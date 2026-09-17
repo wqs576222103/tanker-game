@@ -719,6 +719,12 @@ export function buildBattleContext(ai) {
       },
       isBlocked(dir) {
         if (!ownTank) return true;
+        if (
+          !dir ||
+          typeof dir.x === "undefined" ||
+          typeof dir.y === "undefined"
+        )
+          return true;
         const px = ownTank.x + ownTank.w / 2;
         const py = ownTank.y + ownTank.h / 2;
         const nx = px + (dir.x || 0) * CELL;
@@ -744,6 +750,12 @@ export function buildBattleContext(ai) {
       },
       getFreeDistance(dir) {
         if (!ownTank) return 0;
+        if (
+          !dir ||
+          typeof dir.x === "undefined" ||
+          typeof dir.y === "undefined"
+        )
+          return 0;
         const w = ownTank.w || 20,
           h = ownTank.h || 20;
         let px = ownTank.x + w / 2,
@@ -1170,6 +1182,8 @@ export function buildBattleContext(ai) {
     },
     isBlocked(dir) {
       if (!ownTank) return true;
+      if (!dir || typeof dir.x === "undefined" || typeof dir.y === "undefined")
+        return true;
       const px = ownTank.x + ownTank.w / 2;
       const py = ownTank.y + ownTank.h / 2;
       const nx = px + (dir.x || 0) * CELL;
@@ -1195,6 +1209,8 @@ export function buildBattleContext(ai) {
     },
     getFreeDistance(dir) {
       if (!ownTank) return 0;
+      if (!dir || typeof dir.x === "undefined" || typeof dir.y === "undefined")
+        return 0;
       const w = ownTank.w || 20,
         h = ownTank.h || 20;
       let px = ownTank.x + w / 2,

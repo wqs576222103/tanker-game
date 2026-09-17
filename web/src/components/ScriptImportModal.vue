@@ -56,13 +56,29 @@
         </div>
 
         <div class="modal-tip-text">
-          <strong>第三步：粘贴AI生成的脚本并确认导入</strong>
+          <strong>第三步：导入脚本</strong>
         </div>
-        <textarea
-          v-model="scriptContent"
-          placeholder="将AI生成的脚本代码粘贴到此处..."
-          class="script-textarea"
-        ></textarea>
+        <div class="script-input-area">
+          <div class="file-import-section">
+            <button class="btn-import-file" @click="triggerFileInput">
+              <span class="icon">📁</span> 选择本地脚本文件导入
+            </button>
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".js"
+              class="hidden-file-input"
+              @change="handleFileImport"
+            />
+            <span v-if="fileName" class="file-name">{{ fileName }}</span>
+            <span class="or-divider">或者粘贴脚本</span>
+          </div>
+          <textarea
+            v-model="scriptContent"
+            placeholder="将AI生成的脚本代码粘贴到此处..."
+            class="script-textarea"
+          ></textarea>
+        </div>
         <div v-if="scriptError" class="modal-error">{{ scriptError }}</div>
       </div>
       <div class="modal-footer">
@@ -100,6 +116,8 @@ const scriptContent = ref("");
 const scriptError = ref("");
 const loading = ref(false);
 const copySuccess = ref(false);
+const fileInput = ref(null);
+const fileName = ref("");
 
 function downloadPrompt() {
   const link = document.createElement("a");
@@ -123,6 +141,32 @@ async function copyPromptToClipboard() {
     console.error("复制失败:", err);
     scriptError.value = "复制失败，请手动下载提示词文件";
   }
+}
+
+function triggerFileInput() {
+  fileInput.value.click();
+}
+
+function handleFileImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!file.name.endsWith(".js")) {
+    scriptError.value = "请选择.js格式的文件";
+    return;
+  }
+
+  fileName.value = file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    scriptContent.value = e.target.result;
+    scriptError.value = "";
+  };
+  reader.onerror = () => {
+    scriptError.value = "文件读取失败";
+  };
+  reader.readAsText(file);
+  event.target.value = "";
 }
 
 async function handleImport() {
@@ -168,7 +212,7 @@ async function handleImport() {
   background: #1e2b22;
   border: 1px solid #4a5a4a;
   border-radius: 10px;
-  width: 480px;
+  width: 520px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -322,6 +366,54 @@ async function handleImport() {
 
 .script-textarea::placeholder {
   color: #6a7a6a;
+}
+
+.script-input-area {
+  position: relative;
+}
+
+.file-import-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.or-divider {
+  color: #6a7a6a;
+  font-size: 12px;
+}
+
+.btn-import-file {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #2a3a2a;
+  color: #9fb6a6;
+  border: 1px solid #4a5a4a;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-import-file:hover {
+  background: #3a4a3a;
+  color: #cfe3cf;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.file-name {
+  color: #4ade80;
+  font-size: 12px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .modal-error {
