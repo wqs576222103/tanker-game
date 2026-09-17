@@ -9,10 +9,10 @@
         <div class="modal-tip-text">
           <strong>第一步：获取AI提示词</strong>
           <div class="action-buttons">
-            <!-- <button class="btn-action" @click="downloadPrompt">
+            <button class="btn-action" @click="downloadPrompt">
               <span class="icon">⬇️</span> 下载提示词文件
-            </button> -->
-            <!-- <span class="action-or">或者</span> -->
+            </button>
+            <span class="action-or">或者</span>
             <button class="btn-action" @click="copyPromptToClipboard">
               <span class="icon">📋</span> 复制提示词到剪贴板
             </button>
@@ -23,7 +23,7 @@
         <div class="modal-tip-text">
           <strong>第二步：使用AI生成脚本</strong>
           <div class="ai-sites">
-            打开一个AI网站，可以为下方链接网址：
+            打开一个AI网站，可以点击下方链接：
             <div class="site-links">
               <a
                 href="https://tongyi.aliyun.com/qianwen"
@@ -49,8 +49,8 @@
             </div>
             <br />
             <span
-              >将复制提示词发送给AI，并追加定制说明：
-              "我想要生成一个xxx的坦克"。</span
+              >将复制提示词发送给AI，并在提示词后面追加坦克类型说明，如：
+              "我想要生成一个优先拾取道具，躲避攻击，移动持续进攻的的坦克"。</span
             >
           </div>
         </div>
