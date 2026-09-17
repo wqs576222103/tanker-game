@@ -1249,6 +1249,17 @@ export function explodeMine(m) {
       if (t.hp <= 0) killEnemy(t);
     }
   }
+  // 波及 3x3 范围内的boss
+  if (boss && boss.alive) {
+    const bx = boss.x + boss.w / 2,
+      by = boss.y + boss.h / 2;
+    if (bx >= x1 && bx < x2 && by >= y1 && by < y2) {
+      boss.hp -= 6;
+      boss.flash = 90;
+      spawnExplosion(boss.x + boss.w / 2, boss.y + boss.h / 2, 40, "#ff8a5a");
+      if (boss.hp <= 0) killBoss();
+    }
+  }
   updateHud();
 }
 
@@ -1260,6 +1271,11 @@ export function updateMines(dt) {
       if (TankActions.rectHit({ x: t.x, y: t.y, w: t.w, h: t.h }, m)) {
         explodeMine(m);
         break;
+      }
+    }
+    if (!m.dead && boss && boss.alive) {
+      if (TankActions.rectHit({ x: boss.x, y: boss.y, w: boss.w, h: boss.h }, m)) {
+        explodeMine(m);
       }
     }
   }

@@ -44,6 +44,7 @@ const completed = ref(false);
 const step = ref(0);
 const grassEntered = ref(false);
 const minePickedUp = ref(false);
+const minePlaced = ref(false);
 const shieldPickedUp = ref(false);
 let mineSpawned = false;
 let shieldSpawned = false;
@@ -80,10 +81,10 @@ const steps = [
     },
   },
   {
-    title: "拾取地雷",
-    text: "移动到绿色标记处拾取 💣 地雷",
+    title: "放置地雷",
+    text: "移动到绿色标记处拾取 💣 地雷，然后按 K 放置",
     target: MINE_TARGET,
-    validate: () => minePickedUp.value,
+    validate: () => minePlaced.value,
   },
   {
     title: "拾取道具",
@@ -196,6 +197,10 @@ function tutorialUpdate() {
   // ── 检测必须放在 updateItems 之后（update 已处理）──
   if (!minePickedUp.value && (p.mines || 0) > 0) {
     minePickedUp.value = true;
+  }
+  // 拾取后按 K 放置地雷（地雷数量减少）
+  if (minePickedUp.value && !minePlaced.value && (p.mines || 0) < 3) {
+    minePlaced.value = true;
   }
   if (!shieldPickedUp.value && (p.shieldT || 0) > (window.gtMs || 0)) {
     shieldPickedUp.value = true;
