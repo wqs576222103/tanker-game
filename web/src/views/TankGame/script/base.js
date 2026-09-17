@@ -539,6 +539,7 @@ export function connectivityOk() {
 }
 
 export function placeGates() {
+  if (window.tutorialGateBlock) { gates = []; window.gates = gates; return; }
   gates = [];
   const mkGate = (c1, r1, c2, r2, pair) => {
     const g = { cells: [], partner: null, pair };
@@ -738,14 +739,17 @@ export function resetGame() {
   window.player = player;
   tanks.push(player);
 
-  // 关卡模式：生成初始敌军（initialEnemies 配置 > 0 时）
-  if (window.levelMode && window.levelConfig?.initialEnemies) {
-    for (let i = 0; i < window.levelConfig.initialEnemies; i++) {
+  // 教学模式：初始不生成敌人，由教学步骤触发
+  if (!window.tutorialMode) {
+    // 关卡模式：生成初始敌军（initialEnemies 配置 > 0 时）
+    if (window.levelMode && window.levelConfig?.initialEnemies) {
+      for (let i = 0; i < window.levelConfig.initialEnemies; i++) {
+        spawnEnemy(true);
+      }
+    } else {
+      spawnEnemy(true);
       spawnEnemy(true);
     }
-  } else {
-    spawnEnemy(true);
-    spawnEnemy(true);
   }
   updateHud();
 }
@@ -764,9 +768,11 @@ export function spawnEnemy(instant) {
 
   // 关卡模式：使用关卡指定的敌人生成点
   const enemySpawns =
-    window.levelMode && window.levelConfig?.enemySpawns
-      ? window.levelConfig.enemySpawns
-      : ENEMY_SPAWNS;
+    window.tutorialEnemySpawns && window.tutorialMode
+      ? window.tutorialEnemySpawns
+      : window.levelMode && window.levelConfig?.enemySpawns
+        ? window.levelConfig.enemySpawns
+        : ENEMY_SPAWNS;
 
   const available = enemySpawns.filter((s) => {
     if (!player || !player.alive) return true;
@@ -817,7 +823,7 @@ export function spawnEnemy(instant) {
       : Math.min(55 + diff * 10, 88);
   t.hp = baseEnemyHp;
   t.maxHp = baseEnemyHp;
-  t.invincible = instant ? 300 : 800;
+  t.invincible = window.tutorialMode ? 0 : (instant ? 300 : 800);
   tanks.push(t);
   sfx("enemy");
 }
@@ -1086,6 +1092,21 @@ export function spawnItemAtTank(t) {
   });
 }
 
+// 教学模式：在指定格子位置生成道具（无时限）
+export function spawnItemAtCell(c, r, itemId) {
+  const def = ITEMS.find((it) => it.id === itemId);
+  if (!def) return;
+  items.push({
+    def,
+    x: c * CELL,
+    y: r * CELL,
+    size: CELL,
+    age: 0,
+    life: 999999999,
+    dead: false,
+  });
+}
+
 export function spawnRandomItem() {
   const empty = [];
   for (let r = 1; r < ROWS - 1; r++)
@@ -1117,6 +1138,10 @@ export function spawnRandomItem() {
 window.damageFlash = 0;
 window.itemSpawnTimer = 3;
 window.deathReason = "";
+window.tutorialMode = false;
+window.tutorialHooks = { update: null, render: null };
+window.tutorialGateBlock = false;
+window.tutorialSpawnEnemies = false;
 export function updateItems(dt) {
   itemSpawnTimer -= dt;
   if (itemSpawnTimer <= 0) {
@@ -1250,7 +1275,10 @@ export function update(dt) {
 
   TankActions.updatePlayer(dt);
   TankActions.updateBullets(dt);
-  TankActions.updateEnemies(dt);
+  // 教学模式下冻结敌人：不移动、不射击、不生成新敌人
+  if (!window.tutorialMode) {
+    TankActions.updateEnemies(dt);
+  }
   updateMines(dt);
   updateItems(dt);
   updateParticles(dt);
@@ -1271,6 +1299,18 @@ export function update(dt) {
   } else {
     // 检查是否需要生成新boss
     checkSpawnBoss();
+  }
+
+  // 教学模式：调用外部更新钩子
+  if (window.tutorialMode && window.tutorialHooks?.update) {
+    window.tutorialHooks.update(dt);
+  }
+
+  // 教学模式：在消灭敌人步骤时生成敌人
+  if (window.tutorialMode && window.tutorialSpawnEnemies) {
+    window.tutorialSpawnEnemies = false;
+    spawnEnemy(true);
+    spawnEnemy(true);
   }
 }
 
@@ -1870,6 +1910,11 @@ export function loop(ts) {
     ctx.strokeStyle = `rgba(255, 0, 0, ${0.4 * Math.min(1, damageFlash / 150)})`;
     ctx.lineWidth = 12;
     ctx.strokeRect(2, 2, W - 4, H - 4);
+  }
+
+  // 教学模式：调用外部渲染钩子（在所有游戏画面之后绘制）
+  if (window.tutorialMode && window.tutorialHooks?.render) {
+    window.tutorialHooks.render(ctx);
   }
 
   rafId = requestAnimationFrame(loop);
