@@ -111,6 +111,7 @@ onUnmounted(() => {
   window.map = [];
   window.gates = [];
   window.crackHp = {};
+  window.mapGenerated = false;
   window.player = null;
   window.tanks = [];
   window.bullets = [];
