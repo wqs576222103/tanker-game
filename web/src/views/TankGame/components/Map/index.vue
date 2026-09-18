@@ -29,8 +29,8 @@
             >🗺️ 每局障碍随机生成</template
           ><br />
         </p>
-        <p v-if="!levelMode" style="color: #e0a93a; font-size: 18px">
-          点击下方"导入AI"按钮，获取脚本，定制化你的AI坦克。
+        <p v-if="!levelMode" style="color: #e0a93a; font-size: 16px">
+          点击下方 “📥 导入AI” 按钮，获取提示词，生成脚本，定制化你的AI坦克吧。
         </p>
         <button id="btn-start">{{ startButtonText }}</button>
       </div>
