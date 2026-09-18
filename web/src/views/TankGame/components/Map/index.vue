@@ -84,7 +84,7 @@
         重新开始 R
       </button>
       <button id="btn-ai" class="btn-ai-btn" v-show="!hideAi">🤖 AI: 关</button>
-      <button id="btn-speed" style="display: none" v-show="!hideSpeed">
+      <button id="btn-speed" v-show="!hideSpeed">
         ⏩ 1x
       </button>
       <button

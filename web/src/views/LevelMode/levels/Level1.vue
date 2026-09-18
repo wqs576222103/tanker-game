@@ -2,7 +2,6 @@
   <div class="level-wrap">
     <Map
       :hideAi="true"
-      :hideSpeed="true"
       :hideImportAi="true"
       :hideDeathLog="true"
       :title="config.name"

@@ -30,7 +30,7 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getUserInfoByToken } from "@/api";
 import { getToken, getUserInfo } from "@/utils/user";
@@ -99,6 +99,32 @@ onMounted(async () => {
       console.error("获取用户信息失败:", err);
     }
   }
+});
+
+onUnmounted(() => {
+  window.state = "start";
+  window.kills = 0;
+  window.bossKills = 0;
+  window.gtMs = 0;
+  window.spawnTimer = 2;
+  window.gameSpeed = 1;
+  window.map = [];
+  window.gates = [];
+  window.crackHp = {};
+  window.player = null;
+  window.tanks = [];
+  window.bullets = [];
+  window.items = [];
+  window.mines = [];
+  window.drones = [];
+  window.particles = [];
+  window.floats = [];
+  window.lastTeleport = {};
+  window.boss = null;
+  window.shootQueued = false;
+  window.damageFlash = 0;
+  window.itemSpawnTimer = 3;
+  window.deathReason = "";
 });
 
 function openGameIntro() {
