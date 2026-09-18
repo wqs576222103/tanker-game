@@ -4,6 +4,7 @@
       :hideAi="true"
       :hideImportAi="true"
       :hideDeathLog="true"
+      :hideRefreshMap="true"
       :title="config.name"
     />
 

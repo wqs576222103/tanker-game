@@ -1,6 +1,6 @@
 <template>
   <div class="guide-wrap">
-    <Map ref="mapRef" :hideAi="true" :hideSpeed="true" :hideImportAi="true" :hideDeathLog="true" title="新 手 教 学" startButtonText="开 始 教 学" />
+    <Map ref="mapRef" :hideAi="true" :hideSpeed="true" :hideImportAi="true" :hideDeathLog="true" :hideRefreshMap="true" title="新 手 教 学" startButtonText="开 始 教 学" />
 
     <button class="return-game-btn" @click="goBackToGame">返回游戏</button>
 

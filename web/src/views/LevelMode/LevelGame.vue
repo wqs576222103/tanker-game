@@ -67,10 +67,8 @@ if (!levelConfig.value) {
   router.replace({ name: "LevelSelect" });
 }
 
-onBeforeRouteLeave((to) => {
-  if (to.name !== "LevelGame" && to.name !== "LevelSelect") {
-    clearLevelMode();
-  }
+onBeforeRouteLeave(() => {
+  clearLevelMode();
 });
 
 function onLevelComplete(detail) {

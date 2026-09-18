@@ -71,6 +71,14 @@
       </div>
     </div>
     <div id="btn-group" class="none-select">
+       <button
+        id="btn-refresh-map"
+        :disabled="gameState === 'playing' || gameState === 'paused'"
+        v-show="!hideRefreshMap"
+        @click="refreshMap"
+      >
+        🗺️ 刷新地图
+      </button>
       <button
         id="btn-pause"
         :style="{ display: gameState === 'start' ? 'none' : '' }"
@@ -84,6 +92,7 @@
         重新开始 R
       </button>
       <button id="btn-ai" class="btn-ai-btn" v-show="!hideAi">🤖 AI: 关</button>
+    
       <button id="btn-speed" v-show="!hideSpeed">
         ⏩ 1x
       </button>
@@ -118,7 +127,7 @@ import { useRoute } from "vue-router";
 import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 import { getToken, getUserInfo } from "@/utils/user";
 import { getAiScript, uploadAiScript } from "@/api/ai.js";
-import { initGame, stopGameLoop } from "../../script/base/index.js";
+import { initGame, stopGameLoop, resetGame } from "../../script/base/index.js";
 import { AIPlayer } from "../../script/ai-player.js";
 import SurvivalAI from "../../script/ai-tanker/survival-tank.js";
 import DefaultAI from "../../script/ai-tanker/default-tank.js";
@@ -139,6 +148,10 @@ const props = defineProps({
     default: false,
   },
   hideDeathLog: {
+    type: Boolean,
+    default: false,
+  },
+  hideRefreshMap: {
     type: Boolean,
     default: false,
   },
@@ -233,6 +246,12 @@ async function tankGameOnImport(scriptContent) {
   }
   AIPlayer.updateUI();
 }
+
+function refreshMap() {
+  if (gameState.value === "playing" || gameState.value === "paused") return;
+  window.mapGenerated = false;
+  resetGame();
+}
 </script>
 
 <style scoped>
@@ -294,6 +313,10 @@ canvas {
 }
 #btn-group button:active {
   background: #3a4a3a;
+}
+#btn-group button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 #btn-group button.active {
   background: #4a7a4a;
