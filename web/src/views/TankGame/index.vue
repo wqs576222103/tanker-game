@@ -18,7 +18,7 @@
       <a class="ranking-link battle" @click.prevent="openWindow(tankBattle)"
         >AI坦克对决</a
       > -->
-      <!-- <button class="ranking-link battle" @click="goGuide">新手教学</button> -->
+      <button class="ranking-link battle" @click="goGuide">新手教学</button>
       <button class="ranking-link battle" @click="openGameIntro">
         游戏介绍
       </button>
@@ -36,7 +36,10 @@ import { getUserInfoByToken } from "@/api";
 import { getToken, getUserInfo } from "@/utils/user";
 import Map from "./components/Map/index.vue";
 import GameIntro from "./components/GameIntro/index.vue";
-import { togglePause } from "./script/base/index.js";
+import { togglePause, clearLevelMode } from "./script/base/index.js";
+
+window.mapGenerated = false;
+clearLevelMode();
 
 const route = useRoute();
 const router = useRouter();

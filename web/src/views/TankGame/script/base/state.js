@@ -22,7 +22,7 @@ window.flagCarrier = null;
 window.flagPosition = null;
 window.levelCompleted = false;
 
-// 解救小狗关卡状态
+// 解救橘猫关卡状态
 window.dogRescued = false;
 window.dogDoorLocked = true;
 window.bossKeyDropped = false;

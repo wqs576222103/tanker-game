@@ -1,7 +1,7 @@
 import playerSvg from "@/assets/player.svg";
 import enemySvg from "@/assets/enemy.svg";
 import bossSvg from "@/assets/enemy-boss.svg";
-import dogSvg from "@/assets/dog.svg";
+import dogSvg from "@/assets/cat.svg";
 import bgmMp3 from "@/assets/mp3/tank/background.mp3";
 import bonusMp3 from "@/assets/mp3/tank/bonus.mp3";
 import deathMp3 from "@/assets/mp3/tank/death.mp3";
@@ -81,7 +81,7 @@ export function setLevelMode(levelConfig) {
       team: levelConfig.flag.team,
     };
   }
-  // 解救小狗关卡初始化
+  // 解救橘猫关卡初始化
   if (levelConfig.objective.type === "rescueDog") {
     window.dogRescued = false;
     window.dogDoorLocked = true;
@@ -104,7 +104,7 @@ export function clearLevelMode() {
   window.flagCaptured = false;
   window.flagCarrier = null;
   window.flagPosition = null;
-  // 解救小狗关卡状态重置
+  // 解救橘猫关卡状态重置
   window.dogRescued = false;
   window.dogDoorLocked = true;
   window.bossKeyDropped = false;
@@ -156,7 +156,7 @@ export function checkLevelWin() {
     case "killBoss":
       return window.bossKills > (window.levelLastBossKills || 0);
     case "rescueDog":
-      // 解救小狗：需要击杀boss获取钥匙，然后打开门解救小狗
+      // 解救橘猫：需要击杀boss获取钥匙，然后打开门解救橘猫
       return window.dogRescued;
     default:
       return false;
@@ -223,7 +223,7 @@ window.flagCarrier = null;
 window.flagPosition = null;
 window.levelCompleted = false;
 
-// 解救小狗关卡状态
+// 解救橘猫关卡状态
 window.dogRescued = false;
 window.dogDoorLocked = true;
 window.bossKeyDropped = false;
@@ -659,7 +659,7 @@ export function resetGame() {
   baseEnemyHp = window.levelConfig?.baseEnemyHp || 2;
   window.levelLastBossKills = 0;
 
-  // 解救小狗关卡状态重置
+  // 解救橘猫关卡状态重置
   if (window.levelMode && window.levelConfig?.objective.type === "rescueDog") {
     window.dogRescued = false;
     window.dogDoorLocked = true;
@@ -925,7 +925,7 @@ export function killEnemy(t) {
 export function checkSpawnBoss() {
   if (boss && boss.alive) return;
 
-  // 解救小狗关卡：击杀达标后生成boss
+  // 解救橘猫关卡：击杀达标后生成boss
   if (window.levelMode && window.levelConfig?.objective.type === "rescueDog") {
     const threshold = window.levelConfig.bossThreshold || 10;
     if (kills >= threshold && !boss) {
@@ -958,7 +958,7 @@ export function killBoss() {
   // 防止击杀数超过阈值立即刷新下一个boss
   lastBossKills = Math.max(lastBossKills, kills);
 
-  // 解救小狗关卡：Boss掉落钥匙
+  // 解救橘猫关卡：Boss掉落钥匙
   if (
     window.levelMode &&
     window.levelConfig?.objective.type === "rescueDog" &&
@@ -995,7 +995,7 @@ export function spawnItemAtPosition(x, y) {
   });
 }
 
-// 在指定位置生成钥匙道具（解救小狗关卡）
+// 在指定位置生成钥匙道具（解救橘猫关卡）
 export function spawnKeyItem(x, y) {
   const cc = cellOf(x, y);
   if (map[cc.r][cc.c] !== EMPTY) return;
@@ -1011,7 +1011,7 @@ export function spawnKeyItem(x, y) {
   addFloat(x, y - 10, "钥匙已掉落！", "#ffd700");
 }
 
-// 解锁小狗牢笼的门
+// 解锁橘猫牢笼的门
 export function unlockDogDoor() {
   if (!window.dogDoorLocked) return;
   window.dogDoorLocked = false;
@@ -1029,7 +1029,7 @@ export function unlockDogDoor() {
   sfx("pickup");
 }
 
-// 解救小狗（玩家触碰小狗）
+// 解救橘猫（玩家触碰橘猫）
 export function rescueDog() {
   if (window.dogRescued) return;
   if (window.dogDoorLocked) return; // 门还锁着不能解救
@@ -1041,7 +1041,7 @@ export function rescueDog() {
   const dogX = dogPos.c * CELL + CELL / 2;
   const dogY = dogPos.r * CELL + CELL / 2;
 
-  // 检查玩家是否在小狗附近
+  // 检查玩家是否在橘猫附近
   if (!player || !player.alive) return;
   const playerCx = player.x + player.w / 2;
   const playerCy = player.y + player.h / 2;
@@ -1049,7 +1049,7 @@ export function rescueDog() {
 
   if (dist < CELL * 2) {
     window.dogRescued = true;
-    addFloat(dogX, dogY - 20, "小狗已解救！", "#7de07d");
+    addFloat(dogX, dogY - 20, "橘猫已解救！", "#7de07d");
     sfx("pickup");
     spawnExplosion(dogX, dogY, 30, "#7de07d");
     // 触发关卡完成
@@ -1175,7 +1175,7 @@ export function pickupItem(it) {
   spawnExplosion(it.x + CELL / 2, it.y + CELL / 2, 20, it.def.color);
   switch (id) {
     case "key":
-      // 钥匙：解锁小狗牢笼的门
+      // 钥匙：解锁橘猫牢笼的门
       unlockDogDoor();
       break;
     case "drone":
@@ -1303,7 +1303,7 @@ export function update(dt) {
   // 关卡模式：检测旗帜拾取
   checkFlagCapture();
 
-  // 解救小狗关卡：检测玩家是否触碰小狗
+  // 解救橘猫关卡：检测玩家是否触碰橘猫
   if (window.levelMode && window.levelConfig?.objective.type === "rescueDog") {
     rescueDog();
   }
@@ -1607,7 +1607,7 @@ export function drawBoss() {
   ctx.globalAlpha = 1;
 }
 
-// 绘制小狗和牢笼（解救小狗关卡）
+// 绘制橘猫和牢笼（解救橘猫关卡）
 export function drawDogCage() {
   if (!window.levelMode || window.levelConfig?.objective.type !== "rescueDog")
     return;
@@ -1651,14 +1651,14 @@ export function drawDogCage() {
     ctx.fillText("🔒", doorX + CELL / 2, doorY + CELL / 2);
   }
 
-  // 绘制小狗（始终显示在牢笼内）
+  // 绘制橘猫（始终显示在牢笼内）
   if (dogPosition && !window.dogRescued) {
     const dogX = dogPosition.c * CELL;
     const dogY = dogPosition.r * CELL;
     const cx = dogX + CELL / 2;
     const cy = dogY + CELL / 2;
 
-    // 绘制小狗光圈（门打开后更亮）
+    // 绘制橘猫光圈（门打开后更亮）
     const pulse = 0.5 + 0.5 * Math.sin(gtMs / 200);
     const glowAlpha = window.dogDoorLocked ? 0.15 : 0.3 + pulse * 0.2;
     ctx.fillStyle = `rgba(125, 224, 125, ${glowAlpha})`;
@@ -1666,7 +1666,7 @@ export function drawDogCage() {
     ctx.arc(cx, cy, CELL * 1.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // 绘制小狗
+    // 绘制橘猫
     if (dogImg && dogImg.complete && dogImg.naturalWidth > 0) {
       ctx.drawImage(dogImg, dogX, dogY, CELL, CELL);
     } else {
@@ -1682,7 +1682,7 @@ export function drawDogCage() {
       ctx.fill();
     }
 
-    // 显示小狗图标
+    // 显示橘猫图标
     ctx.font = "18px serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";

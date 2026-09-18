@@ -96,8 +96,8 @@ function initCrackHp(map) {
 
 const config = {
   id: 2,
-  name: "解救小狗",
-  description: "击杀10个敌人后Boss出现，击败Boss获取钥匙，解救被困的小狗！",
+  name: "解救橘猫",
+  description: "击杀10个敌人后Boss出现，击败Boss获取钥匙，解救被困的橘猫！",
   map: level2Map,
   crackHp: initCrackHp(level2Map),
   playerSpawn: { c: 22, r: 26 },
@@ -111,7 +111,7 @@ const config = {
   objective: {
     type: "rescueDog",
     target: 10,
-    description: "击杀10个敌人后Boss出现，击败Boss获取钥匙解救小狗",
+    description: "击杀10个敌人后Boss出现，击败Boss获取钥匙解救橘猫",
   },
   dogCage: {
     dogPosition: { c: 22, r: 8 },

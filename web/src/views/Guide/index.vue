@@ -2,6 +2,8 @@
   <div class="guide-wrap">
     <Map ref="mapRef" :hideAi="true" :hideSpeed="true" :hideImportAi="true" :hideDeathLog="true" title="新 手 教 学" />
 
+    <button class="return-game-btn" @click="goBackToGame">返回游戏</button>
+
     <div v-if="started && !completed" class="tutorial-hud">
       <div class="step-indicator">
         <span v-for="(_, i) in steps" :key="i" class="dot" :class="{ active: i === step, done: i < step }"></span>
@@ -339,6 +341,11 @@ function goBack() {
   router.push({ name: "Home", query: { token: getToken() } });
 }
 
+function goBackToGame() {
+  cleanup();
+  router.push({ name: "TankGame", query: { token: getToken() } });
+}
+
 onMounted(async () => {
   await nextTick();
   setupTutorialGame();
@@ -354,6 +361,25 @@ onUnmounted(() => {
 .guide-wrap {
   position: absolute;
   inset: 0;
+}
+.return-game-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 50;
+  background: rgba(10, 15, 20, 0.85);
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.return-game-btn:hover {
+  background: rgba(30, 40, 50, 0.95);
+  border-color: rgba(148, 163, 184, 0.7);
+  color: #fff;
 }
 .tutorial-hud {
   position: absolute;

@@ -1,7 +1,7 @@
 import playerSvg from "@/assets/player.svg";
 import enemySvg from "@/assets/enemy.svg";
 import bossSvg from "@/assets/enemy-boss.svg";
-import dogSvg from "@/assets/dog.svg";
+import dogSvg from "@/assets/cat.svg";
 
 // ====================== 基础 ======================
 export const CELL = 20,

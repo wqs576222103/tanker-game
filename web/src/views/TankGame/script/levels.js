@@ -11,12 +11,12 @@ export const LEVELS = [
   },
   {
     id: 2,
-    name: "解救小狗",
-    description: "击杀10个敌人后Boss出现，击败Boss获取钥匙，解救被困的小狗！",
+    name: "解救橘猫",
+    description: "击杀10个敌人后Boss出现，击败Boss获取钥匙，解救被困的橘猫！",
     objective: {
       type: "rescueDog",
       target: 10,
-      description: "击杀10个敌人后Boss出现，击败Boss获取钥匙解救小狗",
+      description: "击杀10个敌人后Boss出现，击败Boss获取钥匙解救橘猫",
     },
   },
 ];

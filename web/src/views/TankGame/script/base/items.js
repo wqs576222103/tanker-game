@@ -146,7 +146,7 @@ export function rescueDog() {
 
   if (dist < CELL * 2) {
     window.dogRescued = true;
-    addFloat(dogX, dogY - 20, "小狗已解救！", "#7de07d");
+    addFloat(dogX, dogY - 20, "橘猫已解救！", "#7de07d");
     sfx("pickup");
     spawnExplosion(dogX, dogY, 30, "#7de07d");
     if (checkLevelWin()) {
