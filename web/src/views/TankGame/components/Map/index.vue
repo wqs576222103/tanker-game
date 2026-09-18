@@ -24,7 +24,10 @@
         </div>
         <p>
           ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />
-          🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
+          🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　<template
+            v-if="!levelMode"
+            >🗺️ 每局障碍随机生成</template
+          ><br />
         </p>
         <p v-if="!levelMode" style="color: #e0a93a; font-size: 18px">
           点击下方"导入AI"按钮，获取脚本，定制化你的AI坦克。
