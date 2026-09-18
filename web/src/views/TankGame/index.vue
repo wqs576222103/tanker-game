@@ -18,7 +18,7 @@
       <a class="ranking-link battle" @click.prevent="openWindow(tankBattle)"
         >AI坦克对决</a
       > -->
-      <button class="ranking-link battle" @click="goGuide">新手教学</button>
+      <!-- <button class="ranking-link battle" @click="goGuide">新手教学</button> -->
       <button class="ranking-link battle" @click="openGameIntro">
         游戏介绍
       </button>
