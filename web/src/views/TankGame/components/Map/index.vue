@@ -32,7 +32,7 @@
         <p v-if="!levelMode" style="color: #e0a93a; font-size: 18px">
           点击下方"导入AI"按钮，获取脚本，定制化你的AI坦克。
         </p>
-        <button id="btn-start">开 始 游 戏</button>
+        <button id="btn-start">{{ startButtonText }}</button>
       </div>
       <div class="overlay hidden" id="ov-over">
         <h2>游 戏 结 束</h2>
@@ -145,6 +145,10 @@ const props = defineProps({
   title: {
     type: String,
     default: "坦 克 训 练 师",
+  },
+  startButtonText: {
+    type: String,
+    default: "开 始 游 戏",
   },
 });
 

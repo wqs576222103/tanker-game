@@ -36,10 +36,7 @@ import { getUserInfoByToken } from "@/api";
 import { getToken, getUserInfo } from "@/utils/user";
 import Map from "./components/Map/index.vue";
 import GameIntro from "./components/GameIntro/index.vue";
-import { togglePause, clearLevelMode } from "./script/base/index.js";
-
-window.mapGenerated = false;
-clearLevelMode();
+import { togglePause } from "./script/base/index.js";
 
 const route = useRoute();
 const router = useRouter();

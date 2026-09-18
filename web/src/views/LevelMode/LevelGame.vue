@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getToken, getUserInfo } from "@/utils/user";
 import { saveLevelRecord } from "@/api/levelRecord";
@@ -159,6 +159,10 @@ onMounted(async () => {
     AIPlayer.toggle();
   }
   AIPlayer.setDefault(LevelAI);
+});
+
+onUnmounted(() => {
+  clearLevelMode();
 });
 </script>
 
