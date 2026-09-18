@@ -95,7 +95,27 @@ onMounted(() => {
 onUnmounted(() => {
   if (window.gameLoopId) {
     cancelAnimationFrame(window.gameLoopId);
+    window.gameLoopId = null;
   }
+  window.state = "start";
+  window.tanks = [];
+  window.bullets = [];
+  window.items = [];
+  window.mines = [];
+  window.drones = [];
+  window.particles = [];
+  window.floats = [];
+  window.boss = null;
+  window.lastTeleport = {};
+  window.gtMs = 0;
+  window.gameSpeed = 1;
+  window.map = [];
+  window.gates = [];
+  window.crackHp = {};
+  window.mapGenerated = false;
+  window.itemSpawnTimer = 3;
+  window.battleLastTime = 0;
+  window.battleOvPause = null;
 });
 </script>
 
