@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { getUserInfoByToken } from "@/api";
 import { setUserInfo, setToken } from "@/utils/user.js";
+import { clearLevelMode } from "@/views/TankGame/script/base/index.js";
 
 const routes = [
   {
@@ -74,6 +75,9 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, from, next) => {
+  if (to.name === "TankGame") {
+    clearLevelMode();
+  }
   const token = to.query.token;
   setToken(token);
   if (token) {
