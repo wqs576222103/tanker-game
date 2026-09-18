@@ -37,6 +37,7 @@ export function resetGame() {
     window.levelEnemiesDefeated = 0;
     window.flagCaptured = false;
     window.flagCarrier = null;
+    window.flagPosition = null;
     if (window.levelConfig.flag) {
       window.flagPosition = {
         x: window.levelConfig.flag.x,

@@ -35,8 +35,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import { getToken, getUserInfo } from "@/utils/user";
 import { saveLevelRecord } from "@/api/levelRecord";
 import { LEVELS, unlockNextLevel } from "@/views/TankGame/script/levels.js";
@@ -66,6 +66,12 @@ if (!levelConfig.value) {
   clearLevelMode();
   router.replace({ name: "LevelSelect" });
 }
+
+onBeforeRouteLeave((to) => {
+  if (to.name !== "LevelGame" && to.name !== "LevelSelect") {
+    clearLevelMode();
+  }
+});
 
 function onLevelComplete(detail) {
   levelTime.value = detail.time;
@@ -159,10 +165,6 @@ onMounted(async () => {
     AIPlayer.toggle();
   }
   AIPlayer.setDefault(LevelAI);
-});
-
-onUnmounted(() => {
-  clearLevelMode();
 });
 </script>
 
