@@ -47,6 +47,11 @@
               <span class="no-record">暂无记录</span>
             </div>
           </template>
+          <div class="level-stats" v-else-if="getLevelBestTime(level.id)">
+            <span class="personal-best"
+              >⏱ 最佳用时：{{ formatTime(getLevelBestTime(level.id)) }}</span
+            >
+          </div>
           <div class="level-stats" v-else>
             <span class="no-record"></span>
           </div>
@@ -74,7 +79,11 @@ import {
   getUserBestLevelRecords,
   getGlobalBestLevelRecords,
 } from "@/api/levelRecord";
-import { LEVELS, isLevelUnlocked } from "../TankGame/script/levels.js";
+import {
+  LEVELS,
+  isLevelUnlocked,
+  getUnlockedLevel,
+} from "../TankGame/script/levels.js";
 
 const router = useRouter();
 const userInfo = computed(() => getUserInfo());
@@ -136,6 +145,7 @@ async function loadUserLevelData() {
   if (!token) {
     const localBestTimes = loadLocalLevelRecords();
     userBestTimes.value = localBestTimes;
+    userUnlockedLevel.value = getUnlockedLevel();
     return;
   }
 
