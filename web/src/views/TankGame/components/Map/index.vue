@@ -261,9 +261,13 @@ async function tankGameOnImport(scriptContent) {
 }
 
 function refreshMap() {
-  if (gameState.value === "playing" || gameState.value === "paused") return;
+  if (gameState.value === "playing") return;
   window.mapGenerated = false;
   resetGame();
+  // 隐藏暂停/结束等遮罩，显示开始界面
+  document.getElementById("ov-pause").classList.add("hidden");
+  document.getElementById("ov-over").classList.add("hidden");
+  document.getElementById("ov-start").classList.remove("hidden");
 }
 </script>
 
