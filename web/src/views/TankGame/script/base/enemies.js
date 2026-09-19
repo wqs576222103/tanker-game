@@ -1,4 +1,4 @@
-import { CELL, COLS, ROWS, W, H, EMPTY, WALL, DIRS, ENEMY_SPAWNS } from "./constants.js";
+import { CELL, COLS, ROWS, W, H, EMPTY, WALL, GATE, BORDER, CRACK, DIRS, ENEMY_SPAWNS } from "./constants.js";
 import { cellOf, centerOf, randInt, protectedKey } from "./map.js";
 import { sfx } from "./audio.js";
 import { spawnExplosion, addFloat, makeTank } from "./effects.js";
@@ -8,6 +8,25 @@ import { spawnItemAtTank, spawnItemAtPosition, spawnKeyItem } from "./items.js";
 import { TankActions } from "../tank-actions.js";
 
 // ====================== 敌人 & Boss ======================
+
+function isPassableCell(c, r) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+  const t = window.map[r][c];
+  return t !== WALL && t !== BORDER && t !== CRACK && t !== GATE;
+}
+
+function findNearestPassable(c, r) {
+  if (isPassableCell(c, r)) return { c, r };
+  for (let dist = 1; dist <= 10; dist++) {
+    for (let dr = -dist; dr <= dist; dr++) {
+      for (let dc = -dist; dc <= dist; dc++) {
+        if (Math.abs(dr) !== dist && Math.abs(dc) !== dist) continue;
+        if (isPassableCell(c + dc, r + dr)) return { c: c + dc, r: r + dr };
+      }
+    }
+  }
+  return { c, r };
+}
 export function spawnEnemy(instant) {
   if (window.levelMode && window.levelConfig?.noRespawn) {
     const aliveEnemies = window.tanks.filter((t) => t.alive && !t.isPlayer).length;
@@ -20,21 +39,26 @@ export function spawnEnemy(instant) {
   const enemySpawns =
     window.tutorialEnemySpawns && window.tutorialMode
       ? window.tutorialEnemySpawns
-      : window.levelMode && window.levelConfig?.enemySpawns
-        ? window.levelConfig.enemySpawns
-        : ENEMY_SPAWNS;
+      : window.customEnemySpawns
+        ? window.customEnemySpawns
+        : window.levelMode && window.levelConfig?.enemySpawns
+          ? window.levelConfig.enemySpawns
+          : ENEMY_SPAWNS;
 
-  const available = enemySpawns.filter((s) => {
-    if (!window.player || !window.player.alive) return true;
-    const spCx = s.c * CELL + CELL / 2;
-    const spCy = s.r * CELL + CELL / 2;
-    const pCx = window.player.x + window.player.w / 2;
-    const pCy = window.player.y + window.player.h / 2;
-    return Math.abs(spCx - pCx) > 60 || Math.abs(spCy - pCy) > 60;
-  });
-  if (available.length === 0) return;
+  // 过滤掉不安全或不可通行的出生点
+  const safeSpawns = enemySpawns
+    .map((s) => findNearestPassable(s.c, s.r))
+    .filter((s) => {
+      if (!window.player || !window.player.alive) return true;
+      const spCx = s.c * CELL + CELL / 2;
+      const spCy = s.r * CELL + CELL / 2;
+      const pCx = window.player.x + window.player.w / 2;
+      const pCy = window.player.y + window.player.h / 2;
+      return Math.abs(spCx - pCx) > 60 || Math.abs(spCy - pCy) > 60;
+    });
+  if (safeSpawns.length === 0) return;
 
-  const free = available.filter((s) => {
+  const free = safeSpawns.filter((s) => {
     const sx = s.c * CELL + 2;
     const sy = s.r * CELL + 2;
     return !window.tanks.some(

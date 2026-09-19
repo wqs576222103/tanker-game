@@ -85,6 +85,14 @@
         🗺️ 更换地图
       </button>
       <button
+        id="btn-import-map"
+        :disabled="gameState === 'playing'"
+        v-show="!hideRefreshMap"
+        @click="showMapImport = true"
+      >
+        📥 导入地图
+      </button>
+      <button
         id="btn-pause"
         :style="{ display: gameState === 'start' ? 'none' : '' }"
       >
@@ -124,6 +132,11 @@
       :on-import="tankGameOnImport"
       @close="showScriptImport = false"
     />
+    <MapScriptImportModal
+      v-if="showMapImport"
+      :on-import="handleMapImport"
+      @close="showMapImport = false"
+    />
   </div>
 </template>
 <script setup>
@@ -138,6 +151,8 @@ import SurvivalAI from "../../script/ai-tanker/survival-tank.js";
 import DefaultAI from "../../script/ai-tanker/default-tank.js";
 import LevelAI from "../../script/ai-tanker/level-tank.js";
 import ScriptImportModal from "@/components/ScriptImportModal.vue";
+import MapScriptImportModal from "@/components/MapScriptImportModal.vue";
+import { parseMapScript, validateMapConfig } from "../../script/base/map-script.js";
 
 const props = defineProps({
   hideAi: {
@@ -182,6 +197,7 @@ const employeeId = ref("");
 const gameState = ref("start");
 const levelMode = ref(false);
 const showScriptImport = ref(false);
+const showMapImport = ref(false);
 let stateCheckInterval = null;
 const token = getToken();
 const route = useRoute();
@@ -260,8 +276,25 @@ async function tankGameOnImport(scriptContent) {
   AIPlayer.updateUI();
 }
 
+async function handleMapImport(scriptContent) {
+  const config = await parseMapScript(scriptContent);
+  const result = validateMapConfig(config);
+  if (!result.valid) {
+    throw new Error(result.message);
+  }
+  window.customMapConfig = config;
+  window.mapGenerated = false;
+  resetGame();
+  // 隐藏暂停/结束等遮罩，显示开始界面
+  document.getElementById("ov-pause").classList.add("hidden");
+  document.getElementById("ov-over").classList.add("hidden");
+  document.getElementById("ov-start").classList.remove("hidden");
+}
+
 function refreshMap() {
   if (gameState.value === "playing") return;
+  window.customMapConfig = null;
+  window.customEnemySpawns = null;
   window.mapGenerated = false;
   resetGame();
   // 隐藏暂停/结束等遮罩，显示开始界面

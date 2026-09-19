@@ -1,9 +1,9 @@
-import { CELL, COLS, ROWS, W, H, EMPTY, WALL, BORDER, CRACK, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL, PLAYER_SPAWN } from "./constants.js";
+import { CELL, COLS, ROWS, W, H, EMPTY, WALL, GATE, BORDER, CRACK, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL, PLAYER_SPAWN } from "./constants.js";
 import { genMap, centerOf, protectedKey, randInt, initDoorStates, toggleSwitch, isSpeedCell, isSpikeCell, isPortalCell, damageFallingStone } from "./map.js";
 import { sfx, stopBgm, playBgm, getDeathSoundTimer, setDeathSoundTimer } from "./audio.js";
 import { spawnExplosion, addFloat, makeTank } from "./effects.js";
 import { spawnEnemy, spawnBoss, checkSpawnBoss, maxEnemies } from "./enemies.js";
-import { spawnItemAtTank, spawnRandomItem, updateItems, updateMines, rescueDog, ITEMS } from "./items.js";
+import { spawnItemAtTank, spawnRandomItem, spawnItemAtCell, updateItems, updateMines, rescueDog, ITEMS } from "./items.js";
 import { updateParticles, updateFloats } from "./effects.js";
 import { updateHud, loadHighScore } from "./hud.js";
 import { AIPlayer } from "../ai-player.js";
@@ -14,6 +14,28 @@ import { getUserInfo } from "@/utils/user";
 import { checkLevelWin, showLevelComplete, checkFlagCapture, checkPortalReach } from "./level.js";
 
 // ====================== 游戏流程 ======================
+
+// 判断格子是否可通行（坦克能站上去）
+function isPassableCell(c, r) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+  const t = window.map[r][c];
+  return t !== WALL && t !== BORDER && t !== CRACK && t !== GATE;
+}
+
+// 从指定格子开始向外搜索，找到最近的可通行格子
+function findNearestPassable(c, r) {
+  if (isPassableCell(c, r)) return { c, r };
+  for (let dist = 1; dist <= 10; dist++) {
+    for (let dr = -dist; dr <= dist; dr++) {
+      for (let dc = -dist; dc <= dist; dc++) {
+        if (Math.abs(dr) !== dist && Math.abs(dc) !== dist) continue;
+        if (isPassableCell(c + dc, r + dr)) return { c: c + dc, r: r + dr };
+      }
+    }
+  }
+  return { c, r }; // fallback
+}
+
 export function resetGame() {
   window.state = "start";
   window.gtMs = 0;
@@ -47,7 +69,51 @@ export function resetGame() {
     }
   }
 
-  if (window.levelMode && window.levelConfig?.map) {
+  if (window.customMapConfig) {
+    const cfg = window.customMapConfig;
+    window.map = cfg.map.map((row) => [...row]);
+    window.crackHp = cfg.crackHp ? { ...cfg.crackHp } : {};
+
+    // 为未指定 HP 的碎石墙生成默认值
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++) {
+        if (window.map[r][c] === CRACK && !window.crackHp[protectedKey(c, r)]) {
+          window.crackHp[protectedKey(c, r)] = 2 + randInt(0, 1);
+        }
+      }
+
+    // 构建传送门
+    window.gates = [];
+    if (cfg.gates && cfg.gates.length > 0) {
+      const gateMap = {};
+      for (const gDef of cfg.gates) {
+        const g = { cells: gDef.cells || [], partner: null, pair: gDef.pair || "" };
+        for (const cell of g.cells) {
+          if (window.map[cell.r]) window.map[cell.r][cell.c] = GATE;
+        }
+        window.gates.push(g);
+        if (gDef.pair) gateMap[gDef.pair] = gateMap[gDef.pair] || [];
+        gateMap[gDef.pair].push(g);
+      }
+      // 配对传送门
+      for (const pair of Object.values(gateMap)) {
+        if (pair.length >= 2) {
+          pair[0].partner = pair[1];
+          pair[1].partner = pair[0];
+        }
+      }
+    }
+
+    // 预置道具
+    if (cfg.items) {
+      for (const it of cfg.items) {
+        spawnItemAtCell(it.c, it.r, it.type);
+      }
+    }
+
+    window.mapGenerated = true;
+    window.customEnemySpawns = cfg.enemySpawns || null;
+  } else if (window.levelMode && window.levelConfig?.map) {
     window.map = window.levelConfig.map.map((row) => [...row]);
     window.gates = [];
     window.crackHp = window.levelConfig.crackHp || {};
@@ -85,10 +151,13 @@ export function resetGame() {
   window.lastTeleport = {};
 
   const spawnPoint =
-    window.levelMode && window.levelConfig?.playerSpawn
-      ? window.levelConfig.playerSpawn
-      : PLAYER_SPAWN;
-  const sp = centerOf(spawnPoint.c, spawnPoint.r);
+    window.customMapConfig?.playerSpawn
+      ? window.customMapConfig.playerSpawn
+      : window.levelMode && window.levelConfig?.playerSpawn
+        ? window.levelConfig.playerSpawn
+        : PLAYER_SPAWN;
+  const safeSpawn = findNearestPassable(spawnPoint.c, spawnPoint.r);
+  const sp = centerOf(safeSpawn.c, safeSpawn.r);
   window.player = makeTank(sp.x - (CELL - 4) / 2, sp.y - (CELL - 4) / 2, "up", true);
   if (window.levelMode && window.levelConfig?.playerSpeed) {
     window.player.speed = window.levelConfig.playerSpeed;
@@ -107,12 +176,10 @@ export function resetGame() {
   }
 
   if (!window.tutorialMode) {
-    if (window.levelMode && window.levelConfig?.initialEnemies) {
-      for (let i = 0; i < window.levelConfig.initialEnemies; i++) {
-        spawnEnemy(true);
-      }
-    } else {
-      spawnEnemy(true);
+    const initCount = window.customMapConfig?.initialEnemies
+      || (window.levelMode && window.levelConfig?.initialEnemies)
+      || 2;
+    for (let i = 0; i < initCount; i++) {
       spawnEnemy(true);
     }
   }
