@@ -22,11 +22,11 @@ export const LEVELS = [
   {
     id: 3,
     name: "迷宫机关城",
-    description: "穿越迷宫，躲避机关，到达传送门！",
+    description: "穿越迷宫，推开机关打开石门，躲避落石与巡逻坦克，到达传送门！",
     objective: {
       type: "reachPortal",
       target: 1,
-      description: "到达传送门",
+      description: "穿过迷宫，找到机关打开石门，到达传送门",
     },
     map: generateMazeMap(),
     playerSpawn: { c: 1, r: 28 },

@@ -60,39 +60,39 @@ export const TankActions = {
         const tankCenterY = self.y + self.h / 2;
         const crateCenterX = crate.x + CELL / 2;
         const crateCenterY = crate.y + CELL / 2;
-        
+
         if (dx !== 0) {
-          if (Math.abs(tankCenterY - crateCenterY) > CELL * 0.6) return false;
+          if (Math.abs(tankCenterY - crateCenterY) > CELL * 0.6) return "blocked";
         }
         if (dy !== 0) {
-          if (Math.abs(tankCenterX - crateCenterX) > CELL * 0.6) return false;
+          if (Math.abs(tankCenterX - crateCenterX) > CELL * 0.6) return "blocked";
         }
-        
+
         const nc = cc + dx;
         const nr = cr + dy;
-        
-        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) return false;
-        if (!window.map[nr]) return false;
-        if (window.map[nr][nc] === WALL || window.map[nr][nc] === BORDER || window.map[nr][nc] === CRACK) return false;
-        if (window.map[nr][nc] === DOOR && window.doorStates && !window.doorStates[protectedKey(nc, nr)]) return false;
-        
+
+        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) return "blocked";
+        if (!window.map[nr]) return "blocked";
+        if (window.map[nr][nc] === WALL || window.map[nr][nc] === BORDER || window.map[nr][nc] === CRACK) return "blocked";
+        if (window.map[nr][nc] === DOOR && window.doorStates && !window.doorStates[protectedKey(nc, nr)]) return "blocked";
+
         for (const other of window.crates) {
           if (other === crate) continue;
           const oc = Math.floor(other.x / CELL);
           const or2 = Math.floor(other.y / CELL);
-          if (oc === nc && or2 === nr) return false;
+          if (oc === nc && or2 === nr) return "blocked";
         }
-        
+
         for (const t of tanks) {
           if (!t.alive || t === self) continue;
           const tc = Math.floor(t.x / CELL);
           const tr = Math.floor(t.y / CELL);
-          if (tc === nc && tr === nr) return false;
+          if (tc === nc && tr === nr) return "blocked";
         }
-        
+
         crate.x = nc * CELL;
         crate.y = nr * CELL;
-        
+
         sfx("hit");
         return true;
       }
@@ -107,14 +107,26 @@ export const TankActions = {
     const nx = t.x + dx * sp,
       ny = t.y + dy * sp;
     if (!this.blocked(nx, t.y, t.w, t.h, t)) {
-      if (t.isPlayer) this.tryPushCrate(nx, t.y, dx, 0, t);
-      t.x = nx;
-      if (dx !== 0) t.y = Math.round(t.y / CELL) * CELL + (CELL - t.h) / 2;
+      let canMove = true;
+      if (t.isPlayer) {
+        const res = this.tryPushCrate(nx, t.y, dx, 0, t);
+        if (res === "blocked") canMove = false;
+      }
+      if (canMove) {
+        t.x = nx;
+        if (dx !== 0) t.y = Math.round(t.y / CELL) * CELL + (CELL - t.h) / 2;
+      }
     }
     if (!this.blocked(t.x, ny, t.w, t.h, t)) {
-      if (t.isPlayer) this.tryPushCrate(t.x, ny, 0, dy, t);
-      t.y = ny;
-      if (dy !== 0) t.x = Math.round(t.x / CELL) * CELL + (CELL - t.w) / 2;
+      let canMove = true;
+      if (t.isPlayer) {
+        const res = this.tryPushCrate(t.x, ny, 0, dy, t);
+        if (res === "blocked") canMove = false;
+      }
+      if (canMove) {
+        t.y = ny;
+        if (dy !== 0) t.x = Math.round(t.x / CELL) * CELL + (CELL - t.w) / 2;
+      }
     }
     t.dir = { x: dx, y: dy };
     t.dirName = dx > 0 ? "right" : dx < 0 ? "left" : dy > 0 ? "down" : "up";

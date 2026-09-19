@@ -1,4 +1,4 @@
-import { CELL, COLS, ROWS, W, H, EMPTY, WALL, CRACK, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL, PLAYER_SPAWN } from "./constants.js";
+import { CELL, COLS, ROWS, W, H, EMPTY, WALL, BORDER, CRACK, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL, PLAYER_SPAWN } from "./constants.js";
 import { genMap, centerOf, protectedKey, randInt, initDoorStates, toggleSwitch, isSpeedCell, isSpikeCell, isPortalCell, damageFallingStone } from "./map.js";
 import { sfx, stopBgm, playBgm, getDeathSoundTimer, setDeathSoundTimer } from "./audio.js";
 import { spawnExplosion, addFloat, makeTank } from "./effects.js";
@@ -263,14 +263,16 @@ function updateFallingStones(dt) {
 }
 
 function spawnFallingStone() {
-  const col = 3 + Math.floor(Math.random() * (COLS - 6));
-  let groundR = ROWS - 2;
+  const col = 1 + Math.floor(Math.random() * (COLS - 2));
+  const openRows = [];
   for (let r = 1; r < ROWS - 1; r++) {
-    if (window.map[r] && (window.map[r][col] === 1 || window.map[r][col] === 3)) {
-      groundR = r - 1;
-      break;
+    const v = window.map[r] && window.map[r][col];
+    if (v !== undefined && v !== WALL && v !== BORDER && v !== CRACK) {
+      openRows.push(r);
     }
   }
+  if (!openRows.length) return;
+  const groundR = openRows[Math.floor(Math.random() * openRows.length)];
   window.fallingStones.push({
     x: col * CELL + CELL / 2,
     y: groundR * CELL - CELL * 3,
