@@ -321,7 +321,7 @@ export function playBgm() {
         const a = new Audio(bgmMp3);
         a.volume = 0.35;
         a.play().catch(() => {});
-      }, 5000);
+      }, 10000);
     }
   } catch (e) {}
 }

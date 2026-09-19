@@ -78,11 +78,11 @@
     <div id="btn-group" class="none-select">
        <button
         id="btn-refresh-map"
-        :disabled="gameState === 'playing' || gameState === 'paused'"
+        :disabled="gameState === 'playing'"
         v-show="!hideRefreshMap"
         @click="refreshMap"
       >
-        🗺️ 刷新地图
+        🗺️ 更换地图
       </button>
       <button
         id="btn-pause"
