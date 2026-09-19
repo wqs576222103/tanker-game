@@ -47,6 +47,9 @@ export function clearLevelMode() {
   window.dogDoorLocked = true;
   window.bossKeyDropped = false;
   window.mapGenerated = false;
+  window.fallingStones = [];
+  window.debris = [];
+  window.stoneTimer = 0;
 }
 
 export function isLevelMode() {
