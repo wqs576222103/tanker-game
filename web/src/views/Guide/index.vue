@@ -345,6 +345,7 @@ function cleanup() {
   window.tutorialHooks = { update: null, render: null };
   window.tutorialSpawnEnemies = false;
   window.tutorialEnemyReady = false;
+  window.mapGenerated = false;
 }
 
 function startFreePlay() {
