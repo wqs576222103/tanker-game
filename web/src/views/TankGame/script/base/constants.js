@@ -34,7 +34,14 @@ export const EMPTY = 0,
   GATE = 2,
   BORDER = 3,
   CRACK = 4,
-  GRASS = 5;
+  GRASS = 5,
+  SPEED = 6,
+  SPIKE = 7,
+  FALLING = 8,
+  DOOR = 9,
+  SWITCH = 10,
+  PORTAL = 11,
+  CRATE = 12;
 export const DIRS = {
   up: { x: 0, y: -1 },
   down: { x: 0, y: 1 },

@@ -11,6 +11,13 @@ import {
   WALL,
   BORDER,
   CRACK,
+  DOOR,
+  SWITCH,
+  SPEED,
+  SPIKE,
+  FALLING,
+  PORTAL,
+  CRATE,
   keys,
   DIRS,
   DIR_NAMES,
@@ -27,9 +34,72 @@ import {
   gameOver,
   updateHud,
   sfx,
+  protectedKey,
+  toggleSwitch,
 } from "./base/index.js";
 
 export const TankActions = {
+  // 尝试推动木箱
+  tryPushCrate(x, y, dx, dy, self) {
+    if (!self || !self.isPlayer) return false;
+    if (!window.crates || !window.map) return false;
+    
+    const c = Math.floor(x / CELL);
+    const r = Math.floor(y / CELL);
+    
+    if (isNaN(c) || isNaN(r)) return false;
+    
+    for (const crate of window.crates) {
+      if (!crate || crate.x === undefined || crate.y === undefined) continue;
+      
+      const cc = Math.floor(crate.x / CELL);
+      const cr = Math.floor(crate.y / CELL);
+      
+      if (cc === c && cr === r) {
+        const tankCenterX = self.x + self.w / 2;
+        const tankCenterY = self.y + self.h / 2;
+        const crateCenterX = crate.x + CELL / 2;
+        const crateCenterY = crate.y + CELL / 2;
+        
+        if (dx !== 0) {
+          if (Math.abs(tankCenterY - crateCenterY) > CELL * 0.6) return false;
+        }
+        if (dy !== 0) {
+          if (Math.abs(tankCenterX - crateCenterX) > CELL * 0.6) return false;
+        }
+        
+        const nc = cc + dx;
+        const nr = cr + dy;
+        
+        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) return false;
+        if (!window.map[nr]) return false;
+        if (window.map[nr][nc] === WALL || window.map[nr][nc] === BORDER || window.map[nr][nc] === CRACK) return false;
+        if (window.map[nr][nc] === DOOR && window.doorStates && !window.doorStates[protectedKey(nc, nr)]) return false;
+        
+        for (const other of window.crates) {
+          if (other === crate) continue;
+          const oc = Math.floor(other.x / CELL);
+          const or2 = Math.floor(other.y / CELL);
+          if (oc === nc && or2 === nr) return false;
+        }
+        
+        for (const t of tanks) {
+          if (!t.alive || t === self) continue;
+          const tc = Math.floor(t.x / CELL);
+          const tr = Math.floor(t.y / CELL);
+          if (tc === nc && tr === nr) return false;
+        }
+        
+        crate.x = nc * CELL;
+        crate.y = nr * CELL;
+        
+        sfx("hit");
+        return true;
+      }
+    }
+    return false;
+  },
+  
   // 移动坦克
   moveTank(t, dx, dy, dt) {
     let sp = t.speed * dt;
@@ -37,10 +107,12 @@ export const TankActions = {
     const nx = t.x + dx * sp,
       ny = t.y + dy * sp;
     if (!this.blocked(nx, t.y, t.w, t.h, t)) {
+      if (t.isPlayer) this.tryPushCrate(nx, t.y, dx, 0, t);
       t.x = nx;
       if (dx !== 0) t.y = Math.round(t.y / CELL) * CELL + (CELL - t.h) / 2;
     }
     if (!this.blocked(t.x, ny, t.w, t.h, t)) {
+      if (t.isPlayer) this.tryPushCrate(t.x, ny, 0, dy, t);
       t.y = ny;
       if (dy !== 0) t.x = Math.round(t.x / CELL) * CELL + (CELL - t.w) / 2;
     }
@@ -65,6 +137,7 @@ export const TankActions = {
       for (let c = c1; c <= c2; c++) {
         const v = map[r][c];
         if (v === WALL || v === BORDER || v === CRACK) return true;
+        if (v === DOOR && window.doorStates && !window.doorStates[protectedKey(c, r)]) return true;
       }
     for (const o of tanks) {
       if (!o.alive || o === self) continue;
@@ -438,7 +511,7 @@ export const TankActions = {
     if (spawnTimer <= 0 && alive.length < maxEnemies()) {
       spawnEnemy(false);
       spawnTimer = Math.max(2, 4.5 - gtMs / 30000);
-    } else {
+    } else if (!window.levelMode || !window.levelConfig?.noRespawn) {
       spawnTimer -= dt;
     }
     for (const t of alive) {
@@ -635,6 +708,10 @@ export const TankActions = {
     }
     if (player.invincible > 0) player.invincible -= dt * 1000;
     this.tryTeleport(player);
+    
+    if (window.levelMode && window.levelConfig?.special === "maze") {
+      this.checkSwitchInteraction();
+    }
 
     // 射击
     player.fireCd -= dt;
@@ -714,6 +791,64 @@ export const TankActions = {
           dr.fireCd = 0.3;
         } else {
           dr.fireCd = 0.15;
+        }
+      }
+    }
+  },
+  
+  checkSwitchInteraction() {
+    if (!window.switchLinks) return;
+    
+    for (const sKey in window.switchLinks) {
+      const [sc, sr] = sKey.split(',').map(Number);
+      if (map[sr][sc] !== SWITCH) continue;
+      
+      let hasPressure = false;
+      
+      if (window.crates) {
+        for (const crate of window.crates) {
+          const cc = Math.floor(crate.x / CELL);
+          const cr = Math.floor(crate.y / CELL);
+          if (cc === sc && cr === sr) {
+            hasPressure = true;
+            break;
+          }
+        }
+      }
+      
+      if (!hasPressure && player && player.alive) {
+        const pc = Math.floor((player.x + player.w / 2) / CELL);
+        const pr = Math.floor((player.y + player.h / 2) / CELL);
+        if (pc === sc && pr === sr) {
+          hasPressure = true;
+        }
+      }
+      
+      if (!hasPressure) {
+        for (const t of tanks) {
+          if (!t.alive || t === player) continue;
+          const tc = Math.floor((t.x + t.w / 2) / CELL);
+          const tr = Math.floor((t.y + t.h / 2) / CELL);
+          if (tc === sc && tr === sr) {
+            hasPressure = true;
+            break;
+          }
+        }
+      }
+      
+      const links = window.switchLinks[sKey] || [];
+      for (const doorKey of links) {
+        const [dc, dr] = doorKey.split(',').map(Number);
+        if (map[dr][dc] === DOOR) {
+          if (hasPressure) {
+            if (!window.doorStates[doorKey]) {
+              window.doorStates[doorKey] = true;
+              spawnExplosion(dc * CELL + CELL / 2, dr * CELL + CELL / 2, 10, "#FFD700");
+              sfx("hit");
+            }
+          } else {
+            window.doorStates[doorKey] = false;
+          }
         }
       }
     }

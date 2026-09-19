@@ -14,6 +14,9 @@ import {
   drawGrassOverlay,
   drawParticles,
   drawFloats,
+  drawFallingStones,
+  drawDebris,
+  drawCrates,
 } from "./render.js";
 
 // ====================== 主循环 ======================
@@ -38,6 +41,9 @@ export function loop(ts) {
   drawMap();
   drawItems();
   drawMines();
+  drawFallingStones();
+  drawDebris();
+  drawCrates();
   drawDrones();
   drawBullets();
   for (const t of window.tanks) if (t !== window.player) drawTank(t);

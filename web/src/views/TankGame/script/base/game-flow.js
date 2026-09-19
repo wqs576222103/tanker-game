@@ -1,5 +1,5 @@
-import { CELL, COLS, ROWS, W, H, EMPTY, WALL, CRACK, PLAYER_SPAWN } from "./constants.js";
-import { genMap, centerOf, protectedKey, randInt } from "./map.js";
+import { CELL, COLS, ROWS, W, H, EMPTY, WALL, CRACK, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL, PLAYER_SPAWN } from "./constants.js";
+import { genMap, centerOf, protectedKey, randInt, initDoorStates, toggleSwitch, isSpeedCell, isSpikeCell, isPortalCell, damageFallingStone } from "./map.js";
 import { sfx, stopBgm, playBgm, getDeathSoundTimer, setDeathSoundTimer } from "./audio.js";
 import { spawnExplosion, addFloat, makeTank } from "./effects.js";
 import { spawnEnemy, spawnBoss, checkSpawnBoss, maxEnemies } from "./enemies.js";
@@ -11,7 +11,7 @@ import { AILogger } from "../ai-logger.js";
 import { TankActions } from "../tank-actions.js";
 import { saveGameKills, addDeath } from "@/api/score.js";
 import { getUserInfo } from "@/utils/user";
-import { checkLevelWin, showLevelComplete, checkFlagCapture } from "./level.js";
+import { checkLevelWin, showLevelComplete, checkFlagCapture, checkPortalReach } from "./level.js";
 
 // ====================== 游戏流程 ======================
 export function resetGame() {
@@ -52,6 +52,16 @@ export function resetGame() {
     window.gates = [];
     window.crackHp = window.levelConfig.crackHp || {};
     window.mapGenerated = true;
+    
+    if (window.levelConfig.special === "maze") {
+      initDoorStates();
+      if (window.levelConfig.switchLinks) {
+        window.switchLinks = window.levelConfig.switchLinks;
+      }
+      window.fallingStones = [];
+      window.debris = [];
+      window.reachedPortal = false;
+    }
   } else if (!window.mapGenerated) {
     genMap();
     window.mapGenerated = true;
@@ -69,6 +79,7 @@ export function resetGame() {
   window.items = [];
   window.mines = [];
   window.drones = [];
+  window.crates = [];
   window.particles = [];
   window.floats = [];
   window.lastTeleport = {};
@@ -84,6 +95,16 @@ export function resetGame() {
   }
   window.player.invincible = 2000;
   window.tanks.push(window.player);
+
+  if (window.levelMode && window.levelConfig?.crates) {
+    for (const cratePos of window.levelConfig.crates) {
+      const cp = centerOf(cratePos.c, cratePos.r);
+      window.crates.push({
+        x: cratePos.c * CELL,
+        y: cratePos.r * CELL,
+      });
+    }
+  }
 
   if (!window.tutorialMode) {
     if (window.levelMode && window.levelConfig?.initialEnemies) {
@@ -119,6 +140,14 @@ export function update(dt) {
     rescueDog();
   }
 
+  if (window.levelMode && window.levelConfig?.objective.type === "reachPortal") {
+    checkPortalReach();
+  }
+
+  if (window.levelMode && window.levelConfig?.special === "maze") {
+    updateMazeMechanics(dt);
+  }
+
   if (window.boss && window.boss.alive) {
     TankActions.moveBoss(dt);
     TankActions.bossFire(dt);
@@ -135,6 +164,130 @@ export function update(dt) {
     spawnEnemy(true);
     spawnEnemy(true);
     window.tutorialEnemyReady = true;
+  }
+}
+
+function updateMazeMechanics(dt) {
+  if (!window.player || !window.player.alive) return;
+  
+  const playerCell = {
+    c: Math.floor((window.player.x + window.player.w / 2) / CELL),
+    r: Math.floor((window.player.y + window.player.h / 2) / CELL)
+  };
+  
+  if (isSpeedCell(playerCell.c, playerCell.r)) {
+    window.player.speed = (window.levelConfig?.playerSpeed || 100) * 1.5;
+  } else if (isSpikeCell(playerCell.c, playerCell.r)) {
+    if (window.gtMs % 500 < 20) {
+      window.player.hp -= 1;
+      if (window.player.hp <= 0) {
+        window.player.alive = false;
+        window.deathReason = "踩到尖刺";
+        gameOver();
+        return;
+      }
+    }
+  } else {
+    window.player.speed = window.levelConfig?.playerSpeed || 100;
+  }
+  
+  if (isPortalCell(playerCell.c, playerCell.r)) {
+    window.reachedPortal = true;
+  }
+  
+  updateFallingStones(dt);
+  updateDebris(dt);
+}
+
+const STONE_INTERVAL = 5;
+const STONE_WARNING = 1.5;
+const STONE_SPEED = 250;
+const STONE_RADIUS = CELL * 1.5;
+
+function updateFallingStones(dt) {
+  if (!window.fallingStones) window.fallingStones = [];
+  if (!window.stoneTimer) window.stoneTimer = 0;
+  
+  window.stoneTimer += dt;
+  if (window.stoneTimer >= STONE_INTERVAL) {
+    window.stoneTimer -= STONE_INTERVAL;
+    spawnFallingStone();
+  }
+  
+  for (let i = window.fallingStones.length - 1; i >= 0; i--) {
+    const stone = window.fallingStones[i];
+    
+    if (stone.phase === "warning") {
+      stone.warnTimer += dt;
+      if (stone.warnTimer >= STONE_WARNING) {
+        stone.phase = "falling";
+      }
+      continue;
+    }
+    
+    stone.y += stone.speed * dt;
+    
+    if (stone.y >= stone.groundY) {
+      stone.y = stone.groundY;
+      spawnExplosion(stone.x, stone.y, 20, "#8B4513");
+      sfx("boom");
+      
+      for (const t of window.tanks) {
+        if (!t.alive) continue;
+        const tx = t.x + t.w / 2;
+        const ty = t.y + t.h / 2;
+        const dist = Math.sqrt((stone.x - tx) ** 2 + (stone.y - ty) ** 2);
+        if (dist < STONE_RADIUS) {
+          t.hp -= 2;
+          if (t.hp <= 0) {
+            t.alive = false;
+            if (t.isPlayer) {
+              window.deathReason = "被落石砸中";
+              gameOver();
+            } else {
+              window.kills += 1;
+              spawnExplosion(tx, ty, 30, "#ff8a5a");
+            }
+          }
+        }
+      }
+      window.debris.push({
+        x: stone.x,
+        y: stone.groundY,
+        life: 2,
+        maxLife: 2,
+      });
+      window.fallingStones.splice(i, 1);
+    }
+  }
+}
+
+function spawnFallingStone() {
+  const col = 3 + Math.floor(Math.random() * (COLS - 6));
+  let groundR = ROWS - 2;
+  for (let r = 1; r < ROWS - 1; r++) {
+    if (window.map[r] && (window.map[r][col] === 1 || window.map[r][col] === 3)) {
+      groundR = r - 1;
+      break;
+    }
+  }
+  window.fallingStones.push({
+    x: col * CELL + CELL / 2,
+    y: groundR * CELL - CELL * 3,
+    groundY: groundR * CELL + CELL / 2,
+    speed: STONE_SPEED,
+    phase: "warning",
+    warnTimer: 0,
+  });
+}
+
+function updateDebris(dt) {
+  if (!window.debris) return;
+  for (let i = window.debris.length - 1; i >= 0; i--) {
+    window.debris[i].life -= dt;
+    if (window.debris[i].life <= 0) {
+      window.debris.splice(i, 1);
+    }
   }
 }
 

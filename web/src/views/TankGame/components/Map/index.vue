@@ -18,9 +18,14 @@
           方向键 / WASD 移动，空格 / J 射击，K 放置地雷<br />
           敌人从左上、右上角不断进攻，击杀敌人
         </p>
-        <div class="items">
-          🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />
-          🛡️ 护盾 &nbsp;💣 地雷 &nbsp;❤️ 生命恢复 &nbsp;🔄 反弹子弹
+        <div class="items" v-if="!hideItemLegend">
+          <template v-if="customItems">
+            <span v-for="(item, index) in customItems" :key="index">{{ item }}</span>
+          </template>
+          <template v-else>
+            🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />
+            🛡️ 护盾 &nbsp;💣 地雷 &nbsp;❤️ 生命恢复 &nbsp;🔄 反弹子弹
+          </template>
         </div>
         <p>
           ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />
@@ -154,6 +159,14 @@ const props = defineProps({
   hideRefreshMap: {
     type: Boolean,
     default: false,
+  },
+  hideItemLegend: {
+    type: Boolean,
+    default: false,
+  },
+  customItems: {
+    type: Array,
+    default: null,
   },
   title: {
     type: String,

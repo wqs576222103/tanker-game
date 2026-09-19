@@ -45,6 +45,7 @@ import { AIPlayer } from "@/views/TankGame/script/ai-player.js";
 import LevelAI from "@/views/TankGame/script/ai-tanker/level-tank.js";
 import Level1 from "./levels/Level1.vue";
 import Level2 from "./levels/Level2.vue";
+import Level3 from "./levels/Level3.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -53,7 +54,7 @@ const levelId = computed(() => parseInt(route.params.id));
 const employeeId = ref("");
 const username = ref("");
 
-const levelComponents = { 1: Level1, 2: Level2 };
+const levelComponents = { 1: Level1, 2: Level2, 3: Level3 };
 const levelComponent = computed(() => levelComponents[levelId.value]);
 
 const levelConfig = computed(() => LEVELS.find((l) => l.id === levelId.value));

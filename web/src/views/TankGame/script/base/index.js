@@ -6,6 +6,7 @@ export {
   initCanvas,
   playerImg, enemyImg, bossImg, dogImg,
   EMPTY, WALL, GATE, BORDER, CRACK, GRASS,
+  SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL, CRATE,
   DIRS, DIR_NAMES,
   PLAYER_SPAWN, ENEMY_SPAWNS,
   keys,
@@ -15,7 +16,7 @@ export {
   LEVEL_MODE_KEYS,
   setLevelMode, clearLevelMode, isLevelMode, getLevelConfig,
   getPlayerSpawnForLevel, getEnemySpawnsForLevel, getMaxEnemiesForLevel,
-  checkLevelWin, checkFlagCapture, showLevelComplete, showLevelFailed,
+  checkLevelWin, checkFlagCapture, showLevelComplete, showLevelFailed, checkPortalReach,
 } from "./level.js";
 
 export {
@@ -32,6 +33,7 @@ export {
   protectedKey, isProtectedCell,
   placeGrass, placeRandomWalls, connectivityOk,
   placeGates, gateAt, damageCrack,
+  initDoorStates, toggleSwitch, isSpeedCell, isSpikeCell, isPortalCell, damageFallingStone,
 } from "./map.js";
 
 export {
@@ -57,7 +59,7 @@ export {
   drawMap, drawGrassCell, drawGrassOverlay,
   drawTank, drawBoss, drawDogCage, drawPlayer,
   drawBullets, drawItems, drawMines, drawDrones,
-  drawParticles, drawFloats,
+  drawParticles, drawFloats, drawFallingStones, drawDebris, drawCrates,
 } from "./render.js";
 
 export {

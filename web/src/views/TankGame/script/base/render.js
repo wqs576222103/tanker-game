@@ -1,4 +1,4 @@
-import { CELL, COLS, ROWS, W, H, EMPTY, WALL, GATE, BORDER, CRACK, GRASS } from "./constants.js";
+import { CELL, COLS, ROWS, W, H, EMPTY, WALL, GATE, BORDER, CRACK, GRASS, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL } from "./constants.js";
 import { playerImg, enemyImg, bossImg, dogImg } from "./constants.js";
 import { protectedKey } from "./map.js";
 import { AIPlayer } from "../ai-player.js";
@@ -94,6 +94,109 @@ export function drawMap() {
       }
       if (v === GRASS) {
         drawGrassCell(c, r);
+        continue;
+      }
+      if (v === SPEED) {
+        const pulse = 0.5 + 0.5 * Math.sin(window.gtMs / 200 + c * 0.5 + r * 0.5);
+        window.ctx.fillStyle = `rgba(0,200,100,${0.2 + pulse * 0.2})`;
+        window.ctx.fillRect(x, y, CELL, CELL);
+        window.ctx.strokeStyle = `rgba(0,255,120,${0.5 + pulse * 0.5})`;
+        window.ctx.lineWidth = 1;
+        window.ctx.beginPath();
+        window.ctx.moveTo(x + 2, y + CELL - 2);
+        window.ctx.lineTo(x + CELL - 2, y + 2);
+        window.ctx.stroke();
+        window.ctx.beginPath();
+        window.ctx.moveTo(x + 6, y + CELL - 2);
+        window.ctx.lineTo(x + CELL - 2, y + 6);
+        window.ctx.stroke();
+        window.ctx.beginPath();
+        window.ctx.moveTo(x + 10, y + CELL - 2);
+        window.ctx.lineTo(x + CELL - 2, y + 10);
+        window.ctx.stroke();
+        continue;
+      }
+      if (v === SPIKE) {
+        const pulse = 0.5 + 0.5 * Math.sin(window.gtMs / 300 + c * 0.4 + r * 0.4);
+        window.ctx.fillStyle = `rgba(200,50,50,${0.2 + pulse * 0.2})`;
+        window.ctx.fillRect(x, y, CELL, CELL);
+        window.ctx.strokeStyle = `rgba(255,80,80,${0.6 + pulse * 0.4})`;
+        window.ctx.lineWidth = 2;
+        const spikeCount = 3;
+        const spikeWidth = CELL / spikeCount;
+        for (let i = 0; i < spikeCount; i++) {
+          const sx = x + i * spikeWidth + spikeWidth / 2;
+          window.ctx.beginPath();
+          window.ctx.moveTo(sx - 4, y + CELL - 2);
+          window.ctx.lineTo(sx, y + 2);
+          window.ctx.lineTo(sx + 4, y + CELL - 2);
+          window.ctx.stroke();
+        }
+        continue;
+      }
+      if (v === FALLING) {
+        const hp = window.crackHp[protectedKey(c, r)] || 2;
+        window.ctx.fillStyle = `rgba(150,120,80,0.3)`;
+        window.ctx.fillRect(x, y, CELL, CELL);
+        window.ctx.strokeStyle = `rgba(180,150,100,${0.4 + hp * 0.2})`;
+        window.ctx.lineWidth = 1;
+        window.ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
+        window.ctx.fillStyle = `rgba(200,180,120,${0.3 + hp * 0.1})`;
+        window.ctx.fillRect(x + 4, y + 4, CELL - 8, 4);
+        window.ctx.fillStyle = "rgba(255,255,255,.6)";
+        for (let i = 0; i < hp; i++) window.ctx.fillRect(x + 2 + i * 5, y + 2, 3, 2);
+        continue;
+      }
+      if (v === DOOR) {
+        const isOpen = window.doorStates && window.doorStates[protectedKey(c, r)];
+        if (isOpen) {
+          window.ctx.fillStyle = "rgba(100,100,100,0.2)";
+          window.ctx.fillRect(x, y, CELL, CELL);
+          window.ctx.strokeStyle = "rgba(150,150,150,0.3)";
+          window.ctx.lineWidth = 1;
+          window.ctx.setLineDash([2, 2]);
+          window.ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
+          window.ctx.setLineDash([]);
+        } else {
+          window.ctx.fillStyle = "#6a6a6a";
+          window.ctx.fillRect(x, y, CELL, CELL);
+          window.ctx.fillStyle = "#5a5a5a";
+          window.ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+          window.ctx.fillStyle = "#7a7a7a";
+          window.ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
+        }
+        continue;
+      }
+      if (v === SWITCH) {
+        const isOn = window.switchStates && window.switchStates[protectedKey(c, r)];
+        window.ctx.fillStyle = isOn ? "rgba(0,200,0,0.3)" : "rgba(200,0,0,0.3)";
+        window.ctx.fillRect(x, y, CELL, CELL);
+        window.ctx.fillStyle = isOn ? "#00AA00" : "#AA0000";
+        window.ctx.fillRect(x + 4, y + 4, CELL - 8, CELL - 8);
+        window.ctx.fillStyle = "#FFD700";
+        window.ctx.beginPath();
+        window.ctx.arc(x + CELL / 2, y + CELL / 2, 3, 0, Math.PI * 2);
+        window.ctx.fill();
+        window.ctx.strokeStyle = "#FFD700";
+        window.ctx.lineWidth = 2;
+        window.ctx.beginPath();
+        window.ctx.arc(x + CELL / 2, y + CELL / 2, 6, 0, Math.PI * 2);
+        window.ctx.stroke();
+        continue;
+      }
+      if (v === PORTAL) {
+        const pulse = 0.5 + 0.5 * Math.sin(window.gtMs / 200);
+        window.ctx.fillStyle = `rgba(100,0,200,${0.3 + pulse * 0.3})`;
+        window.ctx.fillRect(x, y, CELL, CELL);
+        window.ctx.strokeStyle = `rgba(150,0,255,${0.5 + pulse * 0.5})`;
+        window.ctx.lineWidth = 2;
+        window.ctx.beginPath();
+        window.ctx.arc(x + CELL / 2, y + CELL / 2, 6 + pulse * 2, 0, Math.PI * 2);
+        window.ctx.stroke();
+        window.ctx.fillStyle = `rgba(200,100,255,${0.5 + pulse * 0.4})`;
+        window.ctx.beginPath();
+        window.ctx.arc(x + CELL / 2, y + CELL / 2, 3 + pulse * 2, 0, Math.PI * 2);
+        window.ctx.fill();
         continue;
       }
       if (v === GATE) {
@@ -418,6 +521,121 @@ export function drawDrones() {
     window.ctx.beginPath();
     window.ctx.arc(dr.x, dr.y, 4, 0, Math.PI * 2);
     window.ctx.fill();
+  }
+}
+
+export function drawCrates() {
+  const crates = window.crates;
+  if (!crates || !crates.length) return;
+  
+  for (const crate of crates) {
+    const x = crate.x;
+    const y = crate.y;
+    
+    window.ctx.fillStyle = "#8B6914";
+    window.ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+    
+    window.ctx.fillStyle = "#A0791A";
+    window.ctx.fillRect(x + 3, y + 3, CELL - 6, CELL - 6);
+    
+    window.ctx.strokeStyle = "#6B5010";
+    window.ctx.lineWidth = 2;
+    window.ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
+    
+    window.ctx.strokeStyle = "#8B6914";
+    window.ctx.lineWidth = 1;
+    window.ctx.beginPath();
+    window.ctx.moveTo(x + 3, y + 3);
+    window.ctx.lineTo(x + CELL - 3, y + CELL - 3);
+    window.ctx.moveTo(x + CELL - 3, y + 3);
+    window.ctx.lineTo(x + 3, y + CELL - 3);
+    window.ctx.stroke();
+    
+    window.ctx.fillStyle = "#C9A020";
+    window.ctx.beginPath();
+    window.ctx.arc(x + CELL / 2, y + CELL / 2, 3, 0, Math.PI * 2);
+    window.ctx.fill();
+  }
+}
+
+export function drawFallingStones() {
+  const stones = window.fallingStones;
+  if (!stones || !stones.length) return;
+  
+  for (const stone of stones) {
+    if (stone.phase === "warning") {
+      const cx = stone.x;
+      const cy = stone.groundY;
+      const pulse = 0.5 + 0.5 * Math.sin(window.gtMs / 150);
+      
+      window.ctx.fillStyle = `rgba(255, 60, 60, ${0.15 + pulse * 0.15})`;
+      window.ctx.beginPath();
+      window.ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+      window.ctx.fill();
+      
+      window.ctx.strokeStyle = `rgba(255, 60, 60, ${0.4 + pulse * 0.4})`;
+      window.ctx.lineWidth = 2;
+      window.ctx.beginPath();
+      window.ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+      window.ctx.stroke();
+      
+      window.ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
+      window.ctx.textAlign = "center";
+      window.ctx.textBaseline = "middle";
+      window.ctx.fillStyle = `rgba(255, 80, 80, ${0.7 + pulse * 0.3})`;
+      window.ctx.fillText("落石袭来", cx, cy - 30);
+    } else {
+      const cx = stone.x;
+      const cy = stone.y;
+      
+      window.ctx.fillStyle = "#8B7355";
+      window.ctx.beginPath();
+      window.ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+      window.ctx.fill();
+      
+      window.ctx.fillStyle = "#6B5340";
+      window.ctx.beginPath();
+      window.ctx.arc(cx - 2, cy - 2, 6, 0, Math.PI * 2);
+      window.ctx.fill();
+      
+      window.ctx.fillStyle = `rgba(139, 115, 85, 0.3)`;
+      window.ctx.beginPath();
+      window.ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      window.ctx.fill();
+    }
+  }
+}
+
+export function drawDebris() {
+  const debris = window.debris;
+  if (!debris || !debris.length) return;
+  
+  for (const d of debris) {
+    const alpha = d.life / d.maxLife;
+    const cx = d.x;
+    const cy = d.y;
+    
+    window.ctx.globalAlpha = alpha * 0.6;
+    window.ctx.fillStyle = "#6B5340";
+    window.ctx.beginPath();
+    window.ctx.arc(cx - 6, cy + 2, 4, 0, Math.PI * 2);
+    window.ctx.fill();
+    window.ctx.beginPath();
+    window.ctx.arc(cx + 5, cy - 1, 3, 0, Math.PI * 2);
+    window.ctx.fill();
+    window.ctx.beginPath();
+    window.ctx.arc(cx + 1, cy + 5, 5, 0, Math.PI * 2);
+    window.ctx.fill();
+    
+    window.ctx.fillStyle = "#8B7355";
+    window.ctx.beginPath();
+    window.ctx.arc(cx - 3, cy - 3, 3, 0, Math.PI * 2);
+    window.ctx.fill();
+    window.ctx.beginPath();
+    window.ctx.arc(cx + 7, cy + 3, 2, 0, Math.PI * 2);
+    window.ctx.fill();
+    
+    window.ctx.globalAlpha = 1;
   }
 }
 

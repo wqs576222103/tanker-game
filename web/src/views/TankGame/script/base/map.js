@@ -1,4 +1,4 @@
-import { CELL, COLS, ROWS, EMPTY, WALL, GATE, BORDER, CRACK, GRASS, PLAYER_SPAWN, ENEMY_SPAWNS } from "./constants.js";
+import { CELL, COLS, ROWS, EMPTY, WALL, GATE, BORDER, CRACK, GRASS, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL, PLAYER_SPAWN, ENEMY_SPAWNS } from "./constants.js";
 import { spawnExplosion } from "./effects.js";
 import { sfx } from "./audio.js";
 
@@ -138,7 +138,7 @@ export function connectivityOk() {
   const pass = (c, r) =>
     window.map[r] &&
     window.map[r][c] !== undefined &&
-    (window.map[r][c] === EMPTY || window.map[r][c] === GATE || window.map[r][c] === GRASS);
+    (window.map[r][c] === EMPTY || window.map[r][c] === GATE || window.map[r][c] === GRASS || window.map[r][c] === SPEED || window.map[r][c] === SPIKE || window.map[r][c] === PORTAL || window.map[r][c] === SWITCH || window.map[r][c] === FALLING || (window.map[r][c] === DOOR && window.doorStates && window.doorStates[protectedKey(c, r)]));
   const start = { c: PLAYER_SPAWN.c, r: PLAYER_SPAWN.r };
   const seen = new Set();
   const queue = [start];
@@ -201,6 +201,88 @@ export function damageCrack(c, r, dmg) {
     window.map[r][c] = EMPTY;
     delete window.crackHp[k];
     spawnExplosion(cx, cy, 24, "#9aa0b0");
+    sfx("boom");
+  } else {
+    sfx("hit");
+  }
+}
+
+export function initDoorStates() {
+  window.doorStates = {};
+  window.switchStates = {};
+  window.switchLinks = {};
+  window.fallingStones = [];
+  
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const key = protectedKey(c, r);
+      if (window.map[r][c] === DOOR) {
+        window.doorStates[key] = false;
+      }
+      if (window.map[r][c] === SWITCH) {
+        window.switchStates[key] = false;
+      }
+      if (window.map[r][c] === FALLING) {
+        window.crackHp[key] = window.crackHp[key] || 2;
+      }
+    }
+  }
+}
+
+export function toggleSwitch(c, r) {
+  const key = protectedKey(c, r);
+  if (window.map[r][c] !== SWITCH) return;
+  
+  window.switchStates[key] = !window.switchStates[key];
+  
+  const links = window.switchLinks[key] || [];
+  for (const doorKey of links) {
+    const [dc, dr] = doorKey.split(',').map(Number);
+    if (window.map[dr][dc] === DOOR) {
+      window.doorStates[doorKey] = window.switchStates[key];
+      if (window.doorStates[doorKey]) {
+        spawnExplosion(dc * CELL + CELL / 2, dr * CELL + CELL / 2, 10, "#FFD700");
+      }
+    }
+  }
+  
+  sfx("hit");
+}
+
+export function isSpeedCell(c, r) {
+  return window.map[r] && window.map[r][c] === SPEED;
+}
+
+export function isSpikeCell(c, r) {
+  return window.map[r] && window.map[r][c] === SPIKE;
+}
+
+export function isPortalCell(c, r) {
+  return window.map[r] && window.map[r][c] === GATE;
+}
+
+export function damageFallingStone(c, r, dmg) {
+  const key = protectedKey(c, r);
+  if (!window.map[r] || window.map[r][c] !== FALLING) return;
+  
+  window.crackHp[key] = (window.crackHp[key] || 2) - dmg;
+  const cx = c * CELL + CELL / 2;
+  const cy = r * CELL + CELL / 2;
+  spawnExplosion(cx, cy, 8, "#c9a35a");
+  
+  if (window.crackHp[key] <= 0) {
+    window.fallingStones.push({
+      x: cx,
+      y: cy - CELL,
+      targetY: cy,
+      speed: 100,
+      damage: 3,
+      active: true,
+      cellC: c,
+      cellR: r
+    });
+    window.map[r][c] = EMPTY;
+    delete window.crackHp[key];
     sfx("boom");
   } else {
     sfx("hit");

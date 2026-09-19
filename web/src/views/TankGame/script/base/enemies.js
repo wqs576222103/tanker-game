@@ -9,6 +9,11 @@ import { TankActions } from "../tank-actions.js";
 
 // ====================== 敌人 & Boss ======================
 export function spawnEnemy(instant) {
+  if (window.levelMode && window.levelConfig?.noRespawn) {
+    const aliveEnemies = window.tanks.filter((t) => t.alive && !t.isPlayer).length;
+    const totalSpawned = (window.levelConfig.enemySpawns || []).length;
+    if (aliveEnemies >= totalSpawned) return;
+  }
   if (window.tanks.filter((t) => t.alive && !t.isPlayer).length >= maxEnemies())
     return;
 

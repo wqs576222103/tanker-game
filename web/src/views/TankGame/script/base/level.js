@@ -1,4 +1,4 @@
-import { PLAYER_SPAWN, ENEMY_SPAWNS, COLS, ROWS } from "./constants.js";
+import { PLAYER_SPAWN, ENEMY_SPAWNS, COLS, ROWS, GATE, CELL } from "./constants.js";
 
 // ====================== 关卡模式支持 ======================
 export const LEVEL_MODE_KEYS = {
@@ -94,8 +94,33 @@ export function checkLevelWin() {
       return window.bossKills > (window.levelLastBossKills || 0);
     case "rescueDog":
       return window.dogRescued;
+    case "reachPortal":
+      return window.reachedPortal;
     default:
       return false;
+  }
+}
+
+export function checkPortalReach() {
+  if (!window.levelMode || !window.levelConfig || window.levelConfig.objective.type !== "reachPortal") return;
+  if (!window.player || !window.player.alive) return;
+  if (window.reachedPortal) return;
+  
+  const playerCell = {
+    c: Math.floor((window.player.x + window.player.w / 2) / CELL),
+    r: Math.floor((window.player.y + window.player.h / 2) / CELL)
+  };
+  
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (window.map[r] && window.map[r][c] === GATE) {
+        if (playerCell.c === c && playerCell.r === r) {
+          window.reachedPortal = true;
+          showLevelComplete();
+          return;
+        }
+      }
+    }
   }
 }
 
