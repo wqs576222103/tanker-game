@@ -10,7 +10,6 @@
       </div>
       <div class="tutorial-panel">
         <div class="step-title">Step {{ step + 1 }}/{{ steps.length }}：{{ steps[step].title }}</div>
-        <div class="step-instruction">{{ steps[step].text }}</div>
         <button class="skip-btn" @click="skipStep">跳过此步 →</button>
       </div>
     </div>
@@ -309,6 +308,23 @@ function tutorialRender(ctx) {
     ctx.font = "bold 16px monospace";
     ctx.textAlign = "center";
     ctx.fillText("按 K 放置地雷", W / 2, H / 2 - 30);
+    ctx.restore();
+  }
+
+  // 画布顶部显示操作提示（与步骤 text 一致）
+  if (s?.text) {
+    ctx.save();
+    ctx.globalAlpha = pulse * 0.9;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(W / 2 - 220, 40, 440, 40);
+    ctx.strokeStyle = "#4ade80";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(W / 2 - 220, 40, 440, 40);
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = "#4ade80";
+    ctx.font = "bold 16px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(s.text, W / 2, 65);
     ctx.restore();
   }
 }
