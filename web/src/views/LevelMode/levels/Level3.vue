@@ -18,19 +18,19 @@
         <span class="portal-status">{{ reachedPortal ? "✓ 到达传送门" : "寻找传送门" }}</span>
       </div>
       <div class="legend">
-        <div class="legend-item"><span class="legend-color spike"></span> 尖刺(持续伤害)</div>
-        <div class="legend-item"><span class="legend-color falling"></span> 落石(定时下砸)</div>
-        <div class="legend-item"><span class="legend-color door"></span> 门(需压住开关)</div>
-        <div class="legend-item"><span class="legend-color sw"></span> 开关(需木箱/坦克压住)</div>
-        <div class="legend-item"><span class="legend-color crate"></span> 木箱(可推动)</div>
-        <div class="legend-item"><span class="legend-color portal"></span> 传送门(终点)</div>
+        <div class="legend-item"><canvas ref="legendSpike" width="20" height="20"></canvas> 尖刺(持续伤害)</div>
+        <div class="legend-item"><canvas ref="legendFalling" width="20" height="20"></canvas> 落石(定时下砸)</div>
+        <div class="legend-item"><canvas ref="legendDoor" width="20" height="20"></canvas> 门(需压住开关)</div>
+        <div class="legend-item"><canvas ref="legendSwitch" width="20" height="20"></canvas> 开关(需木箱/坦克压住)</div>
+        <div class="legend-item"><canvas ref="legendCrate" width="20" height="20"></canvas> 木箱(可推动)</div>
+        <div class="legend-item"><canvas ref="legendPortal" width="20" height="20"></canvas> 传送门(终点)</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import Map from "@/views/TankGame/components/Map/index.vue";
 import { setLevelMode } from "@/views/TankGame/script/base/index.js";
 import { useGameTimer } from "./useGameTimer.js";
@@ -43,6 +43,125 @@ const config = buildLevelConfig();
 setLevelMode(config);
 
 const reachedPortal = ref(false);
+const legendSpike = ref(null);
+const legendFalling = ref(null);
+const legendDoor = ref(null);
+const legendSwitch = ref(null);
+const legendCrate = ref(null);
+const legendPortal = ref(null);
+
+function drawLegendIcons() {
+  const S = 20;
+  const drawSpike = (canvas) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "rgba(200,50,50,0.5)";
+    ctx.fillRect(0, 0, S, S);
+    ctx.strokeStyle = "rgba(255,80,80,0.9)";
+    ctx.lineWidth = 1.5;
+    const spikeCount = 3;
+    const spikeWidth = S / spikeCount;
+    for (let i = 0; i < spikeCount; i++) {
+      const sx = i * spikeWidth + spikeWidth / 2;
+      ctx.beginPath();
+      ctx.moveTo(sx - 3, S - 1);
+      ctx.lineTo(sx, 1);
+      ctx.lineTo(sx + 3, S - 1);
+      ctx.stroke();
+    }
+  };
+
+  const drawFalling = (canvas) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "rgba(139,115,85,0.3)";
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#8B7355";
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#6B5340";
+    ctx.beginPath();
+    ctx.arc(S / 2 - 1, S / 2 - 1, 4, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  const drawDoor = (canvas) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#6a6a6a";
+    ctx.fillRect(0, 0, S, S);
+    ctx.fillStyle = "#5a5a5a";
+    ctx.fillRect(1, 1, S - 2, S - 2);
+    ctx.fillStyle = "#7a7a7a";
+    ctx.fillRect(2, 2, S - 4, S - 4);
+  };
+
+  const drawSwitch = (canvas) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "rgba(200,0,0,0.3)";
+    ctx.fillRect(0, 0, S, S);
+    ctx.fillStyle = "#AA0000";
+    ctx.fillRect(3, 3, S - 6, S - 6);
+    ctx.fillStyle = "#FFD700";
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#FFD700";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 5, 0, Math.PI * 2);
+    ctx.stroke();
+  };
+
+  const drawCrate = (canvas) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#8B6914";
+    ctx.fillRect(1, 1, S - 2, S - 2);
+    ctx.fillStyle = "#A0791A";
+    ctx.fillRect(2, 2, S - 4, S - 4);
+    ctx.strokeStyle = "#6B5010";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(1, 1, S - 2, S - 2);
+    ctx.strokeStyle = "#8B6914";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(2, 2);
+    ctx.lineTo(S - 2, S - 2);
+    ctx.moveTo(S - 2, 2);
+    ctx.lineTo(2, S - 2);
+    ctx.stroke();
+    ctx.fillStyle = "#C9A020";
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  const drawPortal = (canvas) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "rgba(40,90,140,0.4)";
+    ctx.fillRect(0, 0, S, S);
+    ctx.strokeStyle = "rgba(120,200,255,0.8)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(1, 1, S - 2, S - 2);
+    ctx.fillStyle = "rgba(160,220,255,0.8)";
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  drawSpike(legendSpike.value);
+  drawFalling(legendFalling.value);
+  drawDoor(legendDoor.value);
+  drawSwitch(legendSwitch.value);
+  drawCrate(legendCrate.value);
+  drawPortal(legendPortal.value);
+}
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -141,10 +260,8 @@ function buildLevelConfig() {
     return { c, r };
   });
 
-  // 石门：堵住唯一通关路
-  const di = Math.max(1, Math.min(pathCells.length - 2, Math.floor(pathCells.length * 0.55)));
-  const a = pathCells[di], b = pathCells[di + 1];
-  const doorC = (a.c + b.c) / 2, doorR = (a.r + b.r) / 2;
+  // 石门：固定放在右上方通道口
+  const doorC = 33, doorR = 2;
   sc(doorC, doorR, DR);
   const doorKey = ck(doorC, doorR);
 
@@ -191,9 +308,12 @@ function buildLevelConfig() {
     const [c, r] = k3.split(",").map(Number);
     if (adj(c, r).length === 1) leaves.push({ c, r });
   }
-  const distDoor = { [ck(a.c, a.r)]: 0 };
+  const distDoor = {};
   {
-    const qd = [ck(a.c, a.r)];
+    const doorNeighbors = adj(doorC, doorR).filter((n) => before.has(ck(n.c, n.r)));
+    const startCell = doorNeighbors[0] || { c: doorC, r: doorR - 2 };
+    distDoor[ck(startCell.c, startCell.r)] = 0;
+    const qd = [ck(startCell.c, startCell.r)];
     while (qd.length) {
       const kd = qd.shift();
       const [c, r] = kd.split(",").map(Number);
@@ -217,24 +337,12 @@ function buildLevelConfig() {
   const crateC = (switchLeaf.c + nbLeaf.c) / 2;
   const crateR = (switchLeaf.r + nbLeaf.r) / 2;
 
-  // 路径中段随机放置尖刺（避开起点/终点/门前门后区域）
-  const doorIdx = pathCells.findIndex((c) => ck(c.c, c.r) === doorKey);
-  const spikeCandidates = [];
-  for (let i = 5; i < pathCells.length - 5; i++) {
-    if (Math.abs(i - doorIdx) <= 2) continue;
-    const c = pathCells[i];
-    if (map[c.r][c.c] !== E) continue;
-    if (ck(c.c, c.r) === switchKey || ck(c.c, c.r) === ck(crateC, crateR)) continue;
-    spikeCandidates.push(i);
-  }
-  const spikesPlaced = [];
-  while (spikesPlaced.length < 2 && spikeCandidates.length) {
-    const ri = Math.floor(rand() * spikeCandidates.length);
-    const idx = spikeCandidates.splice(ri, 1)[0];
-    const c = pathCells[idx];
-    sc(c.c, c.r, SK);
-    spikesPlaced.push(c);
-  }
+  // 尖刺：固定放在中间通道
+  sc(21, 9, SK);
+  sc(21, 15, SK);
+
+  // 去掉绿色框位置的墙
+  sc(13, 26, E);
 
   // 各条路线上的巡逻敌人（前段稀疏，后段密集）
   const enemySpawns = [];
@@ -328,6 +436,7 @@ onMounted(() => {
   start();
   window.addEventListener("levelComplete", handleLevelComplete);
   window.addEventListener("levelFailed", handleLevelFailed);
+  nextTick(drawLegendIcons);
 });
 
 onUnmounted(() => {
@@ -355,11 +464,5 @@ onUnmounted(() => {
 .portal-status { color: #78c8ff; font-weight: bold; }
 .legend { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 11px; color: #9fb6a6; }
 .legend-item { display: flex; align-items: center; gap: 8px; }
-.legend-color { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-.legend-color.spike { background: rgba(200,50,50,0.5); }
-.legend-color.falling { background: #8B7355; }
-.legend-color.door { background: #6a6a6a; }
-.legend-color.sw { background: #AA0000; border: 1px solid #FFD700; }
-.legend-color.crate { background: #A0791A; border: 1px solid #6B5010; }
-.legend-color.portal { background: rgba(40,90,140,0.7); }
+.legend-item canvas { border-radius: 2px; flex-shrink: 0; }
 </style>
