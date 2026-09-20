@@ -47,14 +47,13 @@ export {
 } from "./enemies.js";
 
 export {
-  ITEMS, itemTimer,
+  ITEMS, itemTimer, pickItemDef,
   spawnItemAtTank, spawnItemAtCell, spawnRandomItem,
   spawnItemAtPosition, spawnKeyItem,
   unlockDogDoor, rescueDog,
   updateItems, pickupItem,
   explodeMine, updateMines,
 } from "./items.js";
-
 export {
   drawMap, drawGrassCell, drawGrassOverlay,
   drawTank, drawBoss, drawDogCage, drawPlayer,

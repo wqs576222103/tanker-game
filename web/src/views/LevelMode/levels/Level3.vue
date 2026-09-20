@@ -20,7 +20,7 @@
       <div class="legend">
         <div class="legend-item"><canvas ref="legendSpike" width="20" height="20"></canvas> 尖刺(持续伤害)</div>
         <div class="legend-item"><canvas ref="legendFalling" width="20" height="20"></canvas> 落石(定时下砸)</div>
-        <div class="legend-item"><canvas ref="legendDoor" width="20" height="20"></canvas> 门(需压住开关)</div>
+        <div class="legend-item"><canvas ref="legendDoor" width="20" height="20"></canvas> 石门(需压住开关才打开)</div>
         <div class="legend-item"><canvas ref="legendSwitch" width="20" height="20"></canvas> 开关(需木箱/坦克压住)</div>
         <div class="legend-item"><canvas ref="legendCrate" width="20" height="20"></canvas> 木箱(可推动)</div>
         <div class="legend-item"><canvas ref="legendPortal" width="20" height="20"></canvas> 传送门(终点)</div>
@@ -220,6 +220,13 @@ function buildLevelConfig() {
     } else stack.pop();
   }
 
+  // 左下角额外通道：底部一条通道向右、左侧一条通道向上，增加多路选择
+  for (let c = 2; c <= 20; c += 2) sc(c, 27, E);
+  for (let r = 10; r <= 26; r += 2) sc(3, r, E);
+
+  // 堵住传送门正下方的通路，避免出现两条路线到达传送门
+  sc(43, 2, W);
+
   sc(GOAL.c, GOAL.r, G);
 
   const adj = (c, r) => {
@@ -377,9 +384,9 @@ function buildLevelConfig() {
     if (!tooClose) enemySpawns.push(cell);
   }
 
-  // 右下区域补敌（列≥23，行≥15），直接扫描地图空格
+  // 右下区域补敌（列≥23，行≥15），直接扫描地图空格，优先最右下角
   const rightLower = [];
-  for (let r = 15; r <= 27; r += 2) {
+  for (let r = 27; r >= 15; r -= 2) {
     for (let c = 23; c <= 43; c += 2) {
       if (map[r][c] !== E) continue;
       if (ck(c, r) === switchKey || ck(c, r) === ck(crateC, crateR)) continue;
@@ -390,11 +397,45 @@ function buildLevelConfig() {
     }
   }
   for (const cell of rightLower) {
-    if (enemySpawns.length >= 14) break;
+    if (enemySpawns.length >= 18) break;
     const tooClose = enemySpawns.some(
-      (e) => Math.abs(e.c - cell.c) + Math.abs(e.r - cell.r) < 6,
+      (e) => Math.abs(e.c - cell.c) + Math.abs(e.r - cell.r) < 5,
     );
     if (!tooClose) enemySpawns.push(cell);
+  }
+
+  // 去掉玩家坦克右侧最近的一辆敌车，降低开局压力
+  {
+    let idx = -1;
+    let best = Infinity;
+    for (let i = 0; i < enemySpawns.length; i++) {
+      const dc = enemySpawns[i].c - START.c;
+      const dr = enemySpawns[i].r - START.r;
+      if (dc <= 0) continue;
+      const d = Math.hypot(dc, dr);
+      if (d < best) {
+        best = d;
+        idx = i;
+      }
+    }
+    if (idx >= 0) enemySpawns.splice(idx, 1);
+  }
+
+  // 去掉玩家坦克正右下方最近的一辆敌车
+  {
+    let idx = -1;
+    let best = Infinity;
+    for (let i = 0; i < enemySpawns.length; i++) {
+      const dc = enemySpawns[i].c - START.c;
+      const dr = enemySpawns[i].r - START.r;
+      if (dc <= 0 || dr < 0) continue;
+      const d = dc + dr;
+      if (d < best) {
+        best = d;
+        idx = i;
+      }
+    }
+    if (idx >= 0) enemySpawns.splice(idx, 1);
   }
 
   return {
@@ -404,8 +445,8 @@ function buildLevelConfig() {
     crackHp: {},
     playerSpawn: { c: START.c, r: START.r },
     enemySpawns,
-    initialEnemies: Math.min(14, enemySpawns.length),
-    maxEnemies: Math.min(14, enemySpawns.length),
+    initialEnemies: Math.min(18, enemySpawns.length),
+    maxEnemies: Math.min(18, enemySpawns.length),
     baseEnemyHp: 2,
     enemySpeed: 60,
     playerSpeed: 100,
@@ -413,6 +454,7 @@ function buildLevelConfig() {
     noRespawn: true,
     switchLinks: { [switchKey]: [doorKey] },
     crates: [{ c: crateC, r: crateR }],
+    itemWeights: { mine: 3, heal: 3 },
     objective: {
       type: "reachPortal",
       target: 1,

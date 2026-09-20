@@ -26,9 +26,24 @@ export function itemTimer(itemId) {
   return 9000;
 }
 
+// 按权重抽取道具（关卡可通过 levelConfig.itemWeights 提高某类道具概率）
+export function pickItemDef() {
+  const weights = window.levelMode && window.levelConfig?.itemWeights;
+  if (weights) {
+    const total = ITEMS.reduce((s, it) => s + (weights[it.id] ?? 1), 0);
+    let roll = Math.random() * total;
+    for (const it of ITEMS) {
+      roll -= weights[it.id] ?? 1;
+      if (roll <= 0) return it;
+    }
+    return ITEMS[ITEMS.length - 1];
+  }
+  return ITEMS[Math.floor(Math.random() * ITEMS.length)];
+}
+
 export function spawnItemAtTank(t) {
   const cc = cellOf(t.x + t.w / 2, t.y + t.h / 2);
-  const def = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+  const def = pickItemDef();
   window.items.push({
     def,
     x: cc.c * CELL,
@@ -70,7 +85,7 @@ export function spawnRandomItem() {
     }
   if (empty.length === 0) return;
   const pick = empty[Math.floor(Math.random() * empty.length)];
-  const def = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+  const def = pickItemDef();
   window.items.push({
     def,
     x: pick.c * CELL,
@@ -85,7 +100,7 @@ export function spawnRandomItem() {
 export function spawnItemAtPosition(x, y) {
   const cc = cellOf(x, y);
   if (window.map[cc.r][cc.c] !== EMPTY) return;
-  const def = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+  const def = pickItemDef();
   window.items.push({
     def,
     x: cc.c * CELL,
