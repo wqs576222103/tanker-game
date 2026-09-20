@@ -37,6 +37,7 @@ import { getToken, getUserInfo } from "@/utils/user";
 import Map from "./components/Map/index.vue";
 import GameIntro from "./components/GameIntro/index.vue";
 import { togglePause } from "./script/base/index.js";
+import { AIPlayer } from "./script/ai-player.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -102,6 +103,9 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  if (AIPlayer.enabled) {
+    AIPlayer.toggle();
+  }
   window.state = "start";
   window.kills = 0;
   window.bossKills = 0;
