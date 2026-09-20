@@ -230,6 +230,10 @@ onUnmounted(() => {
   if (stateCheckInterval) clearInterval(stateCheckInterval);
   // 离开页面时停止游戏循环，避免残留循环与其他页面互相影响（倍速叠加）
   stopGameLoop();
+  // 清除导入的地图配置，避免污染其它页面
+  window.customMapConfig = null;
+  window.customEnemySpawns = null;
+  window.mapGenerated = false;
 });
 
 // 加载该员工上次导入并保存在服务器的 AI 脚本作为默认AI
