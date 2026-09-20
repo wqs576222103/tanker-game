@@ -85,21 +85,34 @@ export function resetGame() {
     // 构建传送门
     window.gates = [];
     if (cfg.gates && cfg.gates.length > 0) {
-      const gateMap = {};
+      // 先创建所有门对象
       for (const gDef of cfg.gates) {
-        const g = { cells: gDef.cells || [], partner: null, pair: gDef.pair || "" };
+        const g = { cells: gDef.cells || [], partner: null, pairId: null };
         for (const cell of g.cells) {
           if (window.map[cell.r]) window.map[cell.r][cell.c] = GATE;
         }
         window.gates.push(g);
-        if (gDef.pair) gateMap[gDef.pair] = gateMap[gDef.pair] || [];
-        gateMap[gDef.pair].push(g);
       }
-      // 配对传送门
-      for (const pair of Object.values(gateMap)) {
-        if (pair.length >= 2) {
-          pair[0].partner = pair[1];
-          pair[1].partner = pair[0];
+      // 通过 partnerCells 配对传送门
+      for (let i = 0; i < cfg.gates.length; i++) {
+        const gDef = cfg.gates[i];
+        const g = window.gates[i];
+        if (g.partner || !gDef.partnerCells || !gDef.partnerCells.length) continue;
+        // 查找 partnerCells 匹配的另一个门
+        for (let j = 0; j < window.gates.length; j++) {
+          if (i === j) continue;
+          const other = window.gates[j];
+          if (other.cells.length !== gDef.partnerCells.length) continue;
+          const match = gDef.partnerCells.every((pc) =>
+            other.cells.some((oc) => oc.c === pc.c && oc.r === pc.r),
+          );
+          if (match) {
+            g.partner = other;
+            other.partner = g;
+            g.pairId = i;
+            other.pairId = i;
+            break;
+          }
         }
       }
     }

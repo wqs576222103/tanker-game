@@ -104,6 +104,11 @@ export const TankActions = {
   moveTank(t, dx, dy, dt) {
     let sp = t.speed * dt;
     if (t.isPlayer && t.speedT > gtMs) sp *= 1.4;
+    // 加速带效果
+    if (t.isPlayer) {
+      const cc = cellOf(t.x + t.w / 2, t.y + t.h / 2);
+      if (map[cc.r] && map[cc.r][cc.c] === SPEED) sp *= 1.5;
+    }
     const nx = t.x + dx * sp,
       ny = t.y + dy * sp;
     if (!this.blocked(nx, t.y, t.w, t.h, t)) {
@@ -372,13 +377,13 @@ export const TankActions = {
           g.partner &&
           wasOutside &&
           gtMs - b.born > 60 &&
-          b.tpPair !== g.pair
+          b.tpPair !== g.pairId
         ) {
           const cen = centerOf(g.partner.cells[0].c, g.partner.cells[0].r);
           b.x = cen.x;
           b.y = cen.y;
           b.tp = true;
-          b.tpPair = g.pair;
+          b.tpPair = g.pairId;
           spawnExplosion(cen.x, cen.y, 14, "#58a6ff");
           sfx("tp");
           continue;
