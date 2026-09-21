@@ -15,15 +15,35 @@
       </div>
       <div class="objective-text">{{ config.objective.description }}</div>
       <div class="progress-bar">
-        <span class="portal-status">{{ reachedPortal ? "✓ 到达传送门" : "寻找传送门" }}</span>
+        <span class="portal-status">{{
+          reachedPortal ? "✓ 到达传送门" : "寻找传送门"
+        }}</span>
       </div>
       <div class="legend">
-        <div class="legend-item"><canvas ref="legendSpike" width="20" height="20"></canvas> 尖刺(持续伤害)</div>
-        <div class="legend-item"><canvas ref="legendFalling" width="20" height="20"></canvas> 落石(定时下砸)</div>
-        <div class="legend-item"><canvas ref="legendDoor" width="20" height="20"></canvas> 石门(需压住开关才打开)</div>
-        <div class="legend-item"><canvas ref="legendSwitch" width="20" height="20"></canvas> 开关(需木箱/坦克压住)</div>
-        <div class="legend-item"><canvas ref="legendCrate" width="20" height="20"></canvas> 木箱(可推动)</div>
-        <div class="legend-item"><canvas ref="legendPortal" width="20" height="20"></canvas> 传送门(终点)</div>
+        <div class="legend-item">
+          <canvas ref="legendSpike" width="20" height="20"></canvas>
+          尖刺(持续伤害)
+        </div>
+        <div class="legend-item">
+          <canvas ref="legendFalling" width="20" height="20"></canvas>
+          落石(定时下砸)
+        </div>
+        <div class="legend-item">
+          <canvas ref="legendDoor" width="20" height="20"></canvas>
+          石门(需压住开关才打开)
+        </div>
+        <div class="legend-item">
+          <canvas ref="legendSwitch" width="20" height="20"></canvas>
+          开关(需木箱/坦克压住)
+        </div>
+        <div class="legend-item">
+          <canvas ref="legendCrate" width="20" height="20"></canvas>
+          木箱(可推动)
+        </div>
+        <div class="legend-item">
+          <canvas ref="legendPortal" width="20" height="20"></canvas>
+          传送门(终点)
+        </div>
       </div>
     </div>
   </div>
@@ -175,9 +195,15 @@ function mulberry32(seed) {
 }
 
 function buildLevelConfig() {
-  const E = 0, W = 1, G = 2, B = 3;
-  const SK = 7, DR = 9, SW = 10;
-  const COLS = 45, ROWS = 30;
+  const E = 0,
+    W = 1,
+    G = 2,
+    B = 3;
+  const SK = 7,
+    DR = 9,
+    SW = 10;
+  const COLS = 45,
+    ROWS = 30;
   const rand = mulberry32(20260919);
   const ck = (c, r) => c + "," + r;
 
@@ -207,8 +233,14 @@ function buildLevelConfig() {
   while (stack.length) {
     const cur = stack[stack.length - 1];
     const nb = [];
-    for (const [dc, dr] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) {
-      const nc = cur.c + dc, nr = cur.r + dr;
+    for (const [dc, dr] of [
+      [-2, 0],
+      [2, 0],
+      [0, -2],
+      [0, 2],
+    ]) {
+      const nc = cur.c + dc,
+        nr = cur.r + dr;
       if (!cellOk(nc, nr) || visited.has(ck(nc, nr))) continue;
       nb.push({ c: nc, r: nr });
     }
@@ -231,8 +263,14 @@ function buildLevelConfig() {
 
   const adj = (c, r) => {
     const out = [];
-    for (const [dc, dr] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) {
-      const nc = c + dc, nr = r + dr;
+    for (const [dc, dr] of [
+      [-2, 0],
+      [2, 0],
+      [0, -2],
+      [0, 2],
+    ]) {
+      const nc = c + dc,
+        nr = r + dr;
       if (!cellOk(nc, nr)) continue;
       if (map[(r + nr) / 2][(c + nc) / 2] !== W) out.push({ c: nc, r: nr });
     }
@@ -268,7 +306,8 @@ function buildLevelConfig() {
   });
 
   // 石门：固定放在右上方通道口
-  const doorC = 33, doorR = 2;
+  const doorC = 33,
+    doorR = 2;
   sc(doorC, doorR, DR);
   const doorKey = ck(doorC, doorR);
 
@@ -282,7 +321,8 @@ function buildLevelConfig() {
       before.add(k2);
       const [c, r] = k2.split(",").map(Number);
       for (const n of adj(c, r)) {
-        const wc = (c + n.c) / 2, wr = (r + n.r) / 2;
+        const wc = (c + n.c) / 2,
+          wr = (r + n.r) / 2;
         if (wr === doorR && wc === doorC) continue;
         const nk = ck(n.c, n.r);
         if (s2.has(nk)) continue;
@@ -317,7 +357,9 @@ function buildLevelConfig() {
   }
   const distDoor = {};
   {
-    const doorNeighbors = adj(doorC, doorR).filter((n) => before.has(ck(n.c, n.r)));
+    const doorNeighbors = adj(doorC, doorR).filter((n) =>
+      before.has(ck(n.c, n.r)),
+    );
     const startCell = doorNeighbors[0] || { c: doorC, r: doorR - 2 };
     distDoor[ck(startCell.c, startCell.r)] = 0;
     const qd = [ck(startCell.c, startCell.r)];
@@ -334,10 +376,13 @@ function buildLevelConfig() {
   }
   const cands = leaves.filter((l) => dist[ck(l.c, l.r)] >= 3);
   cands.sort(
-    (x, y) => distDoor[ck(x.c, x.r)] - distDoor[ck(y.c, y.r)] || dist[ck(y.c, y.r)] - dist[ck(x.c, x.r)],
+    (x, y) =>
+      distDoor[ck(x.c, x.r)] - distDoor[ck(y.c, y.r)] ||
+      dist[ck(y.c, y.r)] - dist[ck(x.c, x.r)],
   );
   let switchLeaf = cands[0] || leaves[0];
-  if (!switchLeaf) switchLeaf = { ...pathCells[Math.max(0, Math.floor(di / 2))] };
+  if (!switchLeaf)
+    switchLeaf = { ...pathCells[Math.max(0, Math.floor(di / 2))] };
   sc(switchLeaf.c, switchLeaf.r, SW);
   const switchKey = ck(switchLeaf.c, switchLeaf.r);
   const nbLeaf = adj(switchLeaf.c, switchLeaf.r)[0];
@@ -349,18 +394,33 @@ function buildLevelConfig() {
   sc(21, 15, SK);
 
   // 去掉绿色框位置的墙
-  sc(13, 26, E);
+  // sc(13, 26, E);
+
+  // 去掉红色框位置的墙
+  sc(30, 7, E);
 
   // 各条路线上的巡逻敌人（前段稀疏，后段密集）
   const enemySpawns = [];
   const total = pathCells.length;
-  for (let i = Math.floor(total * 0.18); i < total - 2 && enemySpawns.length < 8; i++) {
+  for (
+    let i = Math.floor(total * 0.18);
+    i < total - 2 && enemySpawns.length < 8;
+    i++
+  ) {
     const cell = pathCells[i];
     if (map[cell.r][cell.c] !== E) continue;
-    if (ck(cell.c, cell.r) === switchKey || ck(cell.c, cell.r) === ck(crateC, crateR)) continue;
+    if (
+      ck(cell.c, cell.r) === switchKey ||
+      ck(cell.c, cell.r) === ck(crateC, crateR)
+    )
+      continue;
     const ratio = i / total;
     const minGap = ratio < 0.5 ? 5 : 3;
-    if (enemySpawns.length && i - pathCells.indexOf(enemySpawns[enemySpawns.length - 1]) < minGap) continue;
+    if (
+      enemySpawns.length &&
+      i - pathCells.indexOf(enemySpawns[enemySpawns.length - 1]) < minGap
+    )
+      continue;
     enemySpawns.push(cell);
   }
 
@@ -488,23 +548,78 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.level-wrap { position: absolute; inset: 0; }
+.level-wrap {
+  position: absolute;
+  inset: 0;
+}
 .game-timer {
-  position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 20;
-  background: rgba(0,0,0,0.5); color: #ffd76e; padding: 6px 20px; border-radius: 20px;
-  font-size: 16px; font-weight: bold; letter-spacing: 2px; border: 1px solid rgba(255,215,110,0.3);
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.5);
+  color: #ffd76e;
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  border: 1px solid rgba(255, 215, 110, 0.3);
 }
 .level-hud {
-  position: absolute; top: 100px; width: 300px; left: 20px; z-index: 20;
-  display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.6);
-  padding: 12px 24px; border-radius: 12px; border: 1px solid rgba(255,215,110,0.3);
+  position: absolute;
+  top: 100px;
+  width: 300px;
+  left: 20px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 215, 110, 0.3);
 }
-.objective-bar { display: flex; align-items: center; gap: 16px; }
-.level-tag { font-size: 14px; color: #ffd76e; font-weight: bold; letter-spacing: 2px; }
-.objective-text { font-size: 13px; color: #cfe3cf; }
-.progress-bar { display: flex; gap: 16px; font-size: 13px; }
-.portal-status { color: #78c8ff; font-weight: bold; }
-.legend { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 11px; color: #9fb6a6; }
-.legend-item { display: flex; align-items: center; gap: 8px; }
-.legend-item canvas { border-radius: 2px; flex-shrink: 0; }
+.objective-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.level-tag {
+  font-size: 14px;
+  color: #ffd76e;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+.objective-text {
+  font-size: 13px;
+  color: #cfe3cf;
+}
+.progress-bar {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+}
+.portal-status {
+  color: #78c8ff;
+  font-weight: bold;
+}
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #9fb6a6;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.legend-item canvas {
+  border-radius: 2px;
+  flex-shrink: 0;
+}
 </style>
