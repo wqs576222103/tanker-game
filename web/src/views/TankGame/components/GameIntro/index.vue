@@ -14,9 +14,14 @@
         ⬜ 银色砖墙：不可摧毁　🟨 黄色砖墙：可被子弹击碎<br />
         🌿 草丛：坦克可进入隐藏　🌀 蓝色传送门双向传送　🗺️ 每局障碍随机生成<br />
       </p>
-      <p style="color: #e0a93a; font-size: 16px">
-        点击下方 “📥 导入AI” 按钮，获取提示词，生成脚本，定制化你的AI坦克吧。
+      <p style="color: #58a6ff; font-size: 14px">
+        点击下方 "📥 导入AI" 按钮，获取提示词，生成脚本，定制化你的AI坦克。
       </p>
+      <p style="color: #58a6ff; font-size: 14px">
+        点击 "🗺️ 更换地图"
+        按钮，可切换随机地图、浏览玩家地图或导入自定义地图脚本。
+      </p>
+
       <slot></slot>
     </div>
   </div>
@@ -52,7 +57,7 @@ defineProps({
   border: 2px solid #16213e;
   border-radius: 12px;
   padding: 30px;
-  max-width: 500px;
+  max-width: 600px;
   width: 90%;
   text-align: center;
   color: white;

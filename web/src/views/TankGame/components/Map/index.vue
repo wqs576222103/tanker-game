@@ -36,8 +36,12 @@
             >🗺️ 每局障碍随机生成</template
           ><br />
         </p>
-        <p v-if="!levelMode" style="color: #e0a93a; font-size: 16px">
-          点击下方 “📥 导入AI” 按钮，获取提示词，生成脚本，定制化你的AI坦克吧。
+        <p v-if="!levelMode" style="color: #58a6ff; font-size: 14px">
+          点击下方 “📥 导入AI” 按钮，获取提示词，生成脚本，定制化你的AI坦克。
+        </p>
+        <p v-if="!levelMode" style="color: #58a6ff; font-size: 14px">
+          点击 "🗺️ 更换地图"
+          按钮，可切换随机地图、浏览玩家地图或导入自定义地图脚本。
         </p>
         <button id="btn-start">{{ startButtonText }}</button>
       </div>
