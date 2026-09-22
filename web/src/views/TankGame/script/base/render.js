@@ -136,22 +136,40 @@ export function drawMap() {
         continue;
       }
       if (v === SPIKE) {
-        const pulse =
-          0.5 + 0.5 * Math.sin(window.gtMs / 300 + c * 0.4 + r * 0.4);
-        window.ctx.fillStyle = `rgba(200,50,50,${0.2 + pulse * 0.2})`;
-        window.ctx.fillRect(x, y, CELL, CELL);
-        window.ctx.strokeStyle = `rgba(255,80,80,${0.6 + pulse * 0.4})`;
-        window.ctx.lineWidth = 2;
-        const spikeCount = 3;
-        const spikeWidth = CELL / spikeCount;
-        for (let i = 0; i < spikeCount; i++) {
-          const sx = x + i * spikeWidth + spikeWidth / 2;
-          window.ctx.beginPath();
-          window.ctx.moveTo(sx - 4, y + CELL - 2);
-          window.ctx.lineTo(sx, y + 2);
-          window.ctx.lineTo(sx + 4, y + CELL - 2);
-          window.ctx.stroke();
+        const phase = (window.gtMs + c * 500 + r * 300) % 3000;
+        const spikeUp = phase < 1500;
+        const riseT = spikeUp
+          ? Math.min(phase / 400, 1)
+          : Math.max(1 - (phase - 1500) / 400, 0);
+        if (riseT < 0.1) {
+          window.ctx.fillStyle = "rgba(50,30,30,0.15)";
+          window.ctx.fillRect(x, y, CELL, CELL);
+          continue;
         }
+        window.ctx.fillStyle = "rgba(50,30,30,0.25)";
+        window.ctx.fillRect(x, y, CELL, CELL);
+        const grad = window.ctx.createLinearGradient(x, y, x, y + CELL);
+        grad.addColorStop(0, `rgba(200,200,200,${riseT})`);
+        grad.addColorStop(1, `rgba(85,85,85,${riseT})`);
+        window.ctx.fillStyle = grad;
+        const maxH = CELL * 1.4;
+        const midH = maxH * (2 / 3);
+        const sideH = maxH * 0.5;
+        const w3 = CELL / 3;
+        window.ctx.beginPath();
+        window.ctx.moveTo(x, y + CELL);
+        window.ctx.lineTo(x + w3 * 0.5, y + CELL - sideH * riseT);
+        window.ctx.lineTo(x + w3, y + CELL);
+        window.ctx.lineTo(x + w3 * 1.5, y + CELL - midH * riseT);
+        window.ctx.lineTo(x + w3 * 2, y + CELL);
+        window.ctx.lineTo(x + w3 * 2.5, y + CELL - sideH * riseT);
+        window.ctx.lineTo(x + CELL, y + CELL);
+        window.ctx.closePath();
+        window.ctx.fill();
+        window.ctx.strokeStyle = `rgba(42,42,42,${riseT})`;
+        window.ctx.lineWidth = 1.5;
+        window.ctx.lineJoin = "round";
+        window.ctx.stroke();
         continue;
       }
       if (v === DOOR) {
@@ -313,7 +331,9 @@ export function drawGrassOverlay() {
 
 export function drawTank(t) {
   if (!t.alive) return;
-  if (t.invincible > 0 && Math.floor(window.gtMs / 100) % 2 === 0) {
+  if (t.flash > 0 && Math.floor(window.gtMs / 80) % 2 === 0) {
+    window.ctx.globalAlpha = 0.3;
+  } else if (t.invincible > 0 && Math.floor(window.gtMs / 100) % 2 === 0) {
     window.ctx.globalAlpha = 0.45;
   }
   const cx = t.x + t.w / 2,

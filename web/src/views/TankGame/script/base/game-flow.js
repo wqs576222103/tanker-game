@@ -318,8 +318,16 @@ function updateMazeMechanics(dt) {
   if (isSpeedCell(playerCell.c, playerCell.r)) {
     window.player.speed = (window.levelConfig?.playerSpeed || 100) * 1.5;
   } else if (isSpikeCell(playerCell.c, playerCell.r)) {
-    if (window.gtMs % 500 < 20) {
+    const phase =
+      (window.gtMs + playerCell.c * 500 + playerCell.r * 300) % 3000;
+    const riseT =
+      phase < 1500
+        ? Math.min(phase / 400, 1)
+        : Math.max(1 - (phase - 1500) / 400, 0);
+    if (riseT > 0.5 && window.gtMs % 500 < 20) {
       window.player.hp -= 1;
+      window.player.flash = 300;
+      window.damageFlash = 350;
       if (window.player.hp <= 0) {
         window.player.alive = false;
         window.deathReason = "踩到尖刺";

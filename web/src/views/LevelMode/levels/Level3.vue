@@ -75,20 +75,27 @@ function drawLegendIcons() {
   const drawSpike = (canvas) => {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "rgba(200,50,50,0.5)";
+    ctx.fillStyle = "rgba(50,30,30,0.25)";
     ctx.fillRect(0, 0, S, S);
-    ctx.strokeStyle = "rgba(255,80,80,0.9)";
+    const grad = ctx.createLinearGradient(0, 0, 0, S);
+    grad.addColorStop(0, "#c8c8c8");
+    grad.addColorStop(1, "#555555");
+    ctx.fillStyle = grad;
+    const w3 = S / 3;
+    ctx.beginPath();
+    ctx.moveTo(0, S);
+    ctx.lineTo(w3 * 0.5, S * 0.45);
+    ctx.lineTo(w3, S);
+    ctx.lineTo(w3 * 1.5, S * 0.15);
+    ctx.lineTo(w3 * 2, S);
+    ctx.lineTo(w3 * 2.5, S * 0.45);
+    ctx.lineTo(S, S);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#2a2a2a";
     ctx.lineWidth = 1.5;
-    const spikeCount = 3;
-    const spikeWidth = S / spikeCount;
-    for (let i = 0; i < spikeCount; i++) {
-      const sx = i * spikeWidth + spikeWidth / 2;
-      ctx.beginPath();
-      ctx.moveTo(sx - 3, S - 1);
-      ctx.lineTo(sx, 1);
-      ctx.lineTo(sx + 3, S - 1);
-      ctx.stroke();
-    }
+    ctx.lineJoin = "round";
+    ctx.stroke();
   };
 
   const drawFalling = (canvas) => {
@@ -389,9 +396,11 @@ function buildLevelConfig() {
   const crateC = (switchLeaf.c + nbLeaf.c) / 2;
   const crateR = (switchLeaf.r + nbLeaf.r) / 2;
 
-  // 尖刺：固定放在中间通道
+  // 尖刺：固定放在中间通道 + 底部倒数第二排 + 右边一列
   sc(21, 9, SK);
   sc(21, 15, SK);
+  sc(17, 27, SK);
+  sc(43, 10, SK);
 
   // 去掉绿色框位置的墙
   // sc(13, 26, E);
@@ -514,6 +523,7 @@ function buildLevelConfig() {
     noRespawn: true,
     switchLinks: { [switchKey]: [doorKey] },
     crates: [{ c: crateC, r: crateR }],
+    spikePulse: true,
     itemWeights: { mine: 3, heal: 3 },
     objective: {
       type: "reachPortal",

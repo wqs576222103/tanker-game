@@ -36,6 +36,8 @@ export function loop(ts) {
   window.lastTime = ts;
   if (window.state === "playing") update(dt * window.gameSpeed);
   if (window.damageFlash > 0) window.damageFlash -= dt * 1000;
+  if (window.player && window.player.flash > 0)
+    window.player.flash -= dt * 1000;
   updateHud();
 
   drawMap();
