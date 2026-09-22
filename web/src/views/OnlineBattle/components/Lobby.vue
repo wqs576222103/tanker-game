@@ -2,7 +2,14 @@
   <div class="lobby-container">
     <div class="lobby-header">
       <h2>在线对战</h2>
-      <button class="btn-back" @click="goHome">返回大厅</button>
+      <button class="btn-back" @click="goHome">返回主菜单</button>
+    </div>
+
+    <div v-if="toastMsg" class="toast-msg">{{ toastMsg }}</div>
+
+    <div v-if="battleStarting" class="battle-loading">
+      <div class="battle-loading-spinner"></div>
+      <div class="battle-loading-text">正在进入游戏...</div>
     </div>
 
     <div class="lobby-body">
@@ -71,11 +78,55 @@
                   {{ (p.username || '玩家')[0] }}
                 </span>
                 <span class="player-name">{{ p.username || '玩家' }}</span>
+                <span v-if="p.isHost" class="player-host-tag">房主</span>
                 <span v-if="p.socketId === mySocketId" class="player-tag">我</span>
+                <span
+                  v-if="!p.isHost"
+                  class="ready-status"
+                  :class="p.ready ? 'ready-yes' : 'ready-no'"
+                >
+                  {{ p.ready ? '已准备' : '未准备' }}
+                </span>
+                <div v-if="isHost && p.socketId !== mySocketId" class="host-ops">
+                  <button
+                    v-if="!p.ready"
+                    class="btn-mini remind"
+                    title="提醒准备"
+                    @click="remindReady(p.socketId)"
+                  >提醒</button>
+                  <button
+                    class="btn-mini kick"
+                    title="踢出房间"
+                    @click="kickPlayer(p.socketId)"
+                  >踢出</button>
+                </div>
               </div>
             </div>
-            <div v-if="roomPlayers.length >= 2" class="room-actions">
-              <button class="btn-start" @click="startBattle">开始对战</button>
+            <div v-if="!isHost" class="room-actions ready-actions">
+              <button
+                class="btn-ready"
+                :class="{ 'is-ready': myReady }"
+                @click="toggleReady"
+              >
+                {{ myReady ? '取消准备' : '准备' }}
+              </button>
+            </div>
+            <div v-if="isHost && roomPlayers.length >= 2" class="room-actions">
+              <button
+                class="btn-start"
+                :disabled="!allReady"
+                @click="startBattle"
+              >
+                {{ allReady ? '开始对战' : '等待玩家准备...' }}
+              </button>
+            </div>
+            <div v-else-if="!isHost && roomPlayers.length >= 2" class="room-hint">
+              等待房主开始...
+              <button
+                class="btn-mini remind"
+                style="margin-left: 8px"
+                @click="remindStart"
+              >提醒开始</button>
             </div>
             <div v-else class="room-hint">等待更多玩家加入...</div>
             <button class="btn-leave" @click="leaveRoom">离开房间</button>
@@ -131,7 +182,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { getSocket, disconnectSocket } from "@/utils/socket";
 import { getUserInfo } from "@/utils/user";
@@ -150,7 +201,26 @@ const recentGames = ref([]);
 const mySocketId = ref("");
 const publicRooms = ref([]);
 const matchElapsed = ref(0);
+const battleStarting = ref(false);
+const toastMsg = ref("");
+const copied = ref(false);
 let matchTimer = null;
+let toastTimer = null;
+
+const myReady = computed(() => {
+  const me = roomPlayers.value.find((p) => p.socketId === mySocketId.value);
+  return me ? me.ready : false;
+});
+
+const isHost = computed(() => {
+  const me = roomPlayers.value.find((p) => p.socketId === mySocketId.value);
+  return me ? me.isHost : false;
+});
+
+const allReady = computed(() => {
+  const others = roomPlayers.value.filter((p) => !p.isHost);
+  return roomPlayers.value.length >= 2 && others.every((p) => p.ready);
+});
 
 const teamColors = [
   "#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4",
@@ -226,13 +296,31 @@ function setupSocketListeners() {
       errorMsg.value = "";
     },
     "game-start": () => {
-      router.push("/online-battle/play");
+      battleStarting.value = false;
     },
     "rooms-list": (data) => {
       publicRooms.value = data.rooms || [];
     },
     "rooms-updated": (data) => {
       publicRooms.value = data.rooms || [];
+    },
+    "room-updated": (data) => {
+      roomPlayers.value = data.players || [];
+    },
+    "battle-starting": () => {
+      battleStarting.value = true;
+      errorMsg.value = "";
+    },
+    kicked: (data) => {
+      inRoom.value = false;
+      currentRoomId.value = "";
+      createdRoomId.value = "";
+      roomPlayers.value = [];
+      battleStarting.value = false;
+      showToast(data.message || "你已被移出房间");
+    },
+    reminded: (data) => {
+      showToast(data.message || "房主提醒您准备！");
     },
   };
   Object.entries(lobbyHandlers).forEach(([ev, fn]) => socket.on(ev, fn));
@@ -257,6 +345,8 @@ function stopMatchTimer() {
 function quickMatch() {
   if (!socket) return;
   errorMsg.value = "";
+  matching.value = true;
+  startMatchTimer();
   socket.emit("quick-match", {
     userInfo: _getUserInfoPayload(),
   });
@@ -301,6 +391,35 @@ function startBattle() {
   socket.emit("start-battle");
 }
 
+function toggleReady() {
+  if (!socket) return;
+  socket.emit("player-ready", { ready: !myReady.value });
+}
+
+function kickPlayer(targetSocketId) {
+  if (!socket) return;
+  socket.emit("kick-player", { targetSocketId });
+}
+
+function remindReady(targetSocketId) {
+  if (!socket) return;
+  socket.emit("remind-ready", { targetSocketId });
+}
+
+function remindStart() {
+  if (!socket) return;
+  socket.emit("remind-start");
+}
+
+function showToast(msg) {
+  toastMsg.value = msg;
+  copied.value = false;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastMsg.value = "";
+  }, 2500);
+}
+
 function leaveRoom() {
   if (!socket) return;
   socket.emit("leave-room");
@@ -308,6 +427,7 @@ function leaveRoom() {
   currentRoomId.value = "";
   createdRoomId.value = "";
   roomPlayers.value = [];
+  battleStarting.value = false;
 }
 
 function goHome() {
@@ -317,10 +437,19 @@ function goHome() {
 
 function copyRoomId() {
   const text = createdRoomId.value;
+  const onSuccess = () => {
+    copied.value = true;
+    showToast("房间号已复制");
+  };
+  const onFail = () => {
+    showToast("复制失败，请手动复制");
+  };
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+      fallbackCopy(text) ? onSuccess() : onFail();
+    });
   } else {
-    fallbackCopy(text);
+    fallbackCopy(text) ? onSuccess() : onFail();
   }
 }
 
@@ -331,12 +460,14 @@ function fallbackCopy(text) {
   ta.style.left = "-9999px";
   document.body.appendChild(ta);
   ta.select();
+  let ok = false;
   try {
-    document.execCommand("copy");
+    ok = document.execCommand("copy");
   } catch (e) {
-    // ignore
+    ok = false;
   }
   document.body.removeChild(ta);
+  return ok;
 }
 
 function _getUserInfoPayload() {
@@ -767,5 +898,141 @@ function formatTime(timeStr) {
 .recent-time {
   color: #6a7a6a;
   font-size: 12px;
+}
+
+.player-host-tag {
+  background: #ffeaa7;
+  color: #1a2118;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.ready-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.ready-yes {
+  background: rgba(125, 224, 125, 0.2);
+  color: #7de07d;
+}
+
+.ready-no {
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+}
+
+.host-ops {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.btn-mini {
+  padding: 2px 8px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-mini.remind {
+  background: #45b7d1;
+  color: #1a2118;
+}
+
+.btn-mini.kick {
+  background: #ff6b6b;
+  color: #fff;
+}
+
+.btn-mini:hover {
+  transform: scale(1.05);
+}
+
+.ready-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-ready {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  background: linear-gradient(135deg, #45b7d1, #96ceb4);
+  color: #1a2118;
+  transition: all 0.2s;
+}
+
+.btn-ready:hover {
+  transform: scale(1.02);
+}
+
+.btn-ready.is-ready {
+  background: #3a4a3a;
+  color: #7de07d;
+}
+
+.btn-start:disabled {
+  background: #3a4a3a;
+  color: #6a7a6a;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.toast-msg {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2a3a2a;
+  border: 1px solid #7de07d;
+  color: #7de07d;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  z-index: 1000;
+  animation: toast-in 0.3s ease;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.battle-loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 33, 24, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 999;
+}
+
+.battle-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid rgba(125, 224, 125, 0.2);
+  border-top-color: #7de07d;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.battle-loading-text {
+  color: #7de07d;
+  font-size: 18px;
+  font-weight: bold;
 }
 </style>

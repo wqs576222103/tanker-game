@@ -42,15 +42,7 @@ function setupSocket(server) {
       socket.join(roomId);
       socket.emit("room-created", {
         roomId,
-        players: roomManager.getRoom(roomId)
-          ? Array.from(roomManager.getRoom(roomId).players.values()).map((p) => ({
-              socketId: p.socketId,
-              employeeId: p.employeeId,
-              username: p.username,
-              tankName: p.tankName,
-              teamId: p.teamId,
-            }))
-          : [],
+        players: roomManager.getRoomPlayerList(roomManager.getRoom(roomId)),
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
     });
@@ -78,17 +70,86 @@ function setupSocket(server) {
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
     });
 
+    socket.on("player-ready", (data) => {
+      const ready = !!data?.ready;
+      const result = roomManager.setPlayerReady(socket.id, ready);
+      if (!result) return;
+      io.to(result.roomId).emit("room-updated", { players: result.players });
+    });
+
+    socket.on("kick-player", (data) => {
+      const targetSocketId = data?.targetSocketId;
+      if (!targetSocketId) return;
+      const result = roomManager.kickPlayer(socket.id, targetSocketId);
+      if (result.error) {
+        socket.emit("start-error", { message: result.error });
+        return;
+      }
+      const targetSocket = io.sockets.sockets.get(targetSocketId);
+      if (targetSocket) {
+        targetSocket.leave(result.roomId);
+        targetSocket.emit("kicked", { message: "你已被房主移出房间" });
+      }
+      io.to(result.roomId).emit("player-left", {
+        socketId: targetSocketId,
+        players: result.players,
+      });
+      io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+    });
+
+    socket.on("remind-ready", (data) => {
+      const targetSocketId = data?.targetSocketId;
+      if (!targetSocketId) return;
+      const room = roomManager.getRoomBySocket(socket.id);
+      if (!room) return;
+      const sender = room.players.get(socket.id);
+      if (!sender || !sender.isHost) return;
+      const target = room.players.get(targetSocketId);
+      if (!target || target.isHost) return;
+      const targetSocket = io.sockets.sockets.get(targetSocketId);
+      if (targetSocket) {
+        targetSocket.emit("reminded", { message: "房主提醒您准备！" });
+      }
+    });
+
+    socket.on("remind-start", () => {
+      const room = roomManager.getRoomBySocket(socket.id);
+      if (!room) return;
+      const sender = room.players.get(socket.id);
+      if (!sender || sender.isHost) return;
+      const host = Array.from(room.players.values()).find((p) => p.isHost);
+      if (!host) return;
+      const hostSocket = io.sockets.sockets.get(host.socketId);
+      if (hostSocket) {
+        hostSocket.emit("reminded", {
+          message: `${sender.username || "玩家"} 提醒您开始游戏！`,
+        });
+      }
+    });
+
     socket.on("start-battle", () => {
       const room = roomManager.getRoomBySocket(socket.id);
       if (!room) return;
       if (room.state !== "waiting") return;
+      const host = room.players.get(socket.id);
+      if (!host || !host.isHost) {
+        socket.emit("start-error", { message: "只有房主可以开始对战" });
+        return;
+      }
       if (room.players.size < 2) {
         socket.emit("start-error", { message: "需要至少2名玩家才能开始" });
+        return;
+      }
+      if (!roomManager.allReady(room)) {
+        socket.emit("start-error", { message: "还有玩家未准备" });
         return;
       }
 
       room.state = "starting";
       const players = Array.from(room.players.values());
+      io.to(room.id).emit("battle-starting", { message: "正在进入游戏..." });
+      io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+
       const engine = new GameEngine(room.id, players);
       engines.set(room.id, engine);
 

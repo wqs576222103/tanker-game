@@ -67,7 +67,6 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
 import { getSocket } from "@/utils/socket";
 import {
   setOnlineCtx,
@@ -76,8 +75,8 @@ import {
   cleanupOnlineEngine,
 } from "../logic/onlineEngine.js";
 
-const router = useRouter();
 const socket = getSocket();
+const emit = defineEmits(["back"]);
 
 const gamePhase = ref("waiting");
 const countdownSec = ref(3);
@@ -109,7 +108,7 @@ onMounted(() => {
   } else {
     redirectTimer = setTimeout(() => {
       if (gamePhase.value === "waiting") {
-        router.push("/online-battle");
+        emit("back");
       }
     }, 3000);
   }
@@ -146,11 +145,16 @@ function renderLoop() {
 function fitCanvas() {
   const canvas = document.getElementById("online-game");
   if (!canvas) return;
-  const wrap = document.getElementById("online-canvas-wrap");
-  if (!wrap) return;
-  const pad = 10;
-  const availW = wrap.clientWidth - pad * 2;
-  const availH = wrap.clientHeight - pad * 2;
+  const area = document.getElementById("online-game-area");
+  const hud = document.getElementById("online-hud");
+  const btns = document.getElementById("online-btn-group");
+  if (!area) return;
+  const pad = 20;
+  const hudH = hud ? hud.offsetHeight : 0;
+  const btnH = btns ? btns.offsetHeight : 0;
+  const availW = area.clientWidth - pad;
+  const availH = area.clientHeight - hudH - btnH - pad;
+  if (availW <= 0 || availH <= 0) return;
   const scale = Math.min(availW / 900, availH / 600);
   canvas.style.width = Math.round(900 * scale) + "px";
   canvas.style.height = Math.round(600 * scale) + "px";
@@ -200,6 +204,7 @@ function setupSocketListeners() {
 
 const keysDown = new Set();
 let inputTimer = null;
+let minePulse = false;
 
 function setupKeyboard() {
   document.addEventListener("keydown", onKeyDown);
@@ -218,6 +223,18 @@ function onKeyDown(e) {
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(code)) {
     e.preventDefault();
   }
+  if (code === "KeyK" && gamePhase.value === "playing") {
+    socket.emit("player-input", {
+      up: keysDown.has("ArrowUp") || keysDown.has("KeyW"),
+      down: keysDown.has("ArrowDown") || keysDown.has("KeyS"),
+      left: keysDown.has("ArrowLeft") || keysDown.has("KeyA"),
+      right: keysDown.has("ArrowRight") || keysDown.has("KeyD"),
+      fire: keysDown.has("Space"),
+      mine: true,
+    });
+    minePulse = true;
+    setTimeout(() => { minePulse = false; }, 100);
+  }
   keysDown.add(code);
 }
 
@@ -233,6 +250,7 @@ function sendInput() {
     left: keysDown.has("ArrowLeft") || keysDown.has("KeyA"),
     right: keysDown.has("ArrowRight") || keysDown.has("KeyD"),
     fire: keysDown.has("Space"),
+    mine: minePulse,
   };
   socket.emit("player-input", input);
 }
@@ -248,7 +266,7 @@ function toggleFullscreen() {
 
 function backToLobby() {
   socket.emit("leave-room");
-  router.push("/online-battle");
+  emit("back");
 }
 </script>
 
@@ -300,6 +318,9 @@ function backToLobby() {
   position: relative;
   flex-shrink: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #online-game {

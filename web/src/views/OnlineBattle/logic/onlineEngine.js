@@ -4,6 +4,7 @@ import {
   drawMap,
   drawItems,
   drawBullets,
+  drawMines,
   drawGrassOverlay,
   drawParticles,
   drawFloats,
@@ -21,6 +22,7 @@ let serverState = null;
 let localTanks = [];
 let localBullets = [];
 let localItems = [];
+let localMines = [];
 let localMap = [];
 let localGates = [];
 let localCrackHp = {};
@@ -95,15 +97,37 @@ export function updateServerState(state, fullState) {
   }
 
   if (state && state.items) {
+    const ICONS = {
+      drone: "🚁", spread: "✨", fire: "⚡", speed: "💨",
+      shield: "🛡️", mine: "💣", heal: "❤️",
+    };
     localItems = state.items.map((it) => ({
       x: it.x,
       y: it.y,
       w: 18,
       h: 18,
-      def: { id: it.type, name: it.name, color: "#fff" },
+      life: 20000,
+      age: 0,
+      def: {
+        id: it.type,
+        name: it.name,
+        icon: ICONS[it.type] || "★",
+        color: "#fff",
+      },
       dead: false,
     }));
     window.items = localItems;
+  }
+
+  if (state && state.mines) {
+    localMines = state.mines.map((m) => ({
+      x: m.c * CELL,
+      y: m.r * CELL,
+      w: CELL,
+      h: CELL,
+      dead: false,
+    }));
+    window.mines = localMines;
   }
 }
 
@@ -120,6 +144,7 @@ export function drawOnlineBattle() {
   drawMap();
   drawItems();
   drawBullets();
+  drawMines();
 
   for (const t of localTanks) {
     if (!t.alive) continue;
@@ -176,12 +201,14 @@ export function cleanupOnlineEngine() {
   localTanks = [];
   localBullets = [];
   localItems = [];
+  localMines = [];
   localMap = [];
   localGates = [];
   localCrackHp = {};
   window.tanks = [];
   window.bullets = [];
   window.items = [];
+  window.mines = [];
   window.map = [];
   window.gates = [];
   window.crackHp = {};

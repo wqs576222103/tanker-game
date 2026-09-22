@@ -47,6 +47,7 @@ class RoomManager {
         tankName: player.tankName,
         teamId: room.players.size,
         ready: true,
+        isHost: room.players.size === 0,
         alive: true,
       });
       this.rooms.set(player.socketId, roomId);
@@ -55,6 +56,8 @@ class RoomManager {
     this.rooms.set(`room:${roomId}`, room);
 
     for (const player of matched) {
+      const sock = io.sockets.sockets.get(player.socketId);
+      if (sock) sock.join(roomId);
       io.to(player.socketId).emit("matched", {
         roomId,
         players: this._getRoomPlayerList(room),
@@ -99,7 +102,8 @@ class RoomManager {
       username: userInfo.username || "匿名",
       tankName: userInfo.tankName || "坦克",
       teamId: 0,
-      ready: true,
+      ready: false,
+      isHost: true,
       alive: true,
     });
 
@@ -120,12 +124,48 @@ class RoomManager {
       username: userInfo.username || "匿名",
       tankName: userInfo.tankName || "坦克",
       teamId: room.players.size,
-      ready: true,
+      ready: false,
+      isHost: false,
       alive: true,
     });
 
     this.rooms.set(socketId, roomId);
     return { success: true, players: this._getRoomPlayerList(room) };
+  }
+
+  setPlayerReady(socketId, ready) {
+    const roomId = this.rooms.get(socketId);
+    if (!roomId) return null;
+    const room = this.rooms.get(`room:${roomId}`);
+    if (!room) return null;
+    const player = room.players.get(socketId);
+    if (!player) return null;
+    player.ready = !!ready;
+    return { roomId, players: this._getRoomPlayerList(room) };
+  }
+
+  kickPlayer(hostSocketId, targetSocketId) {
+    const roomId = this.rooms.get(hostSocketId);
+    if (!roomId) return { error: "你不在房间中" };
+    const room = this.rooms.get(`room:${roomId}`);
+    if (!room) return { error: "房间不存在" };
+    const host = room.players.get(hostSocketId);
+    if (!host || !host.isHost) return { error: "只有房主可以踢人" };
+    if (targetSocketId === hostSocketId) return { error: "不能踢自己" };
+    const target = room.players.get(targetSocketId);
+    if (!target) return { error: "玩家不在房间中" };
+
+    room.players.delete(targetSocketId);
+    this.rooms.delete(targetSocketId);
+    return { roomId, kickedSocketId: targetSocketId, players: this._getRoomPlayerList(room) };
+  }
+
+  allReady(room) {
+    for (const p of room.players.values()) {
+      if (p.isHost) continue;
+      if (!p.ready) return false;
+    }
+    return true;
   }
 
   leaveRoom(socketId) {
@@ -138,6 +178,9 @@ class RoomManager {
       return null;
     }
 
+    const leaving = room.players.get(socketId);
+    const wasHost = !!(leaving && leaving.isHost);
+
     room.players.delete(socketId);
     this.rooms.delete(socketId);
 
@@ -145,6 +188,14 @@ class RoomManager {
       this.rooms.delete(`room:${roomId}`);
       console.log(`[RoomManager] Room ${roomId} destroyed (empty)`);
       return { roomId, roomEmpty: true };
+    }
+
+    if (wasHost) {
+      const nextHost = room.players.values().next().value;
+      if (nextHost) {
+        nextHost.isHost = true;
+        console.log(`[RoomManager] Room ${roomId} new host: ${nextHost.username}`);
+      }
     }
 
     return { roomId, players: this._getRoomPlayerList(room), room };
@@ -191,6 +242,11 @@ class RoomManager {
     if (player) player.alive = alive;
   }
 
+  getRoomPlayerList(room) {
+    if (!room) return [];
+    return this._getRoomPlayerList(room);
+  }
+
   _getRoomPlayerList(room) {
     return Array.from(room.players.values()).map((p) => ({
       socketId: p.socketId,
@@ -198,6 +254,8 @@ class RoomManager {
       username: p.username,
       tankName: p.tankName,
       teamId: p.teamId,
+      ready: p.ready,
+      isHost: p.isHost,
       alive: p.alive,
     }));
   }

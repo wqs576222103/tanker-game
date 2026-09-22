@@ -14,6 +14,7 @@ class GameEngine {
     this.tanks = [];
     this.bullets = [];
     this.items = [];
+    this.mines = [];
     this.map = [];
     this.gates = [];
     this.crackHp = {};
@@ -34,8 +35,8 @@ class GameEngine {
     players.forEach((p, i) => {
       const sp = spawnPoints[i];
       const valid = this._findValidSpawnCell(sp.c, sp.r);
-      const x = valid.c * CELL + 3;
-      const y = valid.r * CELL + 3;
+      const x = valid.c * CELL;
+      const y = valid.r * CELL;
       const speed = TANK_SPEED_MIN + Math.random() * (TANK_SPEED_MAX - TANK_SPEED_MIN);
 
       this.tanks.push({
@@ -52,6 +53,7 @@ class GameEngine {
         alive: true,
         fire: false,
         fireCd: 0,
+        mine: false,
         moveUp: false, moveDown: false, moveLeft: false, moveRight: false,
         score: 0, kills: 0, deaths: 0,
         lastDeathReason: "",
@@ -172,7 +174,7 @@ class GameEngine {
   }
 
   _findValidSpawnCell(c, r) {
-    if (this._isPassableCell(c, r)) return { c, r };
+    if (this._canSpawnAt(c, r)) return { c, r };
     const visited = new Set();
     const queue = [{ c, r }];
     visited.add(`${c},${r}`);
@@ -185,13 +187,22 @@ class GameEngine {
         const key = `${nc},${nr}`;
         if (visited.has(key)) continue;
         visited.add(key);
-        if (this._isPassableCell(nc, nr)) return { c: nc, r: nr };
-        if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
-          queue.push({ c: nc, r: nr });
-        }
+        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+        if (this._canSpawnAt(nc, nr)) return { c: nc, r: nr };
+        queue.push({ c: nc, r: nr });
       }
     }
-    return { c, r };
+    return { c: 1, r: 1 };
+  }
+
+  _canSpawnAt(c, r) {
+    if (!this._isPassableCell(c, r)) return false;
+    for (const t of this.tanks) {
+      if (!t.alive) continue;
+      if (t.x < (c + 1) * CELL && t.x + t.w > c * CELL &&
+          t.y < (r + 1) * CELL && t.y + t.h > r * CELL) return false;
+    }
+    return true;
   }
 
   _isPassableCell(c, r) {
@@ -237,6 +248,10 @@ class GameEngine {
     tank.moveLeft = !!input.left;
     tank.moveRight = !!input.right;
     tank.fire = !!input.fire;
+    if (input.mine && !tank.mine) {
+      tank._mineEdge = true;
+    }
+    tank.mine = !!input.mine;
   }
 
   _tick() {
@@ -253,6 +268,10 @@ class GameEngine {
       if (!t.alive) continue;
       this._moveTank(t, dt);
       this._fireBullet(t, dt);
+      if (t._mineEdge && t.mines > 0) {
+        this._placeMine(t);
+      }
+      t._mineEdge = false;
       if (t.invincible > 0) t.invincible -= dt * 1000;
       if (t.fireCd > 0) t.fireCd -= dt;
     }
@@ -260,6 +279,7 @@ class GameEngine {
     this._updateBullets(dt);
     this._checkBulletCollisions();
     this._checkItemPickup();
+    this._updateMines(dt);
 
     this._checkEnd();
 
@@ -314,10 +334,10 @@ class GameEngine {
       const ny = t.y + dy * sp;
       if (!this._isBlocked(nx, t.y, t.w, t.h, t)) t.x = nx;
       if (!this._isBlocked(t.x, ny, t.w, t.h, t)) t.y = ny;
-    }
 
-    t.dir = { x: dx || t.dir.x, y: dy || t.dir.y };
-    t.dirName = dx > 0 ? "right" : dx < 0 ? "left" : dy > 0 ? "down" : dy < 0 ? "up" : t.dirName;
+      t.dir = { x: dx, y: dy };
+      t.dirName = dx > 0 ? "right" : dx < 0 ? "left" : dy > 0 ? "down" : "up";
+    }
 
     const speedMult = t.speedT > this.gtMs ? 1.5 : 1;
     t.speed = (TANK_SPEED_MIN + Math.random() * (TANK_SPEED_MAX - TANK_SPEED_MIN)) * speedMult;
@@ -510,6 +530,88 @@ class GameEngine {
     }
   }
 
+  _placeMine(tank) {
+    const cc = Math.floor((tank.x + tank.w / 2) / CELL);
+    const cr = Math.floor((tank.y + tank.h / 2) / CELL);
+    if (cr < 0 || cr >= ROWS || cc < 0 || cc >= COLS) return;
+    if (this.map[cr][cc] !== EMPTY) return;
+    const occupied = this.mines.some((m) => m.c === cc && m.r === cr);
+    if (occupied) return;
+    tank.mines--;
+    this.mines.push({
+      c: cc, r: cr,
+      ownerId: tank.id,
+      teamId: tank.teamId,
+      age: 0,
+      dead: false,
+    });
+  }
+
+  _updateMines(dt) {
+    for (const m of this.mines) {
+      if (m.dead) continue;
+      m.age += dt;
+      if (m.age > 20) { m.dead = true; continue; }
+      for (const t of this.tanks) {
+        if (!t.alive) continue;
+        if (t.teamId === m.teamId) continue;
+        const tc = Math.floor((t.x + t.w / 2) / CELL);
+        const tr = Math.floor((t.y + t.h / 2) / CELL);
+        if (tc === m.c && tr === m.r) {
+          this._explodeMine(m);
+          break;
+        }
+      }
+    }
+    this.mines = this.mines.filter((m) => !m.dead);
+  }
+
+  _explodeMine(m) {
+    if (m.dead) return;
+    m.dead = true;
+    const x1 = (m.c - 1) * CELL;
+    const y1 = (m.r - 1) * CELL;
+    const x2 = (m.c + 2) * CELL;
+    const y2 = (m.r + 2) * CELL;
+    for (const t of this.tanks) {
+      if (!t.alive) continue;
+      if (t.teamId === m.teamId) continue;
+      const tx = t.x + t.w / 2;
+      const ty = t.y + t.h / 2;
+      if (tx >= x1 && tx < x2 && ty >= y1 && ty < y2) {
+        if (t.shieldT > this.gtMs) continue;
+        t.hp -= 3;
+        if (t.hp <= 0 && t.alive) {
+          t.alive = false;
+          t.deaths++;
+          const killer = this.tanks.find((tk) => tk.id === m.ownerId);
+          t.lastDeathReason = killer ? killer.username : "地雷";
+          if (killer && killer.id !== t.id) {
+            killer.kills++;
+            killer.score++;
+          }
+        }
+      }
+    }
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const r = m.r + dr;
+        const c = m.c + dc;
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
+        if (this.map[r][c] === CRACK) {
+          const key = `${c},${r}`;
+          if (this.crackHp[key]) {
+            this.crackHp[key] -= 2;
+            if (this.crackHp[key] <= 0) {
+              delete this.crackHp[key];
+              this.map[r][c] = EMPTY;
+            }
+          }
+        }
+      }
+    }
+  }
+
   _gateAt(c, r) {
     for (const g of this.gates) {
       if (g.cells.some((cell) => cell.c === c && cell.r === r)) return g;
@@ -597,6 +699,10 @@ class GameEngine {
         y: it.y,
         type: it.def.id,
         name: it.def.name,
+      })),
+      mines: this.mines.filter((m) => !m.dead).map((m) => ({
+        c: m.c,
+        r: m.r,
       })),
     };
   }
