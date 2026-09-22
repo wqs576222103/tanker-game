@@ -1,4 +1,17 @@
-import { CELL, COLS, ROWS, W, H, EMPTY, WALL, GATE, BORDER, CRACK, DIRS, ENEMY_SPAWNS } from "./constants.js";
+import {
+  CELL,
+  COLS,
+  ROWS,
+  W,
+  H,
+  EMPTY,
+  WALL,
+  GATE,
+  BORDER,
+  CRACK,
+  DIRS,
+  ENEMY_SPAWNS,
+} from "./constants.js";
 import { cellOf, centerOf, randInt, protectedKey } from "./map.js";
 import { sfx } from "./audio.js";
 import { spawnExplosion, addFloat, makeTank } from "./effects.js";
@@ -29,7 +42,9 @@ function findNearestPassable(c, r) {
 }
 export function spawnEnemy(instant) {
   if (window.levelMode && window.levelConfig?.noRespawn) {
-    const aliveEnemies = window.tanks.filter((t) => t.alive && !t.isPlayer).length;
+    const aliveEnemies = window.tanks.filter(
+      (t) => t.alive && !t.isPlayer,
+    ).length;
     const totalSpawned = (window.levelConfig.enemySpawns || []).length;
     if (aliveEnemies >= totalSpawned) return;
   }
@@ -95,7 +110,7 @@ export function spawnEnemy(instant) {
       : Math.min(55 + diff * 10, 88);
   t.hp = window.baseEnemyHp;
   t.maxHp = window.baseEnemyHp;
-  t.invincible = window.tutorialMode ? 0 : (instant ? 300 : 800);
+  t.invincible = window.tutorialMode ? 0 : instant ? 300 : 800;
   window.tanks.push(t);
   sfx("enemy");
 }
@@ -105,22 +120,24 @@ export function spawnBoss() {
   let r = Math.floor(ROWS / 2) - 1;
 
   if (TankActions.blocked(c * CELL, r * CELL, CELL * 2, CELL * 2, null)) {
-    for (let i = 0; i < 10; i++) {
-      const randC = randInt(2, COLS - 4);
-      const randR = randInt(2, ROWS - 4);
-      if (
-        !TankActions.blocked(
-          randC * CELL,
-          randR * CELL,
-          CELL * 2,
-          CELL * 2,
-          null,
-        )
-      ) {
-        c = randC;
-        r = randR;
-        break;
+    // 收集所有不被阻挡的 2x2 空地位置，优先选离中心近的
+    const candidates = [];
+    for (let rr = 1; rr <= ROWS - 4; rr++) {
+      for (let cc = 1; cc <= COLS - 4; cc++) {
+        if (
+          !TankActions.blocked(cc * CELL, rr * CELL, CELL * 2, CELL * 2, null)
+        ) {
+          const dist =
+            Math.abs(cc - Math.floor(COLS / 2)) +
+            Math.abs(rr - Math.floor(ROWS / 2));
+          candidates.push({ c: cc, r: rr, dist });
+        }
       }
+    }
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => a.dist - b.dist);
+      c = candidates[0].c;
+      r = candidates[0].r;
     }
   }
 
@@ -215,12 +232,22 @@ export function checkSpawnBoss() {
 export function killBoss() {
   if (!window.boss || !window.boss.alive) return;
   window.boss.alive = false;
-  spawnExplosion(window.boss.x + window.boss.w / 2, window.boss.y + window.boss.h / 2, 60, "#ee5253");
+  spawnExplosion(
+    window.boss.x + window.boss.w / 2,
+    window.boss.y + window.boss.h / 2,
+    60,
+    "#ee5253",
+  );
   window.kills += 25;
   window.bossKills += 1;
   window.baseEnemyHp += 1;
   sfx("boom");
-  addFloat(window.boss.x + window.boss.w / 2, window.boss.y + window.boss.h / 2, "BOSS已击败！", "#ee5253");
+  addFloat(
+    window.boss.x + window.boss.w / 2,
+    window.boss.y + window.boss.h / 2,
+    "BOSS已击败！",
+    "#ee5253",
+  );
   window.lastBossKills = Math.max(window.lastBossKills, window.kills);
 
   if (
@@ -230,12 +257,18 @@ export function killBoss() {
   ) {
     window.bossKeyDropped = true;
     setTimeout(() => {
-      spawnKeyItem(window.boss.x + window.boss.w / 2, window.boss.y + window.boss.h / 2);
+      spawnKeyItem(
+        window.boss.x + window.boss.w / 2,
+        window.boss.y + window.boss.h / 2,
+      );
     }, 500);
   } else {
     for (let i = 0; i < 3; i++) {
       setTimeout(() => {
-        spawnItemAtPosition(window.boss.x + window.boss.w / 2, window.boss.y + window.boss.h / 2);
+        spawnItemAtPosition(
+          window.boss.x + window.boss.w / 2,
+          window.boss.y + window.boss.h / 2,
+        );
       }, i * 500);
     }
   }
