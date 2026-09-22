@@ -686,6 +686,8 @@ class GameEngine {
         score: t.score,
         kills: t.kills,
         deaths: t.deaths,
+        mines: t.mines,
+        drones: t.drones,
       })),
       bullets: this.bullets.map((b) => ({
         x: Math.round(b.x * 10) / 10,

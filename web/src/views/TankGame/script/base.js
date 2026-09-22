@@ -1753,7 +1753,8 @@ export function drawItems() {
 }
 
 export function drawMines() {
-  for (const m of mines) {
+  const arr = window.mines || mines;
+  for (const m of arr) {
     ctx.fillStyle = "#3a3a3a";
     ctx.beginPath();
     ctx.arc(m.x + 10, m.y + 10, 7, 0, Math.PI * 2);

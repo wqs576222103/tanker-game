@@ -11,7 +11,9 @@
           <span id="online-hud-score" class="hud-value">{{ totalKills }}</span>
         </div>
         <div class="hud-right">
-          <span id="online-hud-time" class="hud-value">{{ gameTime }}</span>
+          <span class="hud-label">地雷</span>
+          <span class="hud-value">{{ myMines }}</span>
+          <span id="online-hud-time" class="hud-value" style="margin-left: 12px">{{ gameTime }}</span>
         </div>
       </div>
 
@@ -39,6 +41,7 @@
         <button class="ctrl-btn" @click="toggleFullscreen">全屏</button>
         <button class="ctrl-btn" @click="backToLobby">退出</button>
       </div>
+      <div class="ctrl-hint">方向键/WASD 移动 · 空格/J 射击 · K/L 放雷</div>
     </div>
 
     <div id="online-player-panel">
@@ -83,6 +86,7 @@ const countdownSec = ref(3);
 const aliveCount = ref(0);
 const totalKills = ref(0);
 const gameTime = ref("0:00");
+const myMines = ref(0);
 const roomId = ref("");
 const mySocketId = ref(socket.id);
 const remotePlayers = ref([]);
@@ -176,6 +180,8 @@ function setupSocketListeners() {
       aliveCount.value = data.tanks ? data.tanks.filter((t) => t.alive).length : 0;
       totalKills.value = data.tanks ? data.tanks.reduce((s, t) => s + t.kills, 0) : 0;
       remotePlayers.value = data.tanks || [];
+      const me = data.tanks ? data.tanks.find((t) => t.id === mySocketId.value) : null;
+      myMines.value = me ? me.mines || 0 : 0;
       if (data.gtMs) {
         const mins = Math.floor(data.gtMs / 60000);
         const secs = Math.floor((data.gtMs % 60000) / 1000);
@@ -223,13 +229,13 @@ function onKeyDown(e) {
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(code)) {
     e.preventDefault();
   }
-  if (code === "KeyK" && gamePhase.value === "playing") {
+  if ((code === "KeyK" || code === "KeyL") && gamePhase.value === "playing") {
     socket.emit("player-input", {
       up: keysDown.has("ArrowUp") || keysDown.has("KeyW"),
       down: keysDown.has("ArrowDown") || keysDown.has("KeyS"),
       left: keysDown.has("ArrowLeft") || keysDown.has("KeyA"),
       right: keysDown.has("ArrowRight") || keysDown.has("KeyD"),
-      fire: keysDown.has("Space"),
+      fire: keysDown.has("Space") || keysDown.has("KeyJ"),
       mine: true,
     });
     minePulse = true;
@@ -249,7 +255,7 @@ function sendInput() {
     down: keysDown.has("ArrowDown") || keysDown.has("KeyS"),
     left: keysDown.has("ArrowLeft") || keysDown.has("KeyA"),
     right: keysDown.has("ArrowRight") || keysDown.has("KeyD"),
-    fire: keysDown.has("Space"),
+    fire: keysDown.has("Space") || keysDown.has("KeyJ"),
     mine: minePulse,
   };
   socket.emit("player-input", input);

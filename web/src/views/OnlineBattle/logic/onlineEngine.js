@@ -75,6 +75,8 @@ export function updateServerState(state, fullState) {
         local.score = remote.score;
         local.kills = remote.kills;
         local.deaths = remote.deaths;
+        local.mines = remote.mines || 0;
+        local.drones = remote.drones || 0;
       }
     }
     localTanks = localTanks.filter((t) =>
@@ -128,6 +130,9 @@ export function updateServerState(state, fullState) {
       dead: false,
     }));
     window.mines = localMines;
+  } else if (state) {
+    window.mines = [];
+    localMines = [];
   }
 }
 
