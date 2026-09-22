@@ -1,4 +1,21 @@
-import { CELL, COLS, ROWS, EMPTY, WALL, GATE, BORDER, CRACK, GRASS, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL, PLAYER_SPAWN, ENEMY_SPAWNS } from "./constants.js";
+import {
+  CELL,
+  COLS,
+  ROWS,
+  EMPTY,
+  WALL,
+  GATE,
+  BORDER,
+  CRACK,
+  GRASS,
+  SPEED,
+  SPIKE,
+  DOOR,
+  SWITCH,
+  PORTAL,
+  PLAYER_SPAWN,
+  ENEMY_SPAWNS,
+} from "./constants.js";
 import { spawnExplosion } from "./effects.js";
 import { sfx } from "./audio.js";
 
@@ -130,7 +147,8 @@ export function placeRandomWalls() {
   window.crackHp = {};
   for (let r = 1; r < ROWS - 1; r++)
     for (let c = 1; c < COLS - 1; c++) {
-      if (window.map[r][c] === CRACK) window.crackHp[protectedKey(c, r)] = 2 + randInt(0, 1);
+      if (window.map[r][c] === CRACK)
+        window.crackHp[protectedKey(c, r)] = 2 + randInt(0, 1);
     }
 }
 
@@ -138,7 +156,16 @@ export function connectivityOk() {
   const pass = (c, r) =>
     window.map[r] &&
     window.map[r][c] !== undefined &&
-    (window.map[r][c] === EMPTY || window.map[r][c] === GATE || window.map[r][c] === GRASS || window.map[r][c] === SPEED || window.map[r][c] === SPIKE || window.map[r][c] === PORTAL || window.map[r][c] === SWITCH || window.map[r][c] === FALLING || (window.map[r][c] === DOOR && window.doorStates && window.doorStates[protectedKey(c, r)]));
+    (window.map[r][c] === EMPTY ||
+      window.map[r][c] === GATE ||
+      window.map[r][c] === GRASS ||
+      window.map[r][c] === SPEED ||
+      window.map[r][c] === SPIKE ||
+      window.map[r][c] === PORTAL ||
+      window.map[r][c] === SWITCH ||
+      (window.map[r][c] === DOOR &&
+        window.doorStates &&
+        window.doorStates[protectedKey(c, r)]));
   const start = { c: PLAYER_SPAWN.c, r: PLAYER_SPAWN.r };
   const seen = new Set();
   const queue = [start];
@@ -162,7 +189,10 @@ export function connectivityOk() {
 }
 
 export function placeGates() {
-  if (window.tutorialGateBlock) { window.gates = []; return; }
+  if (window.tutorialGateBlock) {
+    window.gates = [];
+    return;
+  }
   window.gates = [];
   const mkGate = (c1, r1, c2, r2, pair) => {
     const g = { cells: [], partner: null, pair };
@@ -212,7 +242,7 @@ export function initDoorStates() {
   window.switchStates = {};
   window.switchLinks = {};
   window.fallingStones = [];
-  
+
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const key = protectedKey(c, r);
@@ -222,9 +252,6 @@ export function initDoorStates() {
       if (window.map[r][c] === SWITCH) {
         window.switchStates[key] = false;
       }
-      if (window.map[r][c] === FALLING) {
-        window.crackHp[key] = window.crackHp[key] || 2;
-      }
     }
   }
 }
@@ -232,20 +259,25 @@ export function initDoorStates() {
 export function toggleSwitch(c, r) {
   const key = protectedKey(c, r);
   if (window.map[r][c] !== SWITCH) return;
-  
+
   window.switchStates[key] = !window.switchStates[key];
-  
+
   const links = window.switchLinks[key] || [];
   for (const doorKey of links) {
-    const [dc, dr] = doorKey.split(',').map(Number);
+    const [dc, dr] = doorKey.split(",").map(Number);
     if (window.map[dr][dc] === DOOR) {
       window.doorStates[doorKey] = window.switchStates[key];
       if (window.doorStates[doorKey]) {
-        spawnExplosion(dc * CELL + CELL / 2, dr * CELL + CELL / 2, 10, "#FFD700");
+        spawnExplosion(
+          dc * CELL + CELL / 2,
+          dr * CELL + CELL / 2,
+          10,
+          "#FFD700",
+        );
       }
     }
   }
-  
+
   sfx("hit");
 }
 
@@ -259,32 +291,4 @@ export function isSpikeCell(c, r) {
 
 export function isPortalCell(c, r) {
   return window.map[r] && window.map[r][c] === GATE;
-}
-
-export function damageFallingStone(c, r, dmg) {
-  const key = protectedKey(c, r);
-  if (!window.map[r] || window.map[r][c] !== FALLING) return;
-  
-  window.crackHp[key] = (window.crackHp[key] || 2) - dmg;
-  const cx = c * CELL + CELL / 2;
-  const cy = r * CELL + CELL / 2;
-  spawnExplosion(cx, cy, 8, "#c9a35a");
-  
-  if (window.crackHp[key] <= 0) {
-    window.fallingStones.push({
-      x: cx,
-      y: cy - CELL,
-      targetY: cy,
-      speed: 100,
-      damage: 3,
-      active: true,
-      cellC: c,
-      cellR: r
-    });
-    window.map[r][c] = EMPTY;
-    delete window.crackHp[key];
-    sfx("boom");
-  } else {
-    sfx("hit");
-  }
 }

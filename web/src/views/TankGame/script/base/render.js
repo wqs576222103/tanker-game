@@ -1,4 +1,21 @@
-import { CELL, COLS, ROWS, W, H, EMPTY, WALL, GATE, BORDER, CRACK, GRASS, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL } from "./constants.js";
+import {
+  CELL,
+  COLS,
+  ROWS,
+  W,
+  H,
+  EMPTY,
+  WALL,
+  GATE,
+  BORDER,
+  CRACK,
+  GRASS,
+  SPEED,
+  SPIKE,
+  DOOR,
+  SWITCH,
+  PORTAL,
+} from "./constants.js";
 import { playerImg, enemyImg, bossImg, dogImg } from "./constants.js";
 import { protectedKey } from "./map.js";
 import { AIPlayer } from "../ai-player.js";
@@ -88,7 +105,8 @@ export function drawMap() {
           window.ctx.stroke();
         }
         window.ctx.fillStyle = "rgba(255,255,255,.55)";
-        for (let i = 0; i < hp; i++) window.ctx.fillRect(x + 2 + i * 5, y + 2, 3, 2);
+        for (let i = 0; i < hp; i++)
+          window.ctx.fillRect(x + 2 + i * 5, y + 2, 3, 2);
         window.ctx.restore();
         continue;
       }
@@ -97,7 +115,8 @@ export function drawMap() {
         continue;
       }
       if (v === SPEED) {
-        const pulse = 0.5 + 0.5 * Math.sin(window.gtMs / 200 + c * 0.5 + r * 0.5);
+        const pulse =
+          0.5 + 0.5 * Math.sin(window.gtMs / 200 + c * 0.5 + r * 0.5);
         window.ctx.fillStyle = `rgba(0,200,100,${0.2 + pulse * 0.2})`;
         window.ctx.fillRect(x, y, CELL, CELL);
         window.ctx.strokeStyle = `rgba(0,255,120,${0.5 + pulse * 0.5})`;
@@ -117,7 +136,8 @@ export function drawMap() {
         continue;
       }
       if (v === SPIKE) {
-        const pulse = 0.5 + 0.5 * Math.sin(window.gtMs / 300 + c * 0.4 + r * 0.4);
+        const pulse =
+          0.5 + 0.5 * Math.sin(window.gtMs / 300 + c * 0.4 + r * 0.4);
         window.ctx.fillStyle = `rgba(200,50,50,${0.2 + pulse * 0.2})`;
         window.ctx.fillRect(x, y, CELL, CELL);
         window.ctx.strokeStyle = `rgba(255,80,80,${0.6 + pulse * 0.4})`;
@@ -134,21 +154,9 @@ export function drawMap() {
         }
         continue;
       }
-      if (v === FALLING) {
-        const hp = window.crackHp[protectedKey(c, r)] || 2;
-        window.ctx.fillStyle = `rgba(150,120,80,0.3)`;
-        window.ctx.fillRect(x, y, CELL, CELL);
-        window.ctx.strokeStyle = `rgba(180,150,100,${0.4 + hp * 0.2})`;
-        window.ctx.lineWidth = 1;
-        window.ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
-        window.ctx.fillStyle = `rgba(200,180,120,${0.3 + hp * 0.1})`;
-        window.ctx.fillRect(x + 4, y + 4, CELL - 8, 4);
-        window.ctx.fillStyle = "rgba(255,255,255,.6)";
-        for (let i = 0; i < hp; i++) window.ctx.fillRect(x + 2 + i * 5, y + 2, 3, 2);
-        continue;
-      }
       if (v === DOOR) {
-        const isOpen = window.doorStates && window.doorStates[protectedKey(c, r)];
+        const isOpen =
+          window.doorStates && window.doorStates[protectedKey(c, r)];
         if (isOpen) {
           window.ctx.fillStyle = "rgba(100,100,100,0.2)";
           window.ctx.fillRect(x, y, CELL, CELL);
@@ -168,7 +176,8 @@ export function drawMap() {
         continue;
       }
       if (v === SWITCH) {
-        const isOn = window.switchStates && window.switchStates[protectedKey(c, r)];
+        const isOn =
+          window.switchStates && window.switchStates[protectedKey(c, r)];
         window.ctx.fillStyle = isOn ? "rgba(0,200,0,0.3)" : "rgba(200,0,0,0.3)";
         window.ctx.fillRect(x, y, CELL, CELL);
         window.ctx.fillStyle = isOn ? "#00AA00" : "#AA0000";
@@ -191,16 +200,29 @@ export function drawMap() {
         window.ctx.strokeStyle = `rgba(150,0,255,${0.5 + pulse * 0.5})`;
         window.ctx.lineWidth = 2;
         window.ctx.beginPath();
-        window.ctx.arc(x + CELL / 2, y + CELL / 2, 6 + pulse * 2, 0, Math.PI * 2);
+        window.ctx.arc(
+          x + CELL / 2,
+          y + CELL / 2,
+          6 + pulse * 2,
+          0,
+          Math.PI * 2,
+        );
         window.ctx.stroke();
         window.ctx.fillStyle = `rgba(200,100,255,${0.5 + pulse * 0.4})`;
         window.ctx.beginPath();
-        window.ctx.arc(x + CELL / 2, y + CELL / 2, 3 + pulse * 2, 0, Math.PI * 2);
+        window.ctx.arc(
+          x + CELL / 2,
+          y + CELL / 2,
+          3 + pulse * 2,
+          0,
+          Math.PI * 2,
+        );
         window.ctx.fill();
         continue;
       }
       if (v === GATE) {
-        const pulse = 0.5 + 0.5 * Math.sin(window.gtMs / 250 + c * 0.6 + r * 0.3);
+        const pulse =
+          0.5 + 0.5 * Math.sin(window.gtMs / 250 + c * 0.6 + r * 0.3);
         window.ctx.fillStyle = `rgba(40,90,140,${0.25 + pulse * 0.35})`;
         window.ctx.fillRect(x, y, CELL, CELL);
         window.ctx.strokeStyle = `rgba(120,200,255,${0.4 + pulse * 0.5})`;
@@ -208,7 +230,13 @@ export function drawMap() {
         window.ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
         window.ctx.fillStyle = `rgba(160,220,255,${0.5 + pulse * 0.4})`;
         window.ctx.beginPath();
-        window.ctx.arc(x + CELL / 2, y + CELL / 2, 3 + pulse * 3, 0, Math.PI * 2);
+        window.ctx.arc(
+          x + CELL / 2,
+          y + CELL / 2,
+          3 + pulse * 3,
+          0,
+          Math.PI * 2,
+        );
         window.ctx.fill();
         continue;
       }
@@ -217,7 +245,8 @@ export function drawMap() {
   if (window.levelMode && window.flagPosition && !window.flagCaptured) {
     const fx = window.flagPosition.x;
     const fy = window.flagPosition.y;
-    const flagColor = window.flagPosition.team === "player" ? "#7de07d" : "#ff6b6b";
+    const flagColor =
+      window.flagPosition.team === "player" ? "#7de07d" : "#ff6b6b";
     window.ctx.save();
     window.ctx.fillStyle = "#888";
     window.ctx.fillRect(fx + 2, fy + 2, 2, CELL - 4);
@@ -315,7 +344,8 @@ export function drawTank(t) {
     const pct = Math.max(0, t.hp / t.maxHp);
     window.ctx.fillStyle = "#1c1f1c";
     window.ctx.fillRect(cx - t.w / 2, cy - t.h / 2 - 6, t.w, 4);
-    window.ctx.fillStyle = pct > 0.5 ? "#7de07d" : pct > 0.25 ? "#ffd76e" : "#ff6b6b";
+    window.ctx.fillStyle =
+      pct > 0.5 ? "#7de07d" : pct > 0.25 ? "#ffd76e" : "#ff6b6b";
     window.ctx.fillRect(cx - t.w / 2, cy - t.h / 2 - 6, t.w * pct, 4);
   }
   window.ctx.globalAlpha = 1;
@@ -346,15 +376,31 @@ export function drawBoss() {
     );
   } else {
     window.ctx.fillStyle = "#ee5253";
-    window.ctx.fillRect(-window.boss.w / 2, -window.boss.h / 2, window.boss.w, window.boss.h);
+    window.ctx.fillRect(
+      -window.boss.w / 2,
+      -window.boss.h / 2,
+      window.boss.w,
+      window.boss.h,
+    );
   }
   window.ctx.restore();
 
   const pct = Math.max(0, window.boss.hp / window.boss.maxHp);
   window.ctx.fillStyle = "#1c1f1c";
-  window.ctx.fillRect(cx - window.boss.w / 2, cy - window.boss.h / 2 - 6, window.boss.w, 4);
-  window.ctx.fillStyle = pct > 0.5 ? "#7de07d" : pct > 0.25 ? "#ffd76e" : "#ff6b6b";
-  window.ctx.fillRect(cx - window.boss.w / 2, cy - window.boss.h / 2 - 6, window.boss.w * pct, 4);
+  window.ctx.fillRect(
+    cx - window.boss.w / 2,
+    cy - window.boss.h / 2 - 6,
+    window.boss.w,
+    4,
+  );
+  window.ctx.fillStyle =
+    pct > 0.5 ? "#7de07d" : pct > 0.25 ? "#ffd76e" : "#ff6b6b";
+  window.ctx.fillRect(
+    cx - window.boss.w / 2,
+    cy - window.boss.h / 2 - 6,
+    window.boss.w * pct,
+    4,
+  );
 
   window.ctx.globalAlpha = 1;
 }
@@ -448,7 +494,13 @@ export function drawPlayer() {
     window.ctx.stroke();
     window.ctx.strokeStyle = "rgba(160,220,255,.4)";
     window.ctx.beginPath();
-    window.ctx.arc(cx, cy, 27, window.gtMs / 200, window.gtMs / 200 + Math.PI * 1.4);
+    window.ctx.arc(
+      cx,
+      cy,
+      27,
+      window.gtMs / 200,
+      window.gtMs / 200 + Math.PI * 1.4,
+    );
     window.ctx.stroke();
   }
 }
@@ -527,21 +579,21 @@ export function drawDrones() {
 export function drawCrates() {
   const crates = window.crates;
   if (!crates || !crates.length) return;
-  
+
   for (const crate of crates) {
     const x = crate.x;
     const y = crate.y;
-    
+
     window.ctx.fillStyle = "#8B6914";
     window.ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-    
+
     window.ctx.fillStyle = "#A0791A";
     window.ctx.fillRect(x + 3, y + 3, CELL - 6, CELL - 6);
-    
+
     window.ctx.strokeStyle = "#6B5010";
     window.ctx.lineWidth = 2;
     window.ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
-    
+
     window.ctx.strokeStyle = "#8B6914";
     window.ctx.lineWidth = 1;
     window.ctx.beginPath();
@@ -550,7 +602,7 @@ export function drawCrates() {
     window.ctx.moveTo(x + CELL - 3, y + 3);
     window.ctx.lineTo(x + 3, y + CELL - 3);
     window.ctx.stroke();
-    
+
     window.ctx.fillStyle = "#C9A020";
     window.ctx.beginPath();
     window.ctx.arc(x + CELL / 2, y + CELL / 2, 3, 0, Math.PI * 2);
@@ -561,24 +613,24 @@ export function drawCrates() {
 export function drawFallingStones() {
   const stones = window.fallingStones;
   if (!stones || !stones.length) return;
-  
+
   for (const stone of stones) {
     if (stone.phase === "warning") {
       const cx = stone.x;
       const cy = stone.groundY;
       const pulse = 0.5 + 0.5 * Math.sin(window.gtMs / 150);
-      
+
       window.ctx.fillStyle = `rgba(255, 60, 60, ${0.15 + pulse * 0.15})`;
       window.ctx.beginPath();
       window.ctx.arc(cx, cy, 20, 0, Math.PI * 2);
       window.ctx.fill();
-      
+
       window.ctx.strokeStyle = `rgba(255, 60, 60, ${0.4 + pulse * 0.4})`;
       window.ctx.lineWidth = 2;
       window.ctx.beginPath();
       window.ctx.arc(cx, cy, 20, 0, Math.PI * 2);
       window.ctx.stroke();
-      
+
       window.ctx.font = 'bold 12px "Microsoft YaHei", sans-serif';
       window.ctx.textAlign = "center";
       window.ctx.textBaseline = "middle";
@@ -587,17 +639,17 @@ export function drawFallingStones() {
     } else {
       const cx = stone.x;
       const cy = stone.y;
-      
+
       window.ctx.fillStyle = "#8B7355";
       window.ctx.beginPath();
       window.ctx.arc(cx, cy, 10, 0, Math.PI * 2);
       window.ctx.fill();
-      
+
       window.ctx.fillStyle = "#6B5340";
       window.ctx.beginPath();
       window.ctx.arc(cx - 2, cy - 2, 6, 0, Math.PI * 2);
       window.ctx.fill();
-      
+
       window.ctx.fillStyle = `rgba(139, 115, 85, 0.3)`;
       window.ctx.beginPath();
       window.ctx.arc(cx, cy, 14, 0, Math.PI * 2);
@@ -609,12 +661,12 @@ export function drawFallingStones() {
 export function drawDebris() {
   const debris = window.debris;
   if (!debris || !debris.length) return;
-  
+
   for (const d of debris) {
     const alpha = d.life / d.maxLife;
     const cx = d.x;
     const cy = d.y;
-    
+
     window.ctx.globalAlpha = alpha * 0.6;
     window.ctx.fillStyle = "#6B5340";
     window.ctx.beginPath();
@@ -626,7 +678,7 @@ export function drawDebris() {
     window.ctx.beginPath();
     window.ctx.arc(cx + 1, cy + 5, 5, 0, Math.PI * 2);
     window.ctx.fill();
-    
+
     window.ctx.fillStyle = "#8B7355";
     window.ctx.beginPath();
     window.ctx.arc(cx - 3, cy - 3, 3, 0, Math.PI * 2);
@@ -634,7 +686,7 @@ export function drawDebris() {
     window.ctx.beginPath();
     window.ctx.arc(cx + 7, cy + 3, 2, 0, Math.PI * 2);
     window.ctx.fill();
-    
+
     window.ctx.globalAlpha = 1;
   }
 }
@@ -648,7 +700,13 @@ export function drawParticles() {
       window.ctx.strokeStyle = p.color;
       window.ctx.lineWidth = 3;
       window.ctx.beginPath();
-      window.ctx.arc(p.x, p.y, p.size * (1 - p.life / p.max) + 4, 0, Math.PI * 2);
+      window.ctx.arc(
+        p.x,
+        p.y,
+        p.size * (1 - p.life / p.max) + 4,
+        0,
+        Math.PI * 2,
+      );
       window.ctx.stroke();
     } else {
       window.ctx.fillStyle = p.color;

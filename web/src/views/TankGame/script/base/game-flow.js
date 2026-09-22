@@ -1,9 +1,55 @@
-import { CELL, COLS, ROWS, W, H, EMPTY, WALL, GATE, BORDER, CRACK, SPEED, SPIKE, FALLING, DOOR, SWITCH, PORTAL, PLAYER_SPAWN } from "./constants.js";
-import { genMap, centerOf, protectedKey, randInt, initDoorStates, toggleSwitch, isSpeedCell, isSpikeCell, isPortalCell, damageFallingStone } from "./map.js";
-import { sfx, stopBgm, playBgm, getDeathSoundTimer, setDeathSoundTimer } from "./audio.js";
+import {
+  CELL,
+  COLS,
+  ROWS,
+  W,
+  H,
+  EMPTY,
+  WALL,
+  GATE,
+  BORDER,
+  CRACK,
+  SPEED,
+  SPIKE,
+  DOOR,
+  SWITCH,
+  PORTAL,
+  PLAYER_SPAWN,
+} from "./constants.js";
+import {
+  genMap,
+  centerOf,
+  protectedKey,
+  randInt,
+  initDoorStates,
+  toggleSwitch,
+  isSpeedCell,
+  isSpikeCell,
+  isPortalCell,
+} from "./map.js";
+import {
+  sfx,
+  stopBgm,
+  playBgm,
+  getDeathSoundTimer,
+  setDeathSoundTimer,
+} from "./audio.js";
 import { spawnExplosion, addFloat, makeTank } from "./effects.js";
-import { spawnEnemy, spawnBoss, checkSpawnBoss, maxEnemies } from "./enemies.js";
-import { spawnItemAtTank, spawnRandomItem, spawnItemAtCell, updateItems, updateMines, rescueDog, ITEMS } from "./items.js";
+import {
+  spawnEnemy,
+  spawnBoss,
+  checkSpawnBoss,
+  maxEnemies,
+} from "./enemies.js";
+import {
+  spawnItemAtTank,
+  spawnRandomItem,
+  spawnItemAtCell,
+  updateItems,
+  updateMines,
+  rescueDog,
+  ITEMS,
+} from "./items.js";
 import { updateParticles, updateFloats } from "./effects.js";
 import { updateHud, loadHighScore } from "./hud.js";
 import { AIPlayer } from "../ai-player.js";
@@ -11,7 +57,12 @@ import { AILogger } from "../ai-logger.js";
 import { TankActions } from "../tank-actions.js";
 import { saveGameKills, addDeath } from "@/api/score.js";
 import { getUserInfo } from "@/utils/user";
-import { checkLevelWin, showLevelComplete, checkFlagCapture, checkPortalReach } from "./level.js";
+import {
+  checkLevelWin,
+  showLevelComplete,
+  checkFlagCapture,
+  checkPortalReach,
+} from "./level.js";
 
 // ====================== 游戏流程 ======================
 
@@ -97,7 +148,8 @@ export function resetGame() {
       for (let i = 0; i < cfg.gates.length; i++) {
         const gDef = cfg.gates[i];
         const g = window.gates[i];
-        if (g.partner || !gDef.partnerCells || !gDef.partnerCells.length) continue;
+        if (g.partner || !gDef.partnerCells || !gDef.partnerCells.length)
+          continue;
         // 查找 partnerCells 匹配的另一个门
         for (let j = 0; j < window.gates.length; j++) {
           if (i === j) continue;
@@ -131,7 +183,7 @@ export function resetGame() {
     window.gates = [];
     window.crackHp = window.levelConfig.crackHp || {};
     window.mapGenerated = true;
-    
+
     if (window.levelConfig.special === "maze") {
       initDoorStates();
       if (window.levelConfig.switchLinks) {
@@ -163,15 +215,19 @@ export function resetGame() {
   window.floats = [];
   window.lastTeleport = {};
 
-  const spawnPoint =
-    window.customMapConfig?.playerSpawn
-      ? window.customMapConfig.playerSpawn
-      : window.levelMode && window.levelConfig?.playerSpawn
-        ? window.levelConfig.playerSpawn
-        : PLAYER_SPAWN;
+  const spawnPoint = window.customMapConfig?.playerSpawn
+    ? window.customMapConfig.playerSpawn
+    : window.levelMode && window.levelConfig?.playerSpawn
+      ? window.levelConfig.playerSpawn
+      : PLAYER_SPAWN;
   const safeSpawn = findNearestPassable(spawnPoint.c, spawnPoint.r);
   const sp = centerOf(safeSpawn.c, safeSpawn.r);
-  window.player = makeTank(sp.x - (CELL - 4) / 2, sp.y - (CELL - 4) / 2, "up", true);
+  window.player = makeTank(
+    sp.x - (CELL - 4) / 2,
+    sp.y - (CELL - 4) / 2,
+    "up",
+    true,
+  );
   if (window.levelMode && window.levelConfig?.playerSpeed) {
     window.player.speed = window.levelConfig.playerSpeed;
   }
@@ -189,9 +245,10 @@ export function resetGame() {
   }
 
   if (!window.tutorialMode) {
-    const initCount = window.customMapConfig?.initialEnemies
-      || (window.levelMode && window.levelConfig?.initialEnemies)
-      || 2;
+    const initCount =
+      window.customMapConfig?.initialEnemies ||
+      (window.levelMode && window.levelConfig?.initialEnemies) ||
+      2;
     for (let i = 0; i < initCount; i++) {
       spawnEnemy(true);
     }
@@ -220,7 +277,10 @@ export function update(dt) {
     rescueDog();
   }
 
-  if (window.levelMode && window.levelConfig?.objective.type === "reachPortal") {
+  if (
+    window.levelMode &&
+    window.levelConfig?.objective.type === "reachPortal"
+  ) {
     checkPortalReach();
   }
 
@@ -249,12 +309,12 @@ export function update(dt) {
 
 function updateMazeMechanics(dt) {
   if (!window.player || !window.player.alive) return;
-  
+
   const playerCell = {
     c: Math.floor((window.player.x + window.player.w / 2) / CELL),
-    r: Math.floor((window.player.y + window.player.h / 2) / CELL)
+    r: Math.floor((window.player.y + window.player.h / 2) / CELL),
   };
-  
+
   if (isSpeedCell(playerCell.c, playerCell.r)) {
     window.player.speed = (window.levelConfig?.playerSpeed || 100) * 1.5;
   } else if (isSpikeCell(playerCell.c, playerCell.r)) {
@@ -270,11 +330,11 @@ function updateMazeMechanics(dt) {
   } else {
     window.player.speed = window.levelConfig?.playerSpeed || 100;
   }
-  
+
   if (isPortalCell(playerCell.c, playerCell.r)) {
     window.reachedPortal = true;
   }
-  
+
   updateFallingStones(dt);
   updateDebris(dt);
 }
@@ -287,16 +347,16 @@ const STONE_RADIUS = CELL * 1.5;
 function updateFallingStones(dt) {
   if (!window.fallingStones) window.fallingStones = [];
   if (!window.stoneTimer) window.stoneTimer = 0;
-  
+
   window.stoneTimer += dt;
   if (window.stoneTimer >= STONE_INTERVAL) {
     window.stoneTimer -= STONE_INTERVAL;
     spawnFallingStone();
   }
-  
+
   for (let i = window.fallingStones.length - 1; i >= 0; i--) {
     const stone = window.fallingStones[i];
-    
+
     if (stone.phase === "warning") {
       stone.warnTimer += dt;
       if (stone.warnTimer >= STONE_WARNING) {
@@ -304,14 +364,14 @@ function updateFallingStones(dt) {
       }
       continue;
     }
-    
+
     stone.y += stone.speed * dt;
-    
+
     if (stone.y >= stone.groundY) {
       stone.y = stone.groundY;
       spawnExplosion(stone.x, stone.y, 20, "#8B4513");
       sfx("boom");
-      
+
       for (const t of window.tanks) {
         if (!t.alive) continue;
         const tx = t.x + t.w / 2;
@@ -343,24 +403,51 @@ function updateFallingStones(dt) {
 }
 
 function spawnFallingStone() {
-  const col = 1 + Math.floor(Math.random() * (COLS - 2));
-  const openRows = [];
-  for (let r = 1; r < ROWS - 1; r++) {
-    const v = window.map[r] && window.map[r][col];
-    if (v !== undefined && v !== WALL && v !== BORDER && v !== CRACK) {
-      openRows.push(r);
+  const cfg = window.levelConfig || window.customMapConfig;
+  const positions = cfg && cfg.fallingStones;
+
+  if (positions && positions.length > 0) {
+    // 使用配置的位置，循环生成
+    if (!window.stoneIndex) window.stoneIndex = 0;
+    const pos = positions[window.stoneIndex % positions.length];
+    window.stoneIndex++;
+
+    // 验证位置是否有效（不是墙壁/边界/碎石墙）
+    const c = pos.c,
+      r = pos.r;
+    if (c < 1 || c >= COLS - 1 || r < 1 || r >= ROWS - 1) return;
+    const v = window.map[r] && window.map[r][c];
+    if (v === undefined || v === WALL || v === BORDER || v === CRACK) return;
+
+    window.fallingStones.push({
+      x: c * CELL + CELL / 2,
+      y: r * CELL - CELL * 3,
+      groundY: r * CELL + CELL / 2,
+      speed: STONE_SPEED,
+      phase: "warning",
+      warnTimer: 0,
+    });
+  } else {
+    // 未配置位置时，随机生成
+    const col = 1 + Math.floor(Math.random() * (COLS - 2));
+    const openRows = [];
+    for (let r = 1; r < ROWS - 1; r++) {
+      const v = window.map[r] && window.map[r][col];
+      if (v !== undefined && v !== WALL && v !== BORDER && v !== CRACK) {
+        openRows.push(r);
+      }
     }
+    if (!openRows.length) return;
+    const groundR = openRows[Math.floor(Math.random() * openRows.length)];
+    window.fallingStones.push({
+      x: col * CELL + CELL / 2,
+      y: groundR * CELL - CELL * 3,
+      groundY: groundR * CELL + CELL / 2,
+      speed: STONE_SPEED,
+      phase: "warning",
+      warnTimer: 0,
+    });
   }
-  if (!openRows.length) return;
-  const groundR = openRows[Math.floor(Math.random() * openRows.length)];
-  window.fallingStones.push({
-    x: col * CELL + CELL / 2,
-    y: groundR * CELL - CELL * 3,
-    groundY: groundR * CELL + CELL / 2,
-    speed: STONE_SPEED,
-    phase: "warning",
-    warnTimer: 0,
-  });
 }
 
 function updateDebris(dt) {
@@ -425,9 +512,11 @@ export function gameOver() {
   try {
     const userInfo = getUserInfo();
     if (userInfo.employeeId) {
-      saveGameKills(userInfo.employeeId, window.kills, window.bossKills).catch((err) => {
-        console.warn("[Game] 保存击杀数据失败:", err);
-      });
+      saveGameKills(userInfo.employeeId, window.kills, window.bossKills).catch(
+        (err) => {
+          console.warn("[Game] 保存击杀数据失败:", err);
+        },
+      );
       addDeath(userInfo.employeeId).catch((err) => {
         console.warn("[Game] 保存淘汰数失败:", err);
       });

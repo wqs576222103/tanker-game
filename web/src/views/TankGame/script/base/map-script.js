@@ -2,7 +2,16 @@ import { COLS, ROWS } from "./constants.js";
 
 const VALID_TILE_MIN = 0;
 const VALID_TILE_MAX = 12;
-const VALID_ITEMS = ["drone", "spread", "fire", "speed", "shield", "mine", "heal", "bounce"];
+const VALID_ITEMS = [
+  "drone",
+  "spread",
+  "fire",
+  "speed",
+  "shield",
+  "mine",
+  "heal",
+  "bounce",
+];
 
 /**
  * 解析地图脚本源码，返回配置对象
@@ -36,7 +45,9 @@ export async function parseMapScript(source) {
     // 忽略
   }
 
-  throw new Error("未找到有效的地图配置对象，请确保脚本导出 default 或设置 window.__MAP__");
+  throw new Error(
+    "未找到有效的地图配置对象，请确保脚本导出 default 或设置 window.__MAP__",
+  );
 }
 
 /**
@@ -53,7 +64,10 @@ export function validateMapConfig(config) {
   }
 
   if (config.map.length !== ROWS) {
-    return { valid: false, message: `map 必须有 ${ROWS} 行，当前为 ${config.map.length} 行` };
+    return {
+      valid: false,
+      message: `map 必须有 ${ROWS} 行，当前为 ${config.map.length} 行`,
+    };
   }
 
   for (let r = 0; r < ROWS; r++) {
@@ -61,15 +75,30 @@ export function validateMapConfig(config) {
       return { valid: false, message: `第 ${r} 行不是数组` };
     }
     if (config.map[r].length !== COLS) {
-      return { valid: false, message: `第 ${r} 行必须有 ${COLS} 列，当前为 ${config.map[r].length} 列` };
+      return {
+        valid: false,
+        message: `第 ${r} 行必须有 ${COLS} 列，当前为 ${config.map[r].length} 列`,
+      };
     }
     for (let c = 0; c < COLS; c++) {
       const v = config.map[r][c];
       if (typeof v !== "number" || !Number.isInteger(v)) {
-        return { valid: false, message: `map[${r}][${c}] 必须是整数，当前值: ${v}` };
+        return {
+          valid: false,
+          message: `map[${r}][${c}] 必须是整数，当前值: ${v}`,
+        };
       }
       if (v < VALID_TILE_MIN || v > VALID_TILE_MAX) {
-        return { valid: false, message: `map[${r}][${c}] 值 ${v} 超出范围 (${VALID_TILE_MIN}-${VALID_TILE_MAX})` };
+        return {
+          valid: false,
+          message: `map[${r}][${c}] 值 ${v} 超出范围 (${VALID_TILE_MIN}-${VALID_TILE_MAX})`,
+        };
+      }
+      if (v === 8) {
+        return {
+          valid: false,
+          message: `map[${r}][${c}] 值 8 已废弃（落石触发器已移除，落石现在从天空自动掉落）`,
+        };
       }
     }
   }
@@ -81,7 +110,10 @@ export function validateMapConfig(config) {
       return { valid: false, message: "playerSpawn 必须包含 c 和 r 属性" };
     }
     if (ps.c < 0 || ps.c >= COLS || ps.r < 0 || ps.r >= ROWS) {
-      return { valid: false, message: `playerSpawn 坐标越界 (${ps.c},${ps.r})` };
+      return {
+        valid: false,
+        message: `playerSpawn 坐标越界 (${ps.c},${ps.r})`,
+      };
     }
   }
 
@@ -93,10 +125,16 @@ export function validateMapConfig(config) {
     for (let i = 0; i < config.enemySpawns.length; i++) {
       const es = config.enemySpawns[i];
       if (typeof es.c !== "number" || typeof es.r !== "number") {
-        return { valid: false, message: `enemySpawns[${i}] 必须包含 c 和 r 属性` };
+        return {
+          valid: false,
+          message: `enemySpawns[${i}] 必须包含 c 和 r 属性`,
+        };
       }
       if (es.c < 0 || es.c >= COLS || es.r < 0 || es.r >= ROWS) {
-        return { valid: false, message: `enemySpawns[${i}] 坐标越界 (${es.c},${es.r})` };
+        return {
+          valid: false,
+          message: `enemySpawns[${i}] 坐标越界 (${es.c},${es.r})`,
+        };
       }
     }
   }
@@ -108,8 +146,16 @@ export function validateMapConfig(config) {
     }
     for (let i = 0; i < config.gates.length; i++) {
       const g = config.gates[i];
-      if (!g.cells || !Array.isArray(g.cells) || !g.partnerCells || !Array.isArray(g.partnerCells)) {
-        return { valid: false, message: `gates[${i}] 必须包含 cells 和 partnerCells 数组` };
+      if (
+        !g.cells ||
+        !Array.isArray(g.cells) ||
+        !g.partnerCells ||
+        !Array.isArray(g.partnerCells)
+      ) {
+        return {
+          valid: false,
+          message: `gates[${i}] 必须包含 cells 和 partnerCells 数组`,
+        };
       }
     }
   }
@@ -125,10 +171,16 @@ export function validateMapConfig(config) {
         return { valid: false, message: `items[${i}] 必须包含 c 和 r 属性` };
       }
       if (!VALID_ITEMS.includes(it.type)) {
-        return { valid: false, message: `items[${i}] 类型 "${it.type}" 无效，可用类型: ${VALID_ITEMS.join(", ")}` };
+        return {
+          valid: false,
+          message: `items[${i}] 类型 "${it.type}" 无效，可用类型: ${VALID_ITEMS.join(", ")}`,
+        };
       }
       if (it.c < 0 || it.c >= COLS || it.r < 0 || it.r >= ROWS) {
-        return { valid: false, message: `items[${i}] 坐标越界 (${it.c},${it.r})` };
+        return {
+          valid: false,
+          message: `items[${i}] 坐标越界 (${it.c},${it.r})`,
+        };
       }
     }
   }
@@ -142,7 +194,11 @@ export function validateMapConfig(config) {
 
   // 校验 initialEnemies
   if (config.initialEnemies !== undefined) {
-    if (typeof config.initialEnemies !== "number" || config.initialEnemies < 1 || config.initialEnemies > 20) {
+    if (
+      typeof config.initialEnemies !== "number" ||
+      config.initialEnemies < 1 ||
+      config.initialEnemies > 20
+    ) {
       return { valid: false, message: "initialEnemies 必须是 1-20 之间的数字" };
     }
   }
