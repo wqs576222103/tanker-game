@@ -88,7 +88,7 @@
           :disabled="gameState === 'playing'"
           v-show="!hideRefreshMap"
         >
-          🗺️ 更换地图
+          🗺️ {{ currentMapName || "更换地图" }}
         </button>
         <div
           class="map-dropdown"
@@ -102,16 +102,11 @@
           <div class="map-dropdown-item" @click="showPlayerMapList = true">
             <span class="map-dropdown-icon">👥</span> 玩家地图
           </div>
+          <div class="map-dropdown-item" @click="showMapImport = true">
+            <span class="map-dropdown-icon">📥</span> 导入地图
+          </div>
         </div>
       </div>
-      <button
-        id="btn-import-map"
-        :disabled="gameState === 'playing'"
-        v-show="!hideRefreshMap"
-        @click="showMapImport = true"
-      >
-        📥 导入地图
-      </button>
       <button
         id="btn-pause"
         :style="{ display: gameState === 'start' ? 'none' : '' }"
@@ -230,6 +225,7 @@ const showScriptImport = ref(false);
 const showMapImport = ref(false);
 const showMapDropdown = ref(false);
 const showPlayerMapList = ref(false);
+const currentMapName = ref("");
 let mapDropdownTimer = null;
 let stateCheckInterval = null;
 const token = getToken();
@@ -344,6 +340,7 @@ async function handleMapImport(scriptContent, { saveToServer, mapName } = {}) {
   }
   window.customMapConfig = config;
   window.mapGenerated = false;
+  currentMapName.value = config.name || "";
   resetGame();
   // 隐藏暂停/结束等遮罩，显示开始界面
   document.getElementById("ov-pause").classList.add("hidden");
@@ -356,6 +353,7 @@ function refreshMap() {
   window.customMapConfig = null;
   window.customEnemySpawns = null;
   window.mapGenerated = false;
+  currentMapName.value = "";
   resetGame();
   // 隐藏暂停/结束等遮罩，显示开始界面
   document.getElementById("ov-pause").classList.add("hidden");
@@ -403,6 +401,7 @@ async function handlePlayerMapSelect(item) {
     }
     window.customMapConfig = config;
     window.mapGenerated = false;
+    currentMapName.value = config.name || item.mapName || "";
     resetGame();
     document.getElementById("ov-pause").classList.add("hidden");
     document.getElementById("ov-over").classList.add("hidden");

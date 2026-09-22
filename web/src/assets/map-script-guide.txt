@@ -98,30 +98,33 @@ export default {
 
 传送门需要成对配置，坦克走进一个传送门会被传送到配对的传送门。
 
+**推荐写法（每对传送门写两条，用相同的 `pair` 名称配对）：**
+
 ```js
-export default {
-  name: "传送门地图",
-  map: [ /* ... */ ],
-  gates: [
-    {
-      pair: "a",  // 配对标识，相同 pair 的门互相传送
-      cells: [
-        // 本门占据的格子（可以是多个格子）
-        { c: 1, r: 14 },
-      ],
-      partnerCells: [
-        // 配对门占据的格子
-        { c: 43, r: 14 },
-      ],
-    },
-    {
-      pair: "b",
-      cells: [{ c: 22, r: 1 }],
-      partnerCells: [{ c: 22, r: 28 }],
-    },
-  ],
-};
+gates: [
+  // 第一对传送门：左 ↔ 右
+  { pair: "a", cells: [{ c: 1,  r: 14 }] },
+  { pair: "a", cells: [{ c: 43, r: 14 }] },
+  // 第二对传送门：上 ↔ 下
+  { pair: "b", cells: [{ c: 22, r: 1 }] },
+  { pair: "b", cells: [{ c: 22, r: 28 }] },
+],
 ```
+
+**简写写法（只写一边，用 `partnerCells` 指定另一边）：**
+
+```js
+gates: [
+  { pair: "a", cells: [{ c: 1, r: 14 }],  partnerCells: [{ c: 43, r: 14 }] },
+  { pair: "b", cells: [{ c: 22, r: 1 }],  partnerCells: [{ c: 22, r: 28 }] },
+],
+```
+
+> **重要**：
+> - 传送门位置不要放在 BORDER(3) 边界上，否则坦克无法进入
+> - 推荐写法是每对传送门定义两条记录、使用相同的 `pair` 值，兼容性最好
+> - 不需要在 `map` 数组里手动设置 GATE(2)，系统会自动在传送门坐标写入
+> - 每个传送门可以占多个格子（`cells` 数组放多个坐标）
 
 ---
 
@@ -251,11 +254,8 @@ export default {
   ],
 
   gates: [
-    {
-      pair: "h",
-      cells: [{ c: 1, r: 14 }],
-      partnerCells: [{ c: 43, r: 14 }],
-    },
+    { pair: "h", cells: [{ c: 1,  r: 14 }] },
+    { pair: "h", cells: [{ c: 43, r: 14 }] },
   ],
 
   crackHp: {

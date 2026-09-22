@@ -7,6 +7,8 @@ import {
   CRACK,
   GRASS,
   BORDER,
+  SPEED,
+  SPIKE,
   protectedKey,
 } from "./base/index.js";
 
@@ -300,6 +302,47 @@ export const GameUtils = {
     if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
     const v = map[r][c];
     return v === WALL || v === BORDER || v === CRACK;
+  },
+
+  // 获取加速地形位置
+  getSpeedPositions() {
+    const positions = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (map[r][c] === SPEED) {
+          positions.push({ x: c * CELL, y: r * CELL, column: c, row: r });
+        }
+      }
+    }
+    return positions;
+  },
+
+  // 获取尖刺陷阱位置
+  getSpikePositions() {
+    const positions = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (map[r][c] === SPIKE) {
+          positions.push({ x: c * CELL, y: r * CELL, column: c, row: r });
+        }
+      }
+    }
+    return positions;
+  },
+
+  // 获取指定格子周围的地形信息
+  getTerrainInfo(column, row) {
+    const results = [];
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const c = column + dc;
+        const r = row + dr;
+        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+          results.push({ column: c, row: r, type: map[r][c] });
+        }
+      }
+    }
+    return results;
   },
 
   // 获取地图网格类型

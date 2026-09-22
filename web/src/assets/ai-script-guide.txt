@@ -48,10 +48,12 @@ export default {
 | ------------- | --- | ------------------------------ |
 | `TILE.EMPTY`  | 0   | 空地，可通过                   |
 | `TILE.WALL`   | 1   | 砖墙，不可破坏，阻挡子弹与移动 |
-| `TILE.GATE`   | 2   | 传送门                         |
+| `TILE.GATE`   | 2   | 传送门，可通过                 |
 | `TILE.BORDER` | 3   | 地图边界（越界即视为它）       |
 | `TILE.CRACK`  | 4   | 碎石墙，可被子弹破坏           |
 | `TILE.GRASS`  | 5   | 草丛，可通过、隐藏坦克         |
+| `TILE.SPEED`  | 6   | 加速带，坦克经过时移速 ×1.5    |
+| `TILE.SPIKE`  | 7   | 尖刺陷阱，周期性伤害           |
 
 ---
 
@@ -158,6 +160,9 @@ export default {
 | `getTanksInGrass()`                     | 草丛中隐藏的坦克信息           |
 | `getTanksInRange(x,y,range)`            | 指定范围内的坦克               |
 | `getGatePositions()`                    | 传送门位置                     |
+| `getSpeedPositions()`                   | 加速带位置                     |
+| `getSpikePositions()`                   | 尖刺陷阱位置                   |
+| `getTerrainInfo(column,row)`            | 指定格子周围 3×3 地形信息      |
 | `getItemPositions()`                    | 道具位置                       |
 | `getMinePositions()`                    | 地雷位置                       |
 | `getBossPosition()`                     | Boss 位置（无则 null）         |
@@ -232,5 +237,83 @@ if (t._wobbleTimer >= 5) {
   t._wobbleCheckX = t.x;
   t._wobbleCheckY = t.y;
   t._wobbleDist = 0;
+}
+```
+
+---
+
+## 七、地形感知与策略
+
+AI 可通过 `ctx.utils` 和 `ctx.mapAt()` 感知地图地形，据此做出策略决策。
+
+### 地形类型速查
+
+| 类型      | TILE 值 | 效果                          | AI 策略建议                     |
+| --------- | ------- | ----------------------------- | ------------------------------- |
+| 加速带    | 6       | 坦克经过时移速 ×1.5           | 可利用加速带快速转移或追击敌人  |
+| 尖刺陷阱  | 7       | 周期性升起，踩到造成伤害      | 尽量绕开，或引诱敌人进入        |
+| 草丛      | 5       | 坦克进入后隐藏                | 利用草丛埋伏或躲避子弹          |
+| 传送门    | 2       | 踩上后传送到配对传送门        | 利用传送门快速转移或逃跑        |
+| 碎石墙    | 4       | 可被子弹破坏                  | 可射击打通捷径                  |
+
+### 常用地形感知方法
+
+```js
+decide(ctx, dt) {
+  const { player, utils, mapAt, cellOf } = ctx;
+  if (!player) return {};
+
+  // 获取当前所在格子类型
+  const cc = cellOf(player.x + player.w / 2, player.y + player.h / 2);
+  const currentTile = mapAt(cc.c, cc.r);
+
+  // 检测前方格子类型（提前避障）
+  const front = { c: cc.c + player.dir.x, r: cc.r + player.dir.y };
+  const frontTile = mapAt(front.c, front.r);
+
+  // 获取所有加速带位置，寻找最近的
+  const speedZones = utils.getSpeedPositions();
+
+  // 获取所有尖刺位置，避开危险区域
+  const spikes = utils.getSpikePositions();
+
+  // 获取传送门位置，利用快速转移
+  const gates = utils.getGatePositions();
+
+  // 获取指定格子周围 3×3 的地形信息
+  const surroundings = utils.getTerrainInfo(cc.c, cc.r);
+
+  // 判断前方是否安全（不是墙/边界）
+  const isFrontSafe = frontTile !== TILE.WALL
+                   && frontTile !== TILE.BORDER
+                   && frontTile !== TILE.CRACK;
+
+  return { up: false, down: false, left: false, right: false, fire: false };
+}
+```
+
+### 策略示例：避开尖刺
+
+```js
+decide(ctx, dt) {
+  const { player, mapAt, cellOf, isBlocked } = ctx;
+  if (!player) return {};
+
+  const cc = cellOf(player.x + player.w / 2, player.y + player.h / 2);
+
+  // 检查四个方向的格子类型
+  const dirs = {
+    up:    mapAt(cc.c, cc.r - 1),
+    down:  mapAt(cc.c, cc.r + 1),
+    left:  mapAt(cc.c - 1, cc.r),
+    right: mapAt(cc.c + 1, cc.r),
+  };
+
+  // 优先避开尖刺（TILE.SPIKE = 7）
+  const result = { up: false, down: false, left: false, right: false, fire: true };
+  if (dirs.up === 7) result.up = false;    // 不往上（有尖刺）
+  else if (!isBlocked("up")) result.up = true;
+
+  return result;
 }
 ```
