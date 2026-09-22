@@ -138,13 +138,34 @@ export function resetGame() {
     if (cfg.gates && cfg.gates.length > 0) {
       // 先创建所有门对象
       for (const gDef of cfg.gates) {
-        const g = { cells: gDef.cells || [], partner: null, pairId: null };
+        const g = {
+          cells: gDef.cells || [],
+          partner: null,
+          pairId: null,
+          pair: gDef.pair || null,
+        };
         for (const cell of g.cells) {
           if (window.map[cell.r]) window.map[cell.r][cell.c] = GATE;
         }
         window.gates.push(g);
       }
-      // 通过 partnerCells 配对传送门
+
+      // 优先通过 pair 字段配对（相同 pair 名称的门互相传送）
+      const pairMap = {};
+      for (let i = 0; i < window.gates.length; i++) {
+        const g = window.gates[i];
+        if (!g.pair) continue;
+        if (pairMap[g.pair]) {
+          pairMap[g.pair].partner = g;
+          g.partner = pairMap[g.pair];
+          pairMap[g.pair].pairId = i;
+          g.pairId = i;
+        } else {
+          pairMap[g.pair] = g;
+        }
+      }
+
+      // 对未配对的门，通过 partnerCells 配对传送门
       for (let i = 0; i < cfg.gates.length; i++) {
         const gDef = cfg.gates[i];
         const g = window.gates[i];

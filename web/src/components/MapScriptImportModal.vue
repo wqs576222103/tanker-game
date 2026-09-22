@@ -23,15 +23,35 @@
         <div class="modal-tip-text">
           <strong>第二步：编写地图脚本</strong>
           <div class="tip-detail">
-            根据指南编写 JS 脚本，定义地图布局、道具、出生点等。可借助AI生成脚本：
+            根据指南编写 JS
+            脚本，定义地图布局、道具、出生点等。可借助AI生成脚本：
             <div class="site-links">
-              <a href="https://tongyi.aliyun.com/qianwen" target="_blank" class="site-link">通义千问</a>
-              <a href="https://chat.deepseek.com/" target="_blank" class="site-link">DeepSeek</a>
-              <a href="https://chat.openai.com" target="_blank" class="site-link">ChatGPT🪜</a>
-              <a href="https://claude.ai" target="_blank" class="site-link">Claude🪜</a>
+              <a
+                href="https://tongyi.aliyun.com/qianwen"
+                target="_blank"
+                class="site-link"
+                >通义千问</a
+              >
+              <a
+                href="https://chat.deepseek.com/"
+                target="_blank"
+                class="site-link"
+                >DeepSeek</a
+              >
+              <a
+                href="https://chat.openai.com"
+                target="_blank"
+                class="site-link"
+                >ChatGPT🪜</a
+              >
+              <a href="https://claude.ai" target="_blank" class="site-link"
+                >Claude🪜</a
+              >
             </div>
             <br />
-            <span>将指南内容发送给AI，并追加你的需求，如："我想要一个迷宫地图，有加速通道和草丛掩体"。</span>
+            <span
+              >将指南内容发送给AI，并追加你的需求，如："我想要一个迷宫地图，有加速通道和草丛掩体"。</span
+            >
           </div>
         </div>
 
@@ -60,6 +80,15 @@
           ></textarea>
         </div>
         <div v-if="scriptError" class="modal-error">{{ scriptError }}</div>
+        <div v-if="scriptContent.trim() && employeeId" class="map-name-section">
+          <label class="map-name-label">地图名称</label>
+          <input
+            v-model="mapName"
+            placeholder="地图名称"
+            class="map-name-input"
+            maxlength="50"
+          />
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" @click="$emit('close')">取消</button>
@@ -76,13 +105,17 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import mapGuideUrl from "@/assets/map-script-guide.txt?url";
 
 const props = defineProps({
   onImport: {
     type: Function,
     required: true,
+  },
+  employeeId: {
+    type: String,
+    default: "",
   },
 });
 
@@ -94,6 +127,30 @@ const loading = ref(false);
 const copySuccess = ref(false);
 const fileInput = ref(null);
 const fileName = ref("");
+const mapName = ref("");
+let isUpdatingScript = false;
+
+watch(mapName, (newName) => {
+  if (isUpdatingScript || !scriptContent.value) return;
+  const old = scriptContent.value;
+  const updated = old.replace(/(name\s*:\s*)["'](.+?)["']/, `$1"${newName}"`);
+  if (updated !== old) {
+    scriptContent.value = updated;
+  }
+});
+
+watch(scriptContent, (content) => {
+  if (!content) {
+    mapName.value = "";
+    return;
+  }
+  const nameMatch = content.match(/name\s*:\s*["'](.+?)["']/);
+  isUpdatingScript = true;
+  mapName.value = nameMatch ? nameMatch[1] : "";
+  setTimeout(() => {
+    isUpdatingScript = false;
+  }, 0);
+});
 
 function downloadGuide() {
   const link = document.createElement("a");
@@ -166,7 +223,11 @@ async function handleImport() {
 
   loading.value = true;
   try {
-    await props.onImport(scriptContent.value);
+    const finalMapName = mapName.value.trim() || "未命名地图";
+    await props.onImport(scriptContent.value, {
+      saveToServer: true,
+      mapName: finalMapName,
+    });
     scriptContent.value = "";
     scriptError.value = "";
     emit("close");
@@ -294,8 +355,12 @@ async function handleImport() {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .site-links {
@@ -439,5 +504,31 @@ async function handleImport() {
 .btn-confirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.map-name-section {
+  margin-top: 12px;
+}
+.map-name-label {
+  display: block;
+  font-size: 13px;
+  color: #9fb6a6;
+  margin-bottom: 6px;
+}
+.map-name-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid #3a4a3a;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #cfe3cf;
+  outline: none;
+  box-sizing: border-box;
+}
+.map-name-input:focus {
+  border-color: #5a8a5a;
+}
+.map-name-input::placeholder {
+  color: #6a7a6a;
 }
 </style>

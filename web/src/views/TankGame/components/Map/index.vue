@@ -20,7 +20,9 @@
         </p>
         <div class="items" v-if="!hideItemLegend">
           <template v-if="customItems">
-            <span v-for="(item, index) in customItems" :key="index">{{ item }}</span>
+            <span v-for="(item, index) in customItems" :key="index">{{
+              item
+            }}</span>
           </template>
           <template v-else>
             🚁 无人机 &nbsp;✨ 散弹 &nbsp;⚡ 射速 &nbsp;💨 移速<br />
@@ -76,14 +78,32 @@
       </div>
     </div>
     <div id="btn-group" class="none-select">
-       <button
-        id="btn-refresh-map"
-        :disabled="gameState === 'playing'"
-        v-show="!hideRefreshMap"
-        @click="refreshMap"
+      <div
+        class="map-dropdown-wrap"
+        @mouseenter="showMapDropdown = true"
+        @mouseleave="hideMapDropdown"
       >
-        🗺️ 更换地图
-      </button>
+        <button
+          id="btn-refresh-map"
+          :disabled="gameState === 'playing'"
+          v-show="!hideRefreshMap"
+        >
+          🗺️ 更换地图
+        </button>
+        <div
+          class="map-dropdown"
+          v-show="showMapDropdown && gameState !== 'playing'"
+          @mouseenter="clearMapDropdownTimer"
+          @mouseleave="hideMapDropdown"
+        >
+          <div class="map-dropdown-item" @click="handleRandomMap">
+            <span class="map-dropdown-icon">🎲</span> 随机地图
+          </div>
+          <div class="map-dropdown-item" @click="showPlayerMapList = true">
+            <span class="map-dropdown-icon">👥</span> 玩家地图
+          </div>
+        </div>
+      </div>
       <button
         id="btn-import-map"
         :disabled="gameState === 'playing'"
@@ -105,10 +125,8 @@
         重新开始 R
       </button>
       <button id="btn-ai" class="btn-ai-btn" v-show="!hideAi">🤖 AI: 关</button>
-    
-      <button id="btn-speed" v-show="!hideSpeed">
-        ⏩ 1x
-      </button>
+
+      <button id="btn-speed" v-show="!hideSpeed">⏩ 1x</button>
       <button
         id="btn-import-ai"
         class="btn-import-ai-btn"
@@ -135,7 +153,13 @@
     <MapScriptImportModal
       v-if="showMapImport"
       :on-import="handleMapImport"
+      :employee-id="employeeId"
       @close="showMapImport = false"
+    />
+    <PlayerMapListModal
+      v-if="showPlayerMapList"
+      @close="showPlayerMapList = false"
+      @select="handlePlayerMapSelect"
     />
   </div>
 </template>
@@ -152,7 +176,12 @@ import DefaultAI from "../../script/ai-tanker/default-tank.js";
 import LevelAI from "../../script/ai-tanker/level-tank.js";
 import ScriptImportModal from "@/components/ScriptImportModal.vue";
 import MapScriptImportModal from "@/components/MapScriptImportModal.vue";
-import { parseMapScript, validateMapConfig } from "../../script/base/map-script.js";
+import PlayerMapListModal from "@/components/PlayerMapListModal.vue";
+import {
+  parseMapScript,
+  validateMapConfig,
+} from "../../script/base/map-script.js";
+import { getMapScript, uploadMapScript } from "@/api/map.js";
 
 const props = defineProps({
   hideAi: {
@@ -198,15 +227,21 @@ const gameState = ref("start");
 const levelMode = ref(false);
 const showScriptImport = ref(false);
 const showMapImport = ref(false);
+const showMapDropdown = ref(false);
+const showPlayerMapList = ref(false);
+let mapDropdownTimer = null;
 let stateCheckInterval = null;
 const token = getToken();
 const route = useRoute();
+
+console.log("[Map] token:", token);
 
 onMounted(async () => {
   if (token) {
     try {
       const userInfo = getUserInfo();
       employeeId.value = userInfo.employeeId || "";
+      console.log("[Map] employeeId:", employeeId.value);
     } catch (err) {
       console.error("获取用户信息失败:", err);
     }
@@ -280,7 +315,27 @@ async function tankGameOnImport(scriptContent) {
   AIPlayer.updateUI();
 }
 
-async function handleMapImport(scriptContent) {
+async function handleMapImport(scriptContent, { saveToServer, mapName } = {}) {
+  console.log(
+    "[Map] handleMapImport called, saveToServer:",
+    saveToServer,
+    "mapName:",
+    mapName,
+    "employeeId:",
+    employeeId.value,
+  );
+  if (saveToServer && employeeId.value) {
+    try {
+      const blob = new Blob([scriptContent], { type: "text/javascript" });
+      const file = new File([blob], `${mapName || "custom-map"}.js`, {
+        type: "text/javascript",
+      });
+      await uploadMapScript(employeeId.value, mapName, file);
+    } catch (err) {
+      console.warn("[Map] 上传地图脚本到服务器失败:", err);
+    }
+  }
+
   const config = await parseMapScript(scriptContent);
   const result = validateMapConfig(config);
   if (!result.valid) {
@@ -305,6 +360,55 @@ function refreshMap() {
   document.getElementById("ov-pause").classList.add("hidden");
   document.getElementById("ov-over").classList.add("hidden");
   document.getElementById("ov-start").classList.remove("hidden");
+}
+
+function handleRandomMap() {
+  showMapDropdown.value = false;
+  refreshMap();
+}
+
+function hideMapDropdown() {
+  clearTimeout(mapDropdownTimer);
+  mapDropdownTimer = setTimeout(() => {
+    showMapDropdown.value = false;
+  }, 300);
+}
+
+function clearMapDropdownTimer() {
+  clearTimeout(mapDropdownTimer);
+}
+
+async function handlePlayerMapSelect(item) {
+  showPlayerMapList.value = false;
+  if (gameState.value === "playing") return;
+  try {
+    const res = await getMapScript(item.id);
+    const scriptPath = res?.data?.scriptPath;
+    if (!scriptPath) {
+      console.error("地图脚本路径为空");
+      return;
+    }
+    const resp = await fetch(scriptPath);
+    if (!resp.ok) {
+      console.error("拉取地图脚本失败:", resp.status);
+      return;
+    }
+    const scriptContent = await resp.text();
+    const config = await parseMapScript(scriptContent);
+    const result = validateMapConfig(config);
+    if (!result.valid) {
+      console.error("地图脚本验证失败:", result.message);
+      return;
+    }
+    window.customMapConfig = config;
+    window.mapGenerated = false;
+    resetGame();
+    document.getElementById("ov-pause").classList.add("hidden");
+    document.getElementById("ov-over").classList.add("hidden");
+    document.getElementById("ov-start").classList.remove("hidden");
+  } catch (err) {
+    console.error("加载玩家地图失败:", err);
+  }
 }
 </script>
 
@@ -598,5 +702,50 @@ canvas {
 }
 #ov-ai-log button:hover {
   background: #3a4a3a;
+}
+.map-dropdown-wrap {
+  position: relative;
+  display: inline-block;
+}
+.map-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: #1e2b22;
+  border: 1px solid #4a5a4a;
+  border-radius: 10px;
+  padding: 6px 0;
+  min-width: 150px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
+.map-dropdown::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #4a5a4a;
+}
+.map-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #cfe3cf;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.map-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffd76e;
+}
+.map-dropdown-icon {
+  font-size: 16px;
 }
 </style>

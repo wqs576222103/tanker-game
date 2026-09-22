@@ -38,6 +38,7 @@ services:
       - "8102:3000"
     volumes:
       - ./server/upload/ai:/app/upload/ai
+      - ./server/upload/map:/app/upload/map
 
   web:
     build:
