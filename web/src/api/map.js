@@ -1,4 +1,4 @@
-import { post, get } from "@/utils/request";
+import { post, get, del } from "@/utils/request";
 
 export function uploadMapScript(employeeId, mapName, file) {
   const data = new FormData();
@@ -18,4 +18,8 @@ export function getMapScript(id) {
 
 export function getUserMapScripts(employeeId) {
   return get(`/map/user/${employeeId}`);
+}
+
+export function deleteMapScript(id) {
+  return del(`/map/${id}`);
 }

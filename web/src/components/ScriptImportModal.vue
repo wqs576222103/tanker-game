@@ -80,6 +80,15 @@
           ></textarea>
         </div>
         <div v-if="scriptError" class="modal-error">{{ scriptError }}</div>
+        <div v-if="scriptContent.trim()" class="tank-name-section">
+          <label class="tank-name-label">坦克名称</label>
+          <input
+            v-model="tankName"
+            placeholder="坦克名称"
+            class="tank-name-input"
+            maxlength="20"
+          />
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" @click="$emit('close')">取消</button>
@@ -96,7 +105,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 
 const props = defineProps({
@@ -118,6 +127,30 @@ const loading = ref(false);
 const copySuccess = ref(false);
 const fileInput = ref(null);
 const fileName = ref("");
+const tankName = ref("");
+let isUpdatingScript = false;
+
+watch(tankName, (newName) => {
+  if (isUpdatingScript || !scriptContent.value) return;
+  const old = scriptContent.value;
+  const updated = old.replace(/(name\s*:\s*)["'](.+?)["']/, `$1"${newName}"`);
+  if (updated !== old) {
+    scriptContent.value = updated;
+  }
+});
+
+watch(scriptContent, (content) => {
+  if (!content) {
+    tankName.value = "";
+    return;
+  }
+  const nameMatch = content.match(/name\s*:\s*["'](.+?)["']/);
+  isUpdatingScript = true;
+  tankName.value = nameMatch ? nameMatch[1] : "";
+  setTimeout(() => {
+    isUpdatingScript = false;
+  }, 0);
+});
 
 function downloadPrompt() {
   const link = document.createElement("a");
@@ -472,5 +505,31 @@ async function handleImport() {
 .btn-confirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.tank-name-section {
+  margin-top: 12px;
+}
+.tank-name-label {
+  display: block;
+  font-size: 13px;
+  color: #9fb6a6;
+  margin-bottom: 6px;
+}
+.tank-name-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid #3a4a3a;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #cfe3cf;
+  outline: none;
+  box-sizing: border-box;
+}
+.tank-name-input:focus {
+  border-color: #5a8a5a;
+}
+.tank-name-input::placeholder {
+  color: #6a7a6a;
 }
 </style>

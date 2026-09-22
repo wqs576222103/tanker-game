@@ -258,4 +258,45 @@ router.get("/file/:name", async (ctx) => {
   ctx.body = fs.createReadStream(full);
 });
 
+// 删除地图脚本
+router.delete("/:id", async (ctx) => {
+  const id = parseInt(ctx.params.id, 10);
+  if (!id) {
+    ctx.status = 400;
+    ctx.body = { code: 400, message: "缺少 id 参数" };
+    return;
+  }
+  try {
+    const [rows] = await getPool().execute(
+      `SELECT id, script_path FROM \`${MAP_TABLE}\` WHERE id = ?`,
+      [id],
+    );
+    if (rows.length === 0) {
+      ctx.status = 404;
+      ctx.body = { code: 404, message: "地图脚本不存在" };
+      return;
+    }
+    // 删除文件
+    const scriptPath = rows[0].script_path;
+    if (scriptPath) {
+      const fileName = path.basename(scriptPath);
+      const filePath = path.join(UPLOAD_DIR, fileName);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (err) {
+          console.error(`[map] 删除地图文件失败: ${err.message}`);
+        }
+      }
+    }
+    // 删除数据库记录
+    await getPool().execute(`DELETE FROM \`${MAP_TABLE}\` WHERE id = ?`, [id]);
+    ctx.body = { code: 200, data: { success: true } };
+  } catch (err) {
+    console.error(`[map] 删除地图脚本失败: ${err.message}`);
+    ctx.status = 500;
+    ctx.body = { code: 500, message: "删除地图脚本失败" };
+  }
+});
+
 module.exports = router;

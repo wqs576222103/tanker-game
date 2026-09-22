@@ -46,7 +46,7 @@ import GameOverOverlay from "./components/GameOverOverlay.vue";
 import PauseOverlay from "./components/PauseOverlay.vue";
 import TankPanel from "./components/TankPanel.vue";
 import ButtonGroup from "./components/ButtonGroup.vue";
-import GameModal from "./components/GameModal.vue";
+import GameModal from "@/components/GameModal.vue";
 
 const modalVisible = ref(false);
 const modalMessage = ref("");

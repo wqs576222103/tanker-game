@@ -6,6 +6,13 @@
           <div class="modal-icon" v-if="icon">{{ icon }}</div>
           <p class="modal-message">{{ message }}</p>
           <div class="modal-actions">
+            <button
+              v-if="showCancel"
+              class="modal-btn secondary"
+              @click="handleClose"
+            >
+              {{ cancelText }}
+            </button>
             <button class="modal-btn primary" @click="handleConfirm">
               {{ confirmText }}
             </button>
@@ -31,6 +38,14 @@ const props = defineProps({
   confirmText: {
     type: String,
     default: "确定",
+  },
+  cancelText: {
+    type: String,
+    default: "取消",
+  },
+  showCancel: {
+    type: Boolean,
+    default: false,
   },
   icon: {
     type: String,
@@ -133,6 +148,16 @@ watch(
 
 .modal-btn.primary:active {
   transform: scale(0.98);
+}
+
+.modal-btn.secondary {
+  background: transparent;
+  color: #9fb6a6;
+  border: 1px solid #4a5a4a;
+}
+
+.modal-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .modal-enter-active,

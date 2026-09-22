@@ -158,6 +158,7 @@
     />
     <PlayerMapListModal
       v-if="showPlayerMapList"
+      :current-employee-id="employeeId"
       @close="showPlayerMapList = false"
       @select="handlePlayerMapSelect"
     />

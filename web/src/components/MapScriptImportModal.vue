@@ -86,7 +86,7 @@
             v-model="mapName"
             placeholder="地图名称"
             class="map-name-input"
-            maxlength="50"
+            maxlength="20"
           />
         </div>
       </div>
@@ -223,7 +223,13 @@ async function handleImport() {
 
   loading.value = true;
   try {
-    const finalMapName = mapName.value.trim() || "未命名地图";
+    let finalMapName = mapName.value.trim();
+    if (!finalMapName) {
+      finalMapName = "未命名地图";
+    }
+    if (finalMapName.length > 20) {
+      finalMapName = finalMapName.slice(0, 20);
+    }
     await props.onImport(scriptContent.value, {
       saveToServer: true,
       mapName: finalMapName,

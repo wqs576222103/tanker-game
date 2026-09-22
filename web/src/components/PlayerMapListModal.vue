@@ -9,7 +9,7 @@
         <div class="search-bar">
           <input
             v-model="keyword"
-            placeholder="搜索地图名或作者..."
+            placeholder="搜索地图名、工号或玩家名..."
             class="search-input"
             @input="debounceSearch"
           />
@@ -32,6 +32,13 @@
             <button class="btn-use" @click.stop="handleSelect(item)">
               使用
             </button>
+            <button
+              v-if="item.employeeId === currentEmployeeId"
+              class="btn-delete"
+              @click.stop="handleDelete(item)"
+            >
+              删除
+            </button>
           </div>
         </div>
         <div class="empty-tip" v-else-if="!loading">暂无玩家地图</div>
@@ -50,12 +57,30 @@
         <button class="btn-cancel" @click="$emit('close')">关闭</button>
       </div>
     </div>
+    <GameModal
+      :visible="showDeleteConfirm"
+      :message="`确定删除地图「${deleteTarget?.mapName || ''}」吗？`"
+      confirm-text="删除"
+      cancel-text="取消"
+      :show-cancel="true"
+      icon=""
+      @confirm="confirmDelete"
+      @close="showDeleteConfirm = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { getMapScriptList } from "@/api/map.js";
+import { getMapScriptList, deleteMapScript } from "@/api/map.js";
+import GameModal from "@/components/GameModal.vue";
+
+const props = defineProps({
+  currentEmployeeId: {
+    type: String,
+    default: "",
+  },
+});
 
 const emit = defineEmits(["close", "select"]);
 
@@ -65,6 +90,8 @@ const loading = ref(false);
 const page = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
+const showDeleteConfirm = ref(false);
+const deleteTarget = ref(null);
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value));
 
@@ -86,7 +113,15 @@ async function fetchList() {
       keyword: keyword.value,
     });
     const data = res?.data;
-    mapList.value = data?.list || [];
+    mapList.value = (data?.list || []).map((r) => ({
+      id: r.id,
+      employeeId: r.employee_id,
+      username: r.username,
+      mapName: r.map_name,
+      fileName: r.file_name,
+      scriptPath: r.script_path,
+      createTime: r.create_time,
+    }));
     total.value = data?.total || 0;
   } catch (err) {
     console.error("获取地图列表失败:", err);
@@ -103,6 +138,23 @@ function changePage(p) {
 
 function handleSelect(item) {
   emit("select", item);
+}
+
+async function handleDelete(item) {
+  deleteTarget.value = item;
+  showDeleteConfirm.value = true;
+}
+
+async function confirmDelete() {
+  const item = deleteTarget.value;
+  if (!item) return;
+  try {
+    await deleteMapScript(item.id);
+    fetchList();
+  } catch (err) {
+    console.error("删除地图失败:", err);
+  }
+  deleteTarget.value = null;
 }
 
 function formatTime(t) {
@@ -133,7 +185,7 @@ onMounted(() => {
   background: #1e2b22;
   border: 1px solid #4a5a4a;
   border-radius: 10px;
-  width: 520px;
+  width: 620px;
   max-height: 70vh;
   display: flex;
   flex-direction: column;
@@ -260,6 +312,22 @@ onMounted(() => {
 
 .btn-use:hover {
   background: #5a8a5a;
+}
+
+.btn-delete {
+  background: transparent;
+  color: #ff6b6b;
+  border: 1px solid #ff6b6b;
+  padding: 4px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.btn-delete:hover {
+  background: rgba(255, 107, 107, 0.15);
 }
 
 .empty-tip {
