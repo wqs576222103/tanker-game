@@ -136,8 +136,36 @@ export function resetGame() {
     // 构建传送门
     window.gates = [];
     if (cfg.gates && cfg.gates.length > 0) {
-      // 先创建所有门对象
+      // 先为每条 gate 定义自动展开 partnerCells 为独立传送门
+      const expandedGates = [];
       for (const gDef of cfg.gates) {
+        const cells = gDef.cells || [];
+        const partnerCells = gDef.partnerCells || [];
+        if (cells.length > 0) {
+          expandedGates.push({ cells, pair: gDef.pair || null });
+        }
+        // 如果有 partnerCells 但没有对应的另一条 gate 定义，则自动补建
+        if (partnerCells.length > 0) {
+          const hasPartner = cfg.gates.some(
+            (other) =>
+              other !== gDef &&
+              other.pair === gDef.pair &&
+              other.cells.length === partnerCells.length &&
+              partnerCells.every((pc) =>
+                other.cells.some((oc) => oc.c === pc.c && oc.r === pc.r),
+              ),
+          );
+          if (!hasPartner) {
+            expandedGates.push({
+              cells: partnerCells,
+              pair: gDef.pair || null,
+            });
+          }
+        }
+      }
+
+      // 创建所有门对象
+      for (const gDef of expandedGates) {
         const g = {
           cells: gDef.cells || [],
           partner: null,
@@ -162,30 +190,6 @@ export function resetGame() {
           g.pairId = i;
         } else {
           pairMap[g.pair] = g;
-        }
-      }
-
-      // 对未配对的门，通过 partnerCells 配对传送门
-      for (let i = 0; i < cfg.gates.length; i++) {
-        const gDef = cfg.gates[i];
-        const g = window.gates[i];
-        if (g.partner || !gDef.partnerCells || !gDef.partnerCells.length)
-          continue;
-        // 查找 partnerCells 匹配的另一个门
-        for (let j = 0; j < window.gates.length; j++) {
-          if (i === j) continue;
-          const other = window.gates[j];
-          if (other.cells.length !== gDef.partnerCells.length) continue;
-          const match = gDef.partnerCells.every((pc) =>
-            other.cells.some((oc) => oc.c === pc.c && oc.r === pc.r),
-          );
-          if (match) {
-            g.partner = other;
-            other.partner = g;
-            g.pairId = i;
-            other.pairId = i;
-            break;
-          }
         }
       }
     }
