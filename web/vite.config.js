@@ -12,8 +12,13 @@ export default defineConfig({
     port: 8101,
     proxy: {
       "/tank-game-api": {
-        target: "http://localhost:3000",
+        target: "http://192.168.2.4:3000",
         changeOrigin: true,
+      },
+      "/socket.io": {
+        target: "http://192.168.2.4:3000",
+        changeOrigin: true,
+        ws: true,
       },
     },
   },

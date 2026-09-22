@@ -38,6 +38,14 @@
           <div class="mode-name">关卡模式</div>
           <div class="mode-desc">挑战关卡，体验不同的战斗场景</div>
         </router-link>
+        <router-link
+          :to="{ path: '/online-battle', query: { token } }"
+          class="mode-card online-mode"
+        >
+          <div class="mode-icon">⚔️</div>
+          <div class="mode-name">在线对战</div>
+          <div class="mode-desc">匹配对手，实时在线坦克对决</div>
+        </router-link>
       </div>
     </div>
   </div>
@@ -138,6 +146,12 @@ const token = computed(() => route.query.token || "");
 }
 .battle-mode:hover {
   box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+}
+.online-mode {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+.online-mode:hover {
+  box-shadow: 0 12px 40px rgba(231, 76, 60, 0.4);
 }
 .mode-icon {
   font-size: 48px;

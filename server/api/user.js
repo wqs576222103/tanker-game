@@ -114,7 +114,7 @@ router.get("/infoByToken", async (ctx) => {
     if (first) clientIp = first;
   }
 
-  const targetBase = SOURCE_MAP[clientIp] || prodUserUrl;
+  const targetBase = SOURCE_MAP[clientIp] || testUserUrl;
   console.log(`[user] ${clientIp} -> ${targetBase}`);
   if (!targetBase) {
     ctx.status = 403;
