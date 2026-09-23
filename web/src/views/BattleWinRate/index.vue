@@ -40,7 +40,7 @@
               <span class="stat-battles">场次: {{ item.total_battles }}</span>
               <span class="stat-wins">胜: {{ item.wins }}</span>
               <span class="stat-kills">击杀: {{ item.total_kills }}</span>
-              <span class="stat-deaths">死亡: {{ item.total_deaths }}</span>
+              <span class="stat-deaths">淘汰: {{ item.total_deaths }}</span>
             </div>
           </div>
           <div class="rank-rate">

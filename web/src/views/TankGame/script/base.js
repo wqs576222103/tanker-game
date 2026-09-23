@@ -296,34 +296,34 @@ export function playMp3(url) {
   try {
     const a = new Audio(url);
     a.volume = 0.6;
-    a.play().catch(() => {});
+    a.play().catch(() => { });
     return a;
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // 背景音乐：仅在未开始游戏（开始/结束界面）时播放，每隔5秒播放一次
 let bgmAudio = null;
 let bgmTimer = null;
-let deathSoundTimer = null; // 坦克死亡后3秒内禁止播放bgm
+let deathSoundTimer = null; // 坦克淘汰后3秒内禁止播放bgm
 export function playBgm() {
   if (!sfxEnabled) return;
-  if (deathSoundTimer) return; // 死亡音效播放中，不播放bgm
+  if (deathSoundTimer) return; // 淘汰音效播放中，不播放bgm
   try {
     if (!bgmAudio) {
       bgmAudio = new Audio(bgmMp3);
       bgmAudio.volume = 0.35;
     }
     bgmAudio.currentTime = 0;
-    bgmAudio.play().catch(() => {});
+    bgmAudio.play().catch(() => { });
     if (!bgmTimer) {
       bgmTimer = setInterval(() => {
         if (!sfxEnabled || state === "playing" || deathSoundTimer) return;
         const a = new Audio(bgmMp3);
         a.volume = 0.35;
-        a.play().catch(() => {});
+        a.play().catch(() => { });
       }, 10000);
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 export function stopBgm() {
   try {
@@ -335,7 +335,7 @@ export function stopBgm() {
       bgmAudio.pause();
       bgmAudio.currentTime = 0;
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 export function sfx(type) {
@@ -368,7 +368,7 @@ export function sfx(type) {
     g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
     o.start(t);
     o.stop(t + p[1]);
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // ====================== 地图 ======================
@@ -945,7 +945,7 @@ export function checkSpawnBoss() {
   }
 }
 
-// 杀死boss
+// 淘汰boss
 export function killBoss() {
   if (!boss || !boss.alive) return;
   boss.alive = false;
@@ -1886,7 +1886,7 @@ export function updateHud() {
     if (player.drones > 0)
       arr.push(
         "🚁×" +
-          Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
+        Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
       );
     if (player.bounces) arr.push("🔄");
     buff.textContent = arr.length ? arr.join(" ") : "";
@@ -1948,7 +1948,7 @@ export function gameOver() {
     "#ff4a3a",
   );
   sfx("over");
-  // 坦克死亡后等待3秒再播放背景音乐，避免与死亡音效重叠
+  // 坦克淘汰后等待3秒再播放背景音乐，避免与淘汰音效重叠
   deathSoundTimer = setTimeout(() => {
     deathSoundTimer = null;
     playBgm();
@@ -1975,7 +1975,7 @@ export function gameOver() {
   document.getElementById("ov-over-score").textContent =
     "击杀：" + kills + "　Boss击杀：" + bossKills;
   document.getElementById("ov-over-reason").textContent =
-    "死因：" + (deathReason || "不明原因");
+    "淘汰原因：" + (deathReason || "不明原因");
 
   const logCount = AILogger.getRecordCount();
   const logBtn = document.getElementById("btn-ai-log");
@@ -2176,37 +2176,34 @@ export function initGame() {
         .map(
           (r, i) => `
       <div class="log-item">
-        <div class="log-header">淘汰 #${i + 1} - ${
-          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
-        } - ${r.deathReason}</div>
+        <div class="log-header">淘汰 #${i + 1} - ${r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
+            } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">Boss击杀: <span>${r.bossKills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        ${
-          r.type === "ai"
-            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
-            : ""
-        }
+        ${r.type === "ai"
+              ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+              : ""
+            }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
         ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
-        ${
-          r.type === "ai" && r.decisionLog.length > 0
-            ? `
+        ${r.type === "ai" && r.decisionLog.length > 0
+              ? `
           <div class="log-decisions">
             <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
             ${r.decisionLog
-              .slice(-5)
-              .map(
-                (d) => `
+                .slice(-5)
+                .map(
+                  (d) => `
               <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
-              )
-              .join("")}
+                )
+                .join("")}
           </div>
         `
-            : ""
-        }
+              : ""
+            }
       </div>
     `,
         )

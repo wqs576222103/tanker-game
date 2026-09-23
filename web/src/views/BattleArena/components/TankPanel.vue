@@ -29,7 +29,7 @@
           {{ ai.tank ? (ai.tank.alive ? "存活" : "淘汰") : "准备" }}
         </span>
         <span class="tank-score">{{ ai.score }}分</span>
-        <span class="tank-stats">{{ ai.kills }}杀/{{ ai.deaths }}死</span>
+        <span class="tank-stats">{{ ai.kills }}杀/{{ ai.deaths }}淘汰</span>
         <button class="btn-remove" v-if="!isPlaying" @click="removeTank(i)">
           ✕
         </button>

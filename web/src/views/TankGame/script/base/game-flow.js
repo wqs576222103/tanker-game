@@ -529,7 +529,7 @@ export function gameOver() {
   document.getElementById("ov-over-score").textContent =
     "击杀：" + window.kills + "　Boss击杀：" + window.bossKills;
   document.getElementById("ov-over-reason").textContent =
-    "死因：" + (window.deathReason || "不明原因");
+    "淘汰原因：" + (window.deathReason || "不明原因");
 
   const logCount = AILogger.getRecordCount();
   const logBtn = document.getElementById("btn-ai-log");

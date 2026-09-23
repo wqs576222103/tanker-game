@@ -14,7 +14,7 @@ export default {
     // 核心决策循环
     decide(ctx, dt) {
         const player = ctx.player;
-        if (!player) return {}; // 如果玩家已死亡，返回空操作
+        if (!player) return {}; // 如果玩家已淘汰，返回空操作
 
         const enemies = ctx.enemies;
         const items = ctx.items;
