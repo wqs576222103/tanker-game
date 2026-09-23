@@ -38,14 +38,14 @@
           <div class="mode-name">关卡模式</div>
           <div class="mode-desc">挑战关卡，体验不同的战斗场景</div>
         </router-link>
-        <router-link
+        <!-- <router-link
           :to="{ path: '/online-battle', query: { token } }"
           class="mode-card online-mode"
         >
           <div class="mode-icon">⚔️</div>
           <div class="mode-name">在线对战</div>
           <div class="mode-desc">匹配对手，实时在线坦克对决</div>
-        </router-link>
+        </router-link> -->
       </div>
     </div>
   </div>
