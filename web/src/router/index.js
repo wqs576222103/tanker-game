@@ -63,6 +63,16 @@ const routes = [
     name: "Guide",
     component: () => import("../views/Guide/index.vue"),
   },
+  {
+    path: "/online-battle",
+    name: "OnlineBattle",
+    component: () => import("../views/OnlineBattle/index.vue"),
+  },
+  {
+    path: "/online-battle/play",
+    name: "OnlineBattlePlay",
+    component: () => import("../views/OnlineBattle/index.vue"),
+  },
 ];
 
 const router = createRouter({
