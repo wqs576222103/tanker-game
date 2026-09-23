@@ -239,6 +239,9 @@ export function resetGame() {
   window.particles = [];
   window.floats = [];
   window.lastTeleport = {};
+  window.fallingStones = [];
+  window.debris = [];
+  window.reachedPortal = false;
 
   const spawnPoint = window.customMapConfig?.playerSpawn
     ? window.customMapConfig.playerSpawn
@@ -313,6 +316,10 @@ export function update(dt) {
     updateMazeMechanics(dt);
   }
 
+  updateSpikeDamage();
+  updateFallingStones(dt);
+  updateDebris(dt);
+
   if (window.boss && window.boss.alive) {
     TankActions.moveBoss(dt);
     TankActions.bossFire(dt);
@@ -342,7 +349,24 @@ function updateMazeMechanics(dt) {
 
   if (isSpeedCell(playerCell.c, playerCell.r)) {
     window.player.speed = (window.levelConfig?.playerSpeed || 100) * 1.5;
-  } else if (isSpikeCell(playerCell.c, playerCell.r)) {
+  } else if (!isSpikeCell(playerCell.c, playerCell.r)) {
+    window.player.speed = window.levelConfig?.playerSpeed || 100;
+  }
+
+  if (isPortalCell(playerCell.c, playerCell.r)) {
+    window.reachedPortal = true;
+  }
+}
+
+function updateSpikeDamage() {
+  if (!window.player || !window.player.alive) return;
+
+  const playerCell = {
+    c: Math.floor((window.player.x + window.player.w / 2) / CELL),
+    r: Math.floor((window.player.y + window.player.h / 2) / CELL),
+  };
+
+  if (isSpikeCell(playerCell.c, playerCell.r)) {
     const phase =
       (window.gtMs + playerCell.c * 500 + playerCell.r * 300) % 3000;
     const riseT =
@@ -360,16 +384,7 @@ function updateMazeMechanics(dt) {
         return;
       }
     }
-  } else {
-    window.player.speed = window.levelConfig?.playerSpeed || 100;
   }
-
-  if (isPortalCell(playerCell.c, playerCell.r)) {
-    window.reachedPortal = true;
-  }
-
-  updateFallingStones(dt);
-  updateDebris(dt);
 }
 
 const STONE_INTERVAL = 5;
@@ -379,6 +394,7 @@ const STONE_RADIUS = CELL * 1.5;
 
 function updateFallingStones(dt) {
   if (!window.fallingStones) window.fallingStones = [];
+  if (!window.debris) window.debris = [];
   if (!window.stoneTimer) window.stoneTimer = 0;
 
   window.stoneTimer += dt;
