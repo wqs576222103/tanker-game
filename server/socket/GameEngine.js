@@ -753,6 +753,17 @@ class GameEngine {
     }
   }
 
+  _clearTankItems(t) {
+    t.shieldT = 0;
+    t.fireT = 0;
+    t.speedT = 0;
+    t.spreadT = 0;
+    t.mines = 0;
+    t.drones = 0;
+    t.bounces = false;
+    this.drones = this.drones.filter((d) => d.ownerId !== t.id);
+  }
+
   _killTank(t, killer, reason) {
     if (!t.alive) return;
     t.alive = false;
@@ -762,6 +773,7 @@ class GameEngine {
     t.mine = false;
     t._mineEdge = false;
     t.moveUp = false; t.moveDown = false; t.moveLeft = false; t.moveRight = false;
+    this._clearTankItems(t);
     t.lastDeathReason = killer ? killer.username : reason;
     if (killer && killer.id !== t.id) {
       killer.kills++;
@@ -793,10 +805,7 @@ class GameEngine {
     t._mineEdge = false;
     t.moveUp = false; t.moveDown = false; t.moveLeft = false; t.moveRight = false;
     t.fireCd = 0;
-    t.shieldT = 0;
-    t.fireT = 0;
-    t.speedT = 0;
-    t.spreadT = 0;
+    this._clearTankItems(t);
     this._ensureTankOutOfWalls(t);
     if (this._broadcastFn) {
       this._broadcastFn("player-respawned", {
@@ -978,18 +987,24 @@ class GameEngine {
     const isDraw = winners.length !== 1;
     const winner = isDraw ? null : winners[0];
 
+    const tankIds = new Set(sorted.map((t) => t.id));
+    const quitters = (Array.isArray(opts.quitters) ? opts.quitters : []).filter(
+      (q) => q && q.id && !tankIds.has(q.id),
+    );
+    const allPlayers = [...sorted, ...quitters];
+
     if (this._broadcastFn) {
       this._broadcastFn("game-over", {
         winner: winner ? { employeeId: winner.employeeId, username: winner.username, tankName: winner.tankName } : null,
         isDraw,
-        players: sorted.map((t) => ({
+        players: allPlayers.map((t) => ({
           employeeId: t.employeeId,
           username: t.username,
           tankName: t.tankName,
-          score: t.score,
-          kills: t.kills,
-          deaths: t.deaths,
-          deathReason: t.lastDeathReason,
+          score: t.score || 0,
+          kills: t.kills || 0,
+          deaths: t.deaths || 0,
+          deathReason: t.lastDeathReason || "",
           isWinner: winner && winner.id === t.id,
         })),
         gameDurationMs: Math.floor(this.gtMs),
@@ -1001,7 +1016,7 @@ class GameEngine {
         winner,
         isDraw,
         gameDurationMs: Math.floor(this.gtMs),
-        players: sorted,
+        players: allPlayers,
       });
     }
   }

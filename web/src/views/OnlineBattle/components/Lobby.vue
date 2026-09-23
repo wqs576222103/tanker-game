@@ -158,19 +158,27 @@
         </div>
 
         <div class="lobby-section">
-          <h3>最近对战</h3>
+          <div class="section-head">
+            <h3>最近对战</h3>
+            <button class="btn-link" @click="goRecords">查看全部记录</button>
+          </div>
           <div class="recent-list">
             <div v-if="recentGames.length === 0" class="no-data">暂无记录</div>
             <div
               v-for="game in recentGames"
               :key="game.room_id"
               class="recent-item"
+              @click="openRecord(game)"
             >
               <span class="recent-winner">
-                {{ game.is_draw ? '平局' : (game.winner_username || game.winner_name || '未知') }}
+                <template v-if="game.is_draw">平局</template>
+                <template v-else>赢家：{{ game.winner_username || game.winner_name || '未知' }}</template>
               </span>
               <span class="recent-info">
                 {{ game.player_count }}人 · {{ formatDuration(game.game_duration_ms) }}
+                <template v-if="game.players && game.players.length">
+                  · {{ game.players.map(p => `${p.kills}杀${p.deaths}亡`).join(' / ') }}
+                </template>
               </span>
               <span class="recent-time">{{ formatTime(game.create_time) }}</span>
             </div>
@@ -451,6 +459,16 @@ function goHome() {
   router.push("/home");
 }
 
+function goRecords() {
+  if (inRoom.value) leaveRoom();
+  router.push("/online-battle-record");
+}
+
+function openRecord(game) {
+  if (inRoom.value) leaveRoom();
+  router.push("/online-battle-record");
+}
+
 function copyRoomId() {
   const text = createdRoomId.value;
   const onSuccess = () => {
@@ -588,6 +606,30 @@ function formatTime(timeStr) {
   margin: 0 0 8px;
   font-size: 16px;
   color: #7de07d;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.section-head h3 {
+  margin: 0;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #45b7d1;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
 }
 
 .lobby-desc {
@@ -895,10 +937,16 @@ function formatTime(timeStr) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 10px;
   background: #2a3a2a;
   border-radius: 4px;
   font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.recent-item:hover {
+  background: #354535;
 }
 
 .recent-winner {

@@ -196,10 +196,11 @@ function setupSocket(server) {
       if (!room) return;
       const engine = engines.get(room.id);
       if (!engine) return;
+      const snapshot = _snapshotTank(engine, socket.id);
       engine.removePlayer(socket.id);
       const gameActive = engine.state === "countdown" || engine.state === "playing";
       if (gameActive && engine.tanks.length < 2) {
-        engine.forceEnd({ creditRemaining: true });
+        engine.forceEnd({ creditRemaining: true, quitters: snapshot ? [snapshot] : [] });
       }
     });
 
@@ -217,6 +218,21 @@ function setupSocket(server) {
   return io;
 }
 
+function _snapshotTank(engine, socketId) {
+  const t = engine.tanks.find((x) => x.id === socketId);
+  if (!t) return null;
+  return {
+    id: t.id,
+    employeeId: t.employeeId,
+    username: t.username,
+    tankName: t.tankName,
+    score: t.score,
+    kills: t.kills,
+    deaths: t.deaths,
+    lastDeathReason: t.lastDeathReason,
+  };
+}
+
 function _handleLeave(socket, io) {
   const result = roomManager.leaveRoom(socket.id);
   if (!result) return;
@@ -226,7 +242,13 @@ function _handleLeave(socket, io) {
   if (result.roomEmpty) {
     const engine = engines.get(result.roomId);
     if (engine) {
-      engine.stop();
+      const gameActive = engine.state === "countdown" || engine.state === "playing";
+      if (gameActive) {
+        const snapshot = _snapshotTank(engine, socket.id);
+        engine.forceEnd({ creditRemaining: true, quitters: snapshot ? [snapshot] : [] });
+      } else {
+        engine.stop();
+      }
       engines.delete(result.roomId);
     }
     console.log(`[Socket] Room ${result.roomId} cancelled (empty)`);
@@ -247,11 +269,15 @@ function _handleLeave(socket, io) {
 function _checkGameTermination(roomId, removedSocketId) {
   const engine = engines.get(roomId);
   if (!engine) return;
+  const snapshot = _snapshotTank(engine, removedSocketId);
   engine.removePlayer(removedSocketId);
   const room = roomManager.getRoom(roomId);
   const gameActive = engine.state === "countdown" || engine.state === "playing";
-  if (gameActive && room && room.players.size < 2) {
-    engine.forceEnd({ creditRemaining: true });
+  if (!gameActive) return;
+  const shouldEnd =
+    engine.tanks.length < 2 || (room && room.players.size < 2);
+  if (shouldEnd) {
+    engine.forceEnd({ creditRemaining: true, quitters: snapshot ? [snapshot] : [] });
   }
 }
 

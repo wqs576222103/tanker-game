@@ -21,7 +21,7 @@ async function saveOnlineBattleRecord({ roomId, winnerEmployeeId, winnerName, pl
     );
 
     if (players && players.length > 0) {
-      const placeholders = players.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())").join(", ");
+      const placeholders = players.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())").join(", ");
       const flatValues = [];
       for (const p of players) {
         flatValues.push(
@@ -77,7 +77,27 @@ router.get("/rooms", async (ctx) => {
        LIMIT ${pageSize} OFFSET ${offset}`,
     );
 
-    ctx.body = { code: 200, data: { list: rows, total: totalRows.cnt, page, pageSize } };
+    let playersMap = {};
+    if (rows.length > 0) {
+      const roomIds = rows.map((r) => r.room_id);
+      const placeholders = roomIds.map(() => "?").join(", ");
+      const [playerRows] = await getPool().execute(
+        `SELECT room_id, employee_id, username, tank_name, team_id, score,
+                kills, deaths, death_reason, is_winner
+         FROM \`${PLAYER_TABLE}\`
+         WHERE room_id IN (${placeholders})
+         ORDER BY score DESC`,
+        roomIds,
+      );
+      playersMap = playerRows.reduce((acc, p) => {
+        if (!acc[p.room_id]) acc[p.room_id] = [];
+        acc[p.room_id].push(p);
+        return acc;
+      }, {});
+    }
+
+    const list = rows.map((r) => ({ ...r, players: playersMap[r.room_id] || [] }));
+    ctx.body = { code: 200, data: { list, total: totalRows.cnt, page, pageSize } };
   } catch (err) {
     console.error(`[onlineBattle] 查询房间列表失败: ${err.message}`);
     ctx.status = 500;

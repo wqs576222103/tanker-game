@@ -73,6 +73,11 @@ const routes = [
     name: "OnlineBattlePlay",
     component: () => import("../views/OnlineBattle/index.vue"),
   },
+  {
+    path: "/online-battle-record",
+    name: "OnlineBattleRecord",
+    component: () => import("../views/OnlineBattleRecord/index.vue"),
+  },
 ];
 
 const router = createRouter({
