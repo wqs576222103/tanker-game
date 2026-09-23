@@ -235,6 +235,7 @@ onMounted(() => {
   mySocketId.value = socket.id;
   setupSocketListeners();
   fetchRecentGames();
+  socket.emit("get-my-room");
 });
 
 onUnmounted(() => {
@@ -298,6 +299,18 @@ function setupSocketListeners() {
     "game-start": () => {
       battleStarting.value = false;
     },
+    "game-over": () => {
+      battleStarting.value = false;
+      showToast("对战已结束，已返回房间");
+    },
+    "my-room": (data) => {
+      if (data && data.inRoom && data.roomId) {
+        inRoom.value = true;
+        currentRoomId.value = data.roomId;
+        roomPlayers.value = data.players || [];
+        mySocketId.value = socket.id;
+      }
+    },
     "rooms-list": (data) => {
       publicRooms.value = data.rooms || [];
     },
@@ -306,6 +319,9 @@ function setupSocketListeners() {
     },
     "room-updated": (data) => {
       roomPlayers.value = data.players || [];
+      if (data.state === "waiting") {
+        battleStarting.value = false;
+      }
     },
     "battle-starting": () => {
       battleStarting.value = true;

@@ -7,8 +7,7 @@
           <span id="online-hud-alive" class="hud-value">{{ aliveCount }}</span>
         </div>
         <div class="hud-center">
-          <span class="hud-label">总击杀</span>
-          <span id="online-hud-score" class="hud-value">{{ totalKills }}</span>
+          <span v-if="myBuffs.length" class="hud-buffs">{{ myBuffs.join(" ") }}</span>
         </div>
         <div class="hud-right">
           <span class="hud-label">地雷</span>
@@ -28,20 +27,24 @@
           <div class="waiting-text">等待其他玩家...</div>
         </div>
 
+        <div v-if="gamePhase === 'playing' && !myAlive && respawnSec > 0" class="overlay respawn-overlay">
+          <div class="respawn-text">{{ respawnSec }} 秒后复活</div>
+        </div>
+
         <div v-if="gamePhase === 'over'" class="overlay gameover-overlay">
           <div class="gameover-box">
             <div class="gameover-title">{{ gameOverText }}</div>
             <div class="gameover-stats">{{ gameOverStats }}</div>
-            <button class="btn-gameover" @click="backToLobby">返回大厅</button>
+            <button class="btn-gameover" @click="backToRoom">返回房间</button>
           </div>
         </div>
       </div>
 
       <div id="online-btn-group">
         <button class="ctrl-btn" @click="toggleFullscreen">全屏</button>
-        <button class="ctrl-btn" @click="backToLobby">退出</button>
+        <button class="ctrl-btn" @click="backToRoom">退出</button>
       </div>
-      <div class="ctrl-hint">方向键/WASD 移动 · 空格/J 射击 · K/L 放雷</div>
+      <div class="ctrl-hint">方向键/WASD 移动 · 空格/J 射击 · K/L 放雷 · 8分钟决胜 · 可随时退出</div>
     </div>
 
     <div id="online-player-panel">
@@ -56,9 +59,9 @@
           <span class="panel-rank">{{ idx + 1 }}</span>
           <span class="panel-color" :style="{ background: p.color }"></span>
           <span class="panel-name">{{ p.username }}</span>
-          <span class="panel-hp">{{ p.alive ? `HP:${Math.ceil(p.hp)}` : '阵亡' }}</span>
+          <span class="panel-hp">{{ p.alive ? `HP:${Math.ceil(p.hp)}` : deathLabel(p) }}</span>
           <span class="panel-score">{{ p.score }}分</span>
-          <span class="panel-kd">{{ p.kills }}杀{{ p.deaths }}死</span>
+          <span class="panel-kd">{{ p.kills }}杀{{ p.deaths }}淘汰</span>
         </div>
       </div>
       <div class="panel-room-info">
@@ -76,6 +79,10 @@ import {
   updateServerState,
   drawOnlineBattle,
   cleanupOnlineEngine,
+  playItemFx,
+  playTeleportFx,
+  playDeathFx,
+  playRespawnFx,
 } from "../logic/onlineEngine.js";
 
 const socket = getSocket();
@@ -84,7 +91,6 @@ const emit = defineEmits(["back"]);
 const gamePhase = ref("waiting");
 const countdownSec = ref(3);
 const aliveCount = ref(0);
-const totalKills = ref(0);
 const gameTime = ref("0:00");
 const myMines = ref(0);
 const roomId = ref("");
@@ -92,11 +98,31 @@ const mySocketId = ref(socket.id);
 const remotePlayers = ref([]);
 const gameOverText = ref("");
 const gameOverStats = ref("");
+const myBuffs = ref([]);
+const myAlive = ref(true);
+const respawnSec = ref(0);
 let animFrameId = null;
 
 const sortedPlayers = computed(() => {
   return [...remotePlayers.value].sort((a, b) => b.score - a.score);
 });
+
+function deathLabel(p) {
+  const sec = p.respawnIn > 0 ? Math.ceil(p.respawnIn / 1000) : 0;
+  return sec > 0 ? `${sec}s复活` : "淘汰";
+}
+
+function buildBuffs(me, gtMs) {
+  if (!me || !me.alive) return [];
+  const arr = [];
+  if (me.shieldT > gtMs) arr.push(`🛡️${Math.ceil((me.shieldT - gtMs) / 1000)}s`);
+  if (me.fireT > gtMs) arr.push(`⚡${Math.ceil((me.fireT - gtMs) / 1000)}s`);
+  if (me.speedT > gtMs) arr.push(`💨${Math.ceil((me.speedT - gtMs) / 1000)}s`);
+  if (me.spreadT > gtMs) arr.push(`✨${Math.ceil((me.spreadT - gtMs) / 1000)}s`);
+  if (me.drones > 0) arr.push(`🚁${me.drones}`);
+  if (me.bounces) arr.push("🔄");
+  return arr;
+}
 
 let redirectTimer = null;
 
@@ -178,10 +204,12 @@ function setupSocketListeners() {
     "game-state": (data) => {
       updateServerState(data, null);
       aliveCount.value = data.tanks ? data.tanks.filter((t) => t.alive).length : 0;
-      totalKills.value = data.tanks ? data.tanks.reduce((s, t) => s + t.kills, 0) : 0;
       remotePlayers.value = data.tanks || [];
       const me = data.tanks ? data.tanks.find((t) => t.id === mySocketId.value) : null;
       myMines.value = me ? me.mines || 0 : 0;
+      myAlive.value = me ? !!me.alive : false;
+      respawnSec.value = me && !me.alive ? Math.ceil((me.respawnIn || 0) / 1000) : 0;
+      myBuffs.value = buildBuffs(me, data.gtMs || 0);
       if (data.gtMs) {
         const mins = Math.floor(data.gtMs / 60000);
         const secs = Math.floor((data.gtMs % 60000) / 1000);
@@ -190,6 +218,7 @@ function setupSocketListeners() {
     },
     "game-over": (data) => {
       gamePhase.value = "over";
+      respawnSec.value = 0;
       if (data.isDraw) {
         gameOverText.value = "平局！";
       } else if (data.winner) {
@@ -198,11 +227,23 @@ function setupSocketListeners() {
         gameOverText.value = "对战结束";
       }
       gameOverStats.value = data.players
-        ? data.players.map((p) => `${p.username}: ${p.score}分(${p.kills}杀${p.deaths}死)`).join("　")
+        ? data.players.map((p) => `${p.username}: ${p.score}分(${p.kills}杀${p.deaths}淘汰)`).join("　")
         : "";
     },
     "player-left": (data) => {
       remotePlayers.value = data.players || [];
+    },
+    "item-picked": (data) => {
+      playItemFx(data);
+    },
+    teleported: (data) => {
+      playTeleportFx(data);
+    },
+    "player-died": (data) => {
+      playDeathFx(data);
+    },
+    "player-respawned": (data) => {
+      playRespawnFx(data);
     },
   };
   Object.entries(socket._bvHandlers).forEach(([ev, fn]) => socket.on(ev, fn));
@@ -270,8 +311,10 @@ function toggleFullscreen() {
   }
 }
 
-function backToLobby() {
-  socket.emit("leave-room");
+function backToRoom() {
+  if (gamePhase.value === "playing" || gamePhase.value === "countdown") {
+    socket.emit("leave-battle");
+  }
   emit("back");
 }
 </script>
@@ -318,6 +361,19 @@ function backToLobby() {
 .hud-value {
   color: #7de07d;
   font-weight: bold;
+}
+
+.hud-buffs {
+  margin-left: 12px;
+  color: #ffeaa7;
+  font-weight: bold;
+}
+
+.respawn-text {
+  font-size: 32px;
+  font-weight: bold;
+  color: #ffeaa7;
+  text-shadow: 0 0 20px rgba(255, 234, 167, 0.5);
 }
 
 #online-canvas-wrap {

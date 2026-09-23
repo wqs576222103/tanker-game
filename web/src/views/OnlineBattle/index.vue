@@ -37,6 +37,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  socket.emit("leave-room");
   if (indexHandlers) {
     Object.entries(indexHandlers).forEach(([ev, fn]) => socket.off(ev, fn));
     indexHandlers = null;

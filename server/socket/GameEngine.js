@@ -6,6 +6,9 @@ const {
   BULLET_SPEED, FIRE_CD, FIRE_CD_FAST,
   ITEM_SPAWN_INTERVAL_MIN, ITEM_SPAWN_INTERVAL_MAX,
   MAX_ITEMS, ITEM_DEFS,
+  RESPAWN_DELAY_MS, RESPAWN_INVINCIBLE_MS, TELEPORT_COOLDOWN_MS,
+  GAME_TIME_LIMIT_MS,
+  DRONE_MAX, DRONE_RANGE, DRONE_FIRE_CD, DRONE_SEARCH_CD,
 } = require("../shared/constants");
 
 class GameEngine {
@@ -15,6 +18,7 @@ class GameEngine {
     this.bullets = [];
     this.items = [];
     this.mines = [];
+    this.drones = [];
     this.map = [];
     this.gates = [];
     this.crackHp = {};
@@ -23,8 +27,11 @@ class GameEngine {
     this.itemSpawnTimer = 3;
     this.lastTick = Date.now();
     this._tickInterval = null;
+    this._countdownTimer = null;
     this._broadcastFn = null;
     this._endFn = null;
+    this._mapDirty = false;
+    this.lastTeleport = {};
 
     this._genMap();
     this._initPlayers(players);
@@ -34,37 +41,101 @@ class GameEngine {
     const spawnPoints = this._getSpawnPoints(players.length);
     players.forEach((p, i) => {
       const sp = spawnPoints[i];
-      const valid = this._findValidSpawnCell(sp.c, sp.r);
-      const x = valid.c * CELL;
-      const y = valid.r * CELL;
-      const speed = TANK_SPEED_MIN + Math.random() * (TANK_SPEED_MAX - TANK_SPEED_MIN);
-
-      this.tanks.push({
-        id: p.socketId,
-        x, y,
-        w: TANK_W, h: TANK_H,
-        dir: { x: 0, y: 1 },
-        dirName: "down",
-        color: this._getTeamColor(i),
-        teamId: i,
-        hp: TANK_HP,
-        maxHp: TANK_HP,
-        speed,
-        alive: true,
-        fire: false,
-        fireCd: 0,
-        mine: false,
-        moveUp: false, moveDown: false, moveLeft: false, moveRight: false,
-        score: 0, kills: 0, deaths: 0,
-        lastDeathReason: "",
-        employeeId: p.employeeId || "",
-        username: p.username || "匿名",
-        tankName: p.tankName || "坦克",
-        invincible: 2000,
-        shieldT: 0, fireT: 0, speedT: 0, spreadT: 0,
-        drones: 0, mines: 0,
-      });
+      const tank = this._createTank(p, i, sp);
+      this.tanks.push(tank);
+      this._ensureTankOutOfWalls(tank);
     });
+  }
+
+  _createTank(p, teamId, spawnCell) {
+    const valid = this._findValidSpawnCell(spawnCell.c, spawnCell.r);
+    const x = valid.c * CELL;
+    const y = valid.r * CELL;
+    const speed = TANK_SPEED_MIN + Math.random() * (TANK_SPEED_MAX - TANK_SPEED_MIN);
+
+    return {
+      id: p.socketId,
+      x, y,
+      w: TANK_W, h: TANK_H,
+      dir: { x: 0, y: 1 },
+      dirName: "down",
+      color: this._getTeamColor(teamId),
+      teamId,
+      hp: TANK_HP,
+      maxHp: TANK_HP,
+      speed,
+      baseSpeed: speed,
+      alive: true,
+      fire: false,
+      fireCd: 0,
+      mine: false,
+      moveUp: false, moveDown: false, moveLeft: false, moveRight: false,
+      score: 0, kills: 0, deaths: 0,
+      lastDeathReason: "",
+      employeeId: p.employeeId || "",
+      username: p.username || "匿名",
+      tankName: p.tankName || "坦克",
+      invincible: RESPAWN_INVINCIBLE_MS,
+      shieldT: 0, fireT: 0, speedT: 0, spreadT: 0,
+      drones: 0, mines: 0,
+      bounces: false,
+      respawnAt: 0,
+    };
+  }
+
+  addPlayer(playerInfo) {
+    if (this.state === "over") return null;
+    const usedTeamIds = new Set(this.tanks.map((t) => t.teamId));
+    let teamId = 0;
+    while (usedTeamIds.has(teamId)) teamId++;
+    const sp = this._getSpawnPoints(1)[0];
+    const tank = this._createTank(playerInfo, teamId, sp);
+    this.tanks.push(tank);
+    this._ensureTankOutOfWalls(tank);
+    return tank;
+  }
+
+  getJoinState() {
+    const snap = this._getStateSnapshot();
+    return {
+      ...this._getFullState(),
+      gtMs: snap.gtMs,
+      bullets: snap.bullets,
+      items: snap.items,
+      mines: snap.mines,
+      drones: snap.drones,
+      map: this.map,
+      crackHp: this.crackHp,
+      gates: this.gates.map((g) => ({
+        cells: g.cells,
+        partnerCells: g.partner ? g.partner.cells : [],
+      })),
+      tanks: this.tanks.map((t) => ({
+        ...t,
+        invincible: Math.max(0, Math.round(t.invincible)),
+        respawnIn: t.alive ? 0 : Math.max(0, Math.round(t.respawnAt - this.gtMs)),
+      })),
+    };
+  }
+
+  _ensureTankOutOfWalls(tank) {
+    if (!this._isBlocked(tank.x, tank.y, tank.w, tank.h, tank)) return;
+    const cell = this._findValidSpawnCell(
+      Math.floor((tank.x + tank.w / 2) / CELL),
+      Math.floor((tank.y + tank.h / 2) / CELL),
+    );
+    tank.x = cell.c * CELL;
+    tank.y = cell.r * CELL;
+    if (this._isBlocked(tank.x, tank.y, tank.w, tank.h, tank)) {
+      for (let r = 1; r < ROWS - 1; r++) {
+        for (let c = 1; c < COLS - 1; c++) {
+          if (!this._canSpawnAt(c, r)) continue;
+          tank.x = c * CELL;
+          tank.y = r * CELL;
+          return;
+        }
+      }
+    }
   }
 
   _getTeamColor(idx) {
@@ -192,15 +263,34 @@ class GameEngine {
         queue.push({ c: nc, r: nr });
       }
     }
+    for (let rr = 0; rr < ROWS; rr++) {
+      for (let cc = 0; cc < COLS; cc++) {
+        if (this._canSpawnAt(cc, rr)) return { c: cc, r: rr };
+      }
+    }
+    for (let rr = 1; rr < ROWS - 1; rr++) {
+      for (let cc = 1; cc < COLS - 1; cc++) {
+        if (this._isPassableCell(cc, rr)) return { c: cc, r: rr };
+      }
+    }
     return { c: 1, r: 1 };
   }
 
   _canSpawnAt(c, r) {
     if (!this._isPassableCell(c, r)) return false;
+    const x = c * CELL;
+    const y = r * CELL;
+    const c2 = Math.min(COLS - 1, Math.floor((x + TANK_W - 1) / CELL));
+    const r2 = Math.min(ROWS - 1, Math.floor((y + TANK_H - 1) / CELL));
+    for (let rr = r; rr <= r2; rr++) {
+      for (let cc = c; cc <= c2; cc++) {
+        if (!this._isPassableCell(cc, rr)) return false;
+      }
+    }
     for (const t of this.tanks) {
       if (!t.alive) continue;
-      if (t.x < (c + 1) * CELL && t.x + t.w > c * CELL &&
-          t.y < (r + 1) * CELL && t.y + t.h > r * CELL) return false;
+      if (t.x < x + TANK_W && t.x + t.w > x &&
+          t.y < y + TANK_H && t.y + t.h > y) return false;
     }
     return true;
   }
@@ -220,12 +310,14 @@ class GameEngine {
     this._broadcastFn("countdown", { seconds: 3 });
 
     let countdown = 3;
-    const countdownTimer = setInterval(() => {
+    this._countdownTimer = setInterval(() => {
       countdown--;
       if (countdown > 0) {
         this._broadcastFn("countdown", { seconds: countdown });
       } else {
-        clearInterval(countdownTimer);
+        clearInterval(this._countdownTimer);
+        this._countdownTimer = null;
+        if (this.state === "over") return;
         this.state = "playing";
         this._broadcastFn("game-start", this._getFullState());
         this._tickInterval = setInterval(() => this._tick(), 1000 / 30);
@@ -234,10 +326,20 @@ class GameEngine {
   }
 
   stop() {
+    if (this._countdownTimer) {
+      clearInterval(this._countdownTimer);
+      this._countdownTimer = null;
+    }
     if (this._tickInterval) {
       clearInterval(this._tickInterval);
       this._tickInterval = null;
     }
+  }
+
+  removePlayer(socketId) {
+    const idx = this.tanks.findIndex((t) => t.id === socketId);
+    if (idx >= 0) this.tanks.splice(idx, 1);
+    this.drones = this.drones.filter((d) => d.ownerId !== socketId);
   }
 
   handleInput(socketId, input) {
@@ -265,7 +367,10 @@ class GameEngine {
     this._spawnItems(dt);
 
     for (const t of this.tanks) {
-      if (!t.alive) continue;
+      if (!t.alive) {
+        this._tryRespawn(t);
+        continue;
+      }
       this._moveTank(t, dt);
       this._fireBullet(t, dt);
       if (t._mineEdge && t.mines > 0) {
@@ -276,6 +381,7 @@ class GameEngine {
       if (t.fireCd > 0) t.fireCd -= dt;
     }
 
+    this._updateDrones(dt);
     this._updateBullets(dt);
     this._checkBulletCollisions();
     this._checkItemPickup();
@@ -325,6 +431,9 @@ class GameEngine {
     if (t.moveLeft) dx -= 1;
     if (t.moveRight) dx += 1;
 
+    const speedMult = t.speedT > this.gtMs ? 1.5 : 1;
+    t.speed = (t.baseSpeed || TANK_SPEED_MIN) * speedMult;
+
     if (dx !== 0 || dy !== 0) {
       const len = Math.hypot(dx, dy);
       dx /= len;
@@ -337,10 +446,36 @@ class GameEngine {
 
       t.dir = { x: dx, y: dy };
       t.dirName = dx > 0 ? "right" : dx < 0 ? "left" : dy > 0 ? "down" : "up";
-    }
 
-    const speedMult = t.speedT > this.gtMs ? 1.5 : 1;
-    t.speed = (TANK_SPEED_MIN + Math.random() * (TANK_SPEED_MAX - TANK_SPEED_MIN)) * speedMult;
+      this._tryTeleport(t);
+    }
+  }
+
+  _tryTeleport(t) {
+    const cx = t.x + t.w / 2;
+    const cy = t.y + t.h / 2;
+    const c = Math.floor(cx / CELL);
+    const r = Math.floor(cy / CELL);
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+    if (this.map[r][c] !== GATE) return;
+    const g = this._gateAt(c, r);
+    const partner = g && g.partner;
+    if (!partner) return;
+    const last = this.lastTeleport[t.id];
+    if (last != null && this.gtMs - last < TELEPORT_COOLDOWN_MS) return;
+    const pc = partner.cells[0];
+    const cenX = pc.c * CELL + CELL / 2;
+    const cenY = pc.r * CELL + CELL / 2;
+    t.x = cenX - t.w / 2;
+    t.y = cenY - t.h / 2;
+    this.lastTeleport[t.id] = this.gtMs;
+    if (this._broadcastFn) {
+      this._broadcastFn("teleported", {
+        id: t.id,
+        x: Math.round(cenX),
+        y: Math.round(cenY),
+      });
+    }
   }
 
   _isBlocked(x, y, w, h, self) {
@@ -356,9 +491,77 @@ class GameEngine {
     }
     for (const o of this.tanks) {
       if (!o.alive || o === self) continue;
-      if (o.x < x + w && o.x + o.w > x && o.y < y + h && o.y + o.h > y) return true;
+      if (o.x < x + w && o.x + o.w > x && o.y < y + h && o.y + o.h > y) {
+        if (self) this._resolveTankCollision(self, o);
+        return true;
+      }
     }
     return false;
+  }
+
+  _resolveTankCollision(attacker, defender) {
+    if (!attacker || !defender) return false;
+    if (!attacker.alive || !defender.alive) return false;
+    if (attacker.teamId === defender.teamId) return false;
+    if (attacker.invincible > 0 || defender.invincible > 0) return false;
+
+    const now = this.gtMs;
+    const CD = 500;
+    if (
+      (attacker._lastCollideAt || 0) > now - CD ||
+      (defender._lastCollideAt || 0) > now - CD
+    ) {
+      return false;
+    }
+
+    const attackerMoving =
+      Math.abs(attacker.dir.x) + Math.abs(attacker.dir.y) > 0;
+    const oppositeDir =
+      attacker.dir.x + defender.dir.x === 0 &&
+      attacker.dir.y + defender.dir.y === 0;
+
+    if (!attackerMoving) return false;
+
+    attacker._lastCollideAt = now;
+    defender._lastCollideAt = now;
+
+    if (oppositeDir) {
+      if (defender.shieldT > this.gtMs) {
+        defender.shieldT = 0;
+        return true;
+      }
+      if (attacker.hp >= defender.hp) {
+        if (attacker.shieldT > this.gtMs) attacker.shieldT = 0;
+        else attacker.hp -= defender.hp;
+        defender.hp = 0;
+        if (defender.alive) this._killTank(defender, attacker, "坦克撞击");
+        if (attacker.hp <= 0 && attacker.alive) {
+          this._killTank(attacker, defender, "坦克撞击");
+        }
+      } else {
+        const dmg = attacker.hp;
+        if (attacker.shieldT > this.gtMs) attacker.shieldT = 0;
+        else {
+          attacker.hp = 0;
+          if (attacker.alive) this._killTank(attacker, defender, "坦克撞击");
+        }
+        if (defender.shieldT > this.gtMs) defender.shieldT = 0;
+        else {
+          defender.hp -= dmg;
+          if (defender.hp <= 0 && defender.alive) {
+            this._killTank(defender, attacker, "坦克撞击");
+          }
+        }
+      }
+      return true;
+    }
+
+    if (defender.shieldT > this.gtMs) {
+      defender.shieldT = 0;
+      return true;
+    }
+    if (defender.alive) this._killTank(defender, attacker, "坦克撞击");
+    return true;
   }
 
   _fireBullet(t, dt) {
@@ -412,7 +615,8 @@ class GameEngine {
 
       const cc = { c: Math.floor(b.x / CELL), r: Math.floor(b.y / CELL) };
       if (cc.r < 0 || cc.r >= ROWS || cc.c < 0 || cc.c >= COLS) {
-        if (!b.bounced) {
+        const owner = this.tanks.find((t) => t.id === b.ownerId);
+        if (owner && owner.bounces && !b.bounced) {
           b.bounced = true;
           if (cc.r < 0) { b.dy = -b.dy; b.y = prevR * CELL + CELL; }
           else if (cc.r >= ROWS) { b.dy = -b.dy; b.y = prevR * CELL; }
@@ -445,7 +649,8 @@ class GameEngine {
           b.dead = true;
         }
       } else if (tile === BORDER || tile === WALL) {
-        if (!b.bounced) {
+        const owner = this.tanks.find((t) => t.id === b.ownerId);
+        if (owner && owner.bounces && !b.bounced) {
           b.bounced = true;
           const prevTile = this.map[prevR] && this.map[prevR][prevC];
           const wasInside = prevTile !== BORDER && prevTile !== WALL;
@@ -464,6 +669,7 @@ class GameEngine {
         const key = `${cc.c},${cc.r}`;
         if (this.crackHp[key]) {
           this.crackHp[key] -= b.dmg || 1;
+          this._mapDirty = true;
           if (this.crackHp[key] <= 0) {
             delete this.crackHp[key];
             this.map[cc.r][cc.c] = EMPTY;
@@ -488,14 +694,8 @@ class GameEngine {
           b.dead = true;
 
           if (t.hp <= 0 && t.alive) {
-            t.alive = false;
-            t.deaths++;
             const killer = this.tanks.find((tk) => tk.id === b.ownerId);
-            t.lastDeathReason = killer ? killer.username : "bullet";
-            if (killer && killer.id !== t.id) {
-              killer.kills++;
-              killer.score++;
-            }
+            this._killTank(t, killer, "bullet");
           }
         }
       }
@@ -526,7 +726,141 @@ class GameEngine {
       case "shield": tank.shieldT = now + 9000; break;
       case "mine": tank.mines += 3; break;
       case "heal": if (tank.hp < tank.maxHp) tank.hp++; break;
-      case "drone": if (tank.drones < 5) tank.drones++; break;
+      case "bounce": tank.bounces = true; break;
+      case "drone":
+        if (tank.drones < DRONE_MAX) {
+          tank.drones++;
+          this.drones.push({
+            ownerId: tank.id,
+            teamId: tank.teamId,
+            x: tank.x + tank.w / 2,
+            y: tank.y + tank.h / 2 - 12,
+            fireCd: 0.5,
+            age: 0,
+          });
+        }
+        break;
+    }
+    if (this._broadcastFn) {
+      this._broadcastFn("item-picked", {
+        socketId: tank.id,
+        type: it.def.id,
+        name: it.def.name,
+        color: it.def.color || "#fff",
+        x: it.x,
+        y: it.y,
+      });
+    }
+  }
+
+  _killTank(t, killer, reason) {
+    if (!t.alive) return;
+    t.alive = false;
+    t.deaths++;
+    t.respawnAt = this.gtMs + RESPAWN_DELAY_MS;
+    t.fire = false;
+    t.mine = false;
+    t._mineEdge = false;
+    t.moveUp = false; t.moveDown = false; t.moveLeft = false; t.moveRight = false;
+    t.lastDeathReason = killer ? killer.username : reason;
+    if (killer && killer.id !== t.id) {
+      killer.kills++;
+      killer.score++;
+    }
+    if (this._broadcastFn) {
+      this._broadcastFn("player-died", {
+        id: t.id,
+        respawnInMs: RESPAWN_DELAY_MS,
+        x: Math.round(t.x + t.w / 2),
+        y: Math.round(t.y + t.h / 2),
+        color: t.color,
+      });
+    }
+  }
+
+  _tryRespawn(t) {
+    if (!t.respawnAt || this.gtMs < t.respawnAt) return;
+    const sp = this._getSpawnPoints(1)[0];
+    const cell = this._findValidSpawnCell(sp.c, sp.r);
+    t.x = cell.c * CELL;
+    t.y = cell.r * CELL;
+    t.hp = t.maxHp;
+    t.alive = true;
+    t.respawnAt = 0;
+    t.invincible = RESPAWN_INVINCIBLE_MS;
+    t.fire = false;
+    t.mine = false;
+    t._mineEdge = false;
+    t.moveUp = false; t.moveDown = false; t.moveLeft = false; t.moveRight = false;
+    t.fireCd = 0;
+    t.shieldT = 0;
+    t.fireT = 0;
+    t.speedT = 0;
+    t.spreadT = 0;
+    this._ensureTankOutOfWalls(t);
+    if (this._broadcastFn) {
+      this._broadcastFn("player-respawned", {
+        id: t.id,
+        x: Math.round(t.x + t.w / 2),
+        y: Math.round(t.y + t.h / 2),
+      });
+    }
+  }
+
+  _updateDrones(dt) {
+    const byOwner = new Map();
+    for (const dr of this.drones) {
+      if (!byOwner.has(dr.ownerId)) byOwner.set(dr.ownerId, []);
+      byOwner.get(dr.ownerId).push(dr);
+    }
+    for (const [ownerId, list] of byOwner) {
+      const owner = this.tanks.find((t) => t.id === ownerId);
+      if (!owner) continue;
+      list.forEach((dr, i) => {
+        dr.age += dt;
+        if (!owner.alive) return;
+        const px = owner.x + owner.w / 2;
+        const py = owner.y + owner.h / 2;
+        const orbitA = dr.age * 2 + (i * Math.PI * 2) / Math.max(1, list.length);
+        const tx = px + Math.cos(orbitA) * 23;
+        const ty = py + Math.sin(orbitA) * 14 - 11;
+        dr.x += (tx - dr.x) * Math.min(1, dt * 4);
+        dr.y += (ty - dr.y) * Math.min(1, dt * 4);
+        dr.fireCd -= dt;
+        if (dr.fireCd <= 0) {
+          let best = null;
+          let bd = DRONE_RANGE;
+          for (const t of this.tanks) {
+            if (!t.alive || t.teamId === owner.teamId) continue;
+            const dist = Math.hypot(t.x + t.w / 2 - dr.x, t.y + t.h / 2 - dr.y);
+            if (dist < bd) {
+              bd = dist;
+              best = t;
+            }
+          }
+          if (best) {
+            const ang = Math.atan2(
+              best.y + best.h / 2 - dr.y,
+              best.x + best.w / 2 - dr.x,
+            );
+            this.bullets.push({
+              x: dr.x, y: dr.y,
+              dx: Math.cos(ang) * BULLET_SPEED,
+              dy: Math.sin(ang) * BULLET_SPEED,
+              speed: BULLET_SPEED,
+              ownerId: owner.id,
+              teamId: owner.teamId,
+              dmg: 1,
+              dead: false,
+              bounced: false,
+              teleported: false,
+            });
+            dr.fireCd = DRONE_FIRE_CD;
+          } else {
+            dr.fireCd = DRONE_SEARCH_CD;
+          }
+        }
+      });
     }
   }
 
@@ -582,14 +916,8 @@ class GameEngine {
         if (t.shieldT > this.gtMs) continue;
         t.hp -= 3;
         if (t.hp <= 0 && t.alive) {
-          t.alive = false;
-          t.deaths++;
           const killer = this.tanks.find((tk) => tk.id === m.ownerId);
-          t.lastDeathReason = killer ? killer.username : "地雷";
-          if (killer && killer.id !== t.id) {
-            killer.kills++;
-            killer.score++;
-          }
+          this._killTank(t, killer, "地雷");
         }
       }
     }
@@ -602,6 +930,7 @@ class GameEngine {
           const key = `${c},${r}`;
           if (this.crackHp[key]) {
             this.crackHp[key] -= 2;
+            this._mapDirty = true;
             if (this.crackHp[key] <= 0) {
               delete this.crackHp[key];
               this.map[r][c] = EMPTY;
@@ -620,27 +949,36 @@ class GameEngine {
   }
 
   _checkEnd() {
-    const alive = this.tanks.filter((t) => t.alive);
-    if (alive.length <= 1) {
-      this.state = "over";
-      this.stop();
+    if (this.state !== "playing") return;
+    if (this.tanks.length < 2) {
+      this._endGame({ creditRemaining: true });
+      return;
+    }
+    if (this.gtMs < GAME_TIME_LIMIT_MS) return;
+    this._endGame();
+  }
 
-      if (alive.length === 1) {
-        alive[0].score += 3;
-      }
+  forceEnd(opts = {}) {
+    if (this.state === "over") return;
+    this._endGame(opts);
+  }
 
-      const sorted = [...this.tanks].sort((a, b) => b.score - a.score);
-      const maxScore = sorted[0]?.score || 0;
-      const allDead = alive.length === 0;
-      const allSameScore = sorted.every((t) => t.score === maxScore);
-      const isDraw = allDead || allSameScore || maxScore === 0;
+  _endGame(opts = {}) {
+    if (this.state === "over") return;
+    this.state = "over";
+    this.stop();
 
-      let winner = null;
-      if (!isDraw) {
-        const winners = sorted.filter((t) => t.score === maxScore && t.score > 0);
-        if (winners.length === 1) winner = winners[0];
-      }
+    if (opts.creditRemaining && this.tanks.length === 1) {
+      this.tanks[0].score += 3;
+    }
 
+    const sorted = [...this.tanks].sort((a, b) => b.score - a.score);
+    const maxScore = sorted[0]?.score || 0;
+    const winners = maxScore > 0 ? sorted.filter((t) => t.score === maxScore) : [];
+    const isDraw = winners.length !== 1;
+    const winner = isDraw ? null : winners[0];
+
+    if (this._broadcastFn) {
       this._broadcastFn("game-over", {
         winner: winner ? { employeeId: winner.employeeId, username: winner.username, tankName: winner.tankName } : null,
         isDraw,
@@ -656,20 +994,20 @@ class GameEngine {
         })),
         gameDurationMs: Math.floor(this.gtMs),
       });
+    }
 
-      if (this._endFn) {
-        this._endFn({
-          winner,
-          isDraw,
-          gameDurationMs: Math.floor(this.gtMs),
-          players: sorted,
-        });
-      }
+    if (this._endFn) {
+      this._endFn({
+        winner,
+        isDraw,
+        gameDurationMs: Math.floor(this.gtMs),
+        players: sorted,
+      });
     }
   }
 
   _getStateSnapshot() {
-    return {
+    const snap = {
       gtMs: Math.floor(this.gtMs),
       tanks: this.tanks.map((t) => ({
         id: t.id,
@@ -683,11 +1021,19 @@ class GameEngine {
         color: t.color,
         teamId: t.teamId,
         username: t.username,
+        tankName: t.tankName,
         score: t.score,
         kills: t.kills,
         deaths: t.deaths,
         mines: t.mines,
         drones: t.drones,
+        invincible: Math.max(0, Math.round(t.invincible)),
+        shieldT: t.shieldT,
+        fireT: t.fireT,
+        speedT: t.speedT,
+        spreadT: t.spreadT,
+        bounces: !!t.bounces,
+        respawnIn: t.alive ? 0 : Math.max(0, Math.round(t.respawnAt - this.gtMs)),
       })),
       bullets: this.bullets.map((b) => ({
         x: Math.round(b.x * 10) / 10,
@@ -695,6 +1041,7 @@ class GameEngine {
         dx: Math.round(b.dx),
         dy: Math.round(b.dy),
         teamId: b.teamId,
+        bounced: !!b.bounced,
       })),
       items: this.items.filter((it) => !it.dead).map((it) => ({
         x: it.x,
@@ -706,7 +1053,18 @@ class GameEngine {
         c: m.c,
         r: m.r,
       })),
+      drones: this.drones.map((d) => ({
+        x: Math.round(d.x * 10) / 10,
+        y: Math.round(d.y * 10) / 10,
+        ownerId: d.ownerId,
+      })),
     };
+    if (this._mapDirty) {
+      snap.map = this.map;
+      snap.crackHp = this.crackHp;
+      this._mapDirty = false;
+    }
+    return snap;
   }
 
   _getFullState() {
@@ -730,6 +1088,7 @@ class GameEngine {
         hp: t.hp,
         maxHp: t.maxHp,
         alive: t.alive,
+        bounces: !!t.bounces,
         username: t.username,
         tankName: t.tankName,
         score: t.score,

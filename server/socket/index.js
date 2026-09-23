@@ -51,6 +51,11 @@ function setupSocket(server) {
       socket.emit("rooms-list", { rooms: roomManager.getWaitingRooms() });
     });
 
+    socket.on("get-my-room", () => {
+      const myRoom = roomManager.getMyRoom(socket.id);
+      socket.emit("my-room", myRoom ? { inRoom: true, ...myRoom } : { inRoom: false });
+    });
+
     socket.on("join-room", (data) => {
       const roomId = data.roomId;
       const userInfo = data.userInfo || {};
@@ -68,6 +73,14 @@ function setupSocket(server) {
         players: result.players,
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+
+      if (result.inGame) {
+        const engine = engines.get(roomId);
+        if (engine && engine.state !== "over") {
+          engine.addPlayer({ ...userInfo, socketId: socket.id });
+          socket.emit("game-start", engine.getJoinState());
+        }
+      }
     });
 
     socket.on("player-ready", (data) => {
@@ -95,6 +108,7 @@ function setupSocket(server) {
         players: result.players,
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+      _checkGameTermination(result.roomId, targetSocketId);
     });
 
     socket.on("remind-ready", (data) => {
@@ -156,9 +170,15 @@ function setupSocket(server) {
       engine.start(
         (event, data) => io.to(room.id).emit(event, data),
         async (result) => {
-          roomManager.setRoomState(room.id, "over");
-          await _saveRecord(room.id, result);
+          roomManager.setRoomState(room.id, "waiting");
+          roomManager.resetReadyStates(room);
           engines.delete(room.id);
+          await _saveRecord(room.id, result);
+          io.to(room.id).emit("room-updated", {
+            players: roomManager.getRoomPlayerList(room),
+            state: "waiting",
+          });
+          io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
         },
       );
     });
@@ -169,6 +189,18 @@ function setupSocket(server) {
       const engine = engines.get(room.id);
       if (!engine) return;
       engine.handleInput(socket.id, data);
+    });
+
+    socket.on("leave-battle", () => {
+      const room = roomManager.getRoomBySocket(socket.id);
+      if (!room) return;
+      const engine = engines.get(room.id);
+      if (!engine) return;
+      engine.removePlayer(socket.id);
+      const gameActive = engine.state === "countdown" || engine.state === "playing";
+      if (gameActive && engine.tanks.length < 2) {
+        engine.forceEnd({ creditRemaining: true });
+      }
     });
 
     socket.on("leave-room", () => {
@@ -190,7 +222,6 @@ function _handleLeave(socket, io) {
   if (!result) return;
 
   socket.leave(result.roomId);
-  io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
 
   if (result.roomEmpty) {
     const engine = engines.get(result.roomId);
@@ -198,17 +229,29 @@ function _handleLeave(socket, io) {
       engine.stop();
       engines.delete(result.roomId);
     }
+    console.log(`[Socket] Room ${result.roomId} cancelled (empty)`);
+    io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
     return;
   }
+
+  io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
 
   io.to(result.roomId).emit("player-left", {
     socketId: socket.id,
     players: result.players,
   });
 
-  if (result.room && result.room.state === "waiting") {
-    const room = result.room;
-    if (room.players.size < 2) return;
+  _checkGameTermination(result.roomId, socket.id);
+}
+
+function _checkGameTermination(roomId, removedSocketId) {
+  const engine = engines.get(roomId);
+  if (!engine) return;
+  engine.removePlayer(removedSocketId);
+  const room = roomManager.getRoom(roomId);
+  const gameActive = engine.state === "countdown" || engine.state === "playing";
+  if (gameActive && room && room.players.size < 2) {
+    engine.forceEnd({ creditRemaining: true });
   }
 }
 

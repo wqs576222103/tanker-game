@@ -5,6 +5,7 @@ import {
   drawItems,
   drawBullets,
   drawMines,
+  drawDrones,
   drawGrassOverlay,
   drawParticles,
   drawFloats,
@@ -13,6 +14,8 @@ import {
   gateAt,
   spawnExplosion,
   addFloat,
+  updateParticles,
+  updateFloats,
   sfx,
 } from "../../TankGame/script/base.js";
 import { battleTankImg } from "../../BattleArena/logic/gameState.js";
@@ -23,9 +26,11 @@ let localTanks = [];
 let localBullets = [];
 let localItems = [];
 let localMines = [];
+let localDrones = [];
 let localMap = [];
 let localGates = [];
 let localCrackHp = {};
+let lastFxTick = 0;
 
 export function setOnlineCtx(ctx) {
   onlineCtx = ctx;
@@ -47,18 +52,31 @@ export function updateServerState(state, fullState) {
       window.gates.push(gate1, gate2);
     }
     window.crackHp = localCrackHp;
+    localDrones = [];
+    window.drones = localDrones;
 
     localTanks = (fullState.tanks || []).map((t) => ({
       ...t,
-      w: 20,
-      h: 20,
       alive: true,
       moveUp: false, moveDown: false, moveLeft: false, moveRight: false,
       fire: false,
       fireCd: 0,
+      invincible: 0,
       shieldT: 0, fireT: 0, speedT: 0, spreadT: 0,
+      respawnIn: 0,
     }));
     window.tanks = localTanks;
+  }
+
+  if (state) {
+    window.gtMs = state.gtMs || 0;
+  }
+
+  if (state && state.map) {
+    localMap = state.map;
+    localCrackHp = state.crackHp || {};
+    window.map = localMap;
+    window.crackHp = localCrackHp;
   }
 
   if (state && state.tanks) {
@@ -77,6 +95,14 @@ export function updateServerState(state, fullState) {
         local.deaths = remote.deaths;
         local.mines = remote.mines || 0;
         local.drones = remote.drones || 0;
+        local.invincible = remote.invincible || 0;
+        local.shieldT = remote.shieldT || 0;
+        local.fireT = remote.fireT || 0;
+        local.speedT = remote.speedT || 0;
+        local.spreadT = remote.spreadT || 0;
+        local.respawnIn = remote.respawnIn || 0;
+        local.bounces = !!remote.bounces;
+        if (remote.tankName) local.tankName = remote.tankName;
       }
     }
     localTanks = localTanks.filter((t) =>
@@ -93,15 +119,25 @@ export function updateServerState(state, fullState) {
       dy: b.dy,
       speed: Math.hypot(b.dx, b.dy) || 210,
       teamId: b.teamId,
+      bounced: !!b.bounced,
       dead: false,
     }));
     window.bullets = localBullets;
   }
 
+  if (state && state.drones) {
+    localDrones = state.drones.map((d) => ({
+      x: d.x,
+      y: d.y,
+      ownerId: d.ownerId,
+    }));
+    window.drones = localDrones;
+  }
+
   if (state && state.items) {
     const ICONS = {
       drone: "🚁", spread: "✨", fire: "⚡", speed: "💨",
-      shield: "🛡️", mine: "💣", heal: "❤️",
+      shield: "🛡️", mine: "💣", heal: "❤️", bounce: "🔄",
     };
     localItems = state.items.map((it) => ({
       x: it.x,
@@ -150,6 +186,7 @@ export function drawOnlineBattle() {
   drawItems();
   drawBullets();
   drawMines();
+  drawDrones();
 
   for (const t of localTanks) {
     if (!t.alive) continue;
@@ -157,8 +194,36 @@ export function drawOnlineBattle() {
   }
 
   drawGrassOverlay();
+
+  const now = performance.now();
+  if (lastFxTick) {
+    const dt = Math.min(0.05, (now - lastFxTick) / 1000);
+    updateParticles(dt);
+    updateFloats(dt);
+  }
+  lastFxTick = now;
   drawParticles();
   drawFloats();
+}
+
+function burst(x, y, r, color) {
+  const arr = window.particles;
+  if (!arr) return;
+  const n = Math.min(20, Math.floor(r / 2));
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = (0.5 + Math.random()) * (r / 8);
+    arr.push({
+      x,
+      y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp,
+      life: 0,
+      max: 40 + Math.random() * 30,
+      size: 2 + Math.random() * (r / 8),
+      color,
+    });
+  }
 }
 
 function drawOnlineTank(t) {
@@ -167,6 +232,11 @@ function drawOnlineTank(t) {
   const cx = t.x + t.w / 2;
   const cy = t.y + t.h / 2;
   const ang = Math.atan2(t.dir.y, t.dir.x);
+  const gtMs = window.gtMs || 0;
+
+  if (t.invincible > 0 && Math.floor(gtMs / 100) % 2 === 0) {
+    c.globalAlpha = 0.45;
+  }
 
   c.save();
   c.translate(cx, cy);
@@ -180,6 +250,19 @@ function drawOnlineTank(t) {
   }
 
   c.restore();
+  c.globalAlpha = 1;
+
+  if (t.shieldT > gtMs) {
+    c.strokeStyle = "rgba(88,166,255,.85)";
+    c.lineWidth = 3;
+    c.beginPath();
+    c.arc(cx, cy, 24, 0, Math.PI * 2);
+    c.stroke();
+    c.strokeStyle = "rgba(160,220,255,.4)";
+    c.beginPath();
+    c.arc(cx, cy, 27, gtMs / 200, gtMs / 200 + Math.PI * 1.4);
+    c.stroke();
+  }
 
   const pct = Math.max(0, t.hp / t.maxHp);
   c.fillStyle = "#1c1f1c";
@@ -196,6 +279,35 @@ function drawOnlineTank(t) {
   c.fillText(t.username || "玩家", cx, cy - t.h / 2 - 12);
 }
 
+export function playItemFx(data) {
+  if (!data) return;
+  const x = data.x || 0;
+  const y = data.y || 0;
+  const color = data.color || "#fff";
+  sfx("pickup");
+  burst(x + 9, y + 9, 20, color);
+}
+
+export function playTeleportFx(data) {
+  if (!data) return;
+  spawnExplosion(data.x, data.y, 20, "#58a6ff");
+  addFloat(data.x, data.y - 18, "传送", "#58a6ff");
+  sfx("tp");
+}
+
+export function playDeathFx(data) {
+  if (!data) return;
+  burst(data.x, data.y, 34, data.color || "#ff8a5a");
+  sfx("boom");
+}
+
+export function playRespawnFx(data) {
+  if (!data) return;
+  burst(data.x, data.y, 24, "#7de07d");
+  addFloat(data.x, data.y - 18, "复活", "#7de07d");
+  sfx("tp");
+}
+
 export function getLocalTanks() {
   return localTanks;
 }
@@ -207,6 +319,7 @@ export function cleanupOnlineEngine() {
   localBullets = [];
   localItems = [];
   localMines = [];
+  localDrones = [];
   localMap = [];
   localGates = [];
   localCrackHp = {};
@@ -214,9 +327,11 @@ export function cleanupOnlineEngine() {
   window.bullets = [];
   window.items = [];
   window.mines = [];
+  window.drones = [];
   window.map = [];
   window.gates = [];
   window.crackHp = {};
   window.particles = [];
   window.floats = [];
+  lastFxTick = 0;
 }

@@ -112,25 +112,54 @@ class RoomManager {
     return roomId;
   }
 
+  getMyRoom(socketId) {
+    const room = this.getRoomBySocket(socketId);
+    if (!room) return null;
+    return {
+      roomId: room.id,
+      players: this._getRoomPlayerList(room),
+      state: room.state,
+    };
+  }
+
   joinRoom(socketId, roomId, userInfo) {
     const room = this.rooms.get(`room:${roomId}`);
     if (!room) return { error: "房间不存在" };
-    if (room.state !== "waiting") return { error: "游戏已开始" };
     if (room.players.size >= MAX_PLAYERS) return { error: "房间已满" };
 
-    room.players.set(socketId, {
+    const player = {
       socketId,
       employeeId: userInfo.employeeId || "",
       username: userInfo.username || "匿名",
       tankName: userInfo.tankName || "坦克",
-      teamId: room.players.size,
+      teamId: this._nextTeamId(room),
       ready: false,
       isHost: false,
       alive: true,
-    });
+    };
+    room.players.set(socketId, player);
 
     this.rooms.set(socketId, roomId);
-    return { success: true, players: this._getRoomPlayerList(room) };
+    return {
+      success: true,
+      players: this._getRoomPlayerList(room),
+      player,
+      inGame: room.state === "starting" || room.state === "playing",
+    };
+  }
+
+  _nextTeamId(room) {
+    const used = new Set(Array.from(room.players.values()).map((p) => p.teamId));
+    let id = 0;
+    while (used.has(id)) id++;
+    return id;
+  }
+
+  resetReadyStates(room) {
+    if (!room) return;
+    for (const p of room.players.values()) {
+      p.ready = false;
+    }
   }
 
   setPlayerReady(socketId, ready) {
@@ -215,16 +244,22 @@ class RoomManager {
     const list = [];
     for (const [key, room] of this.rooms) {
       if (typeof key !== "string" || !key.startsWith("room:")) continue;
-      if (room.state !== "waiting") continue;
+      if (room.players.size === 0) continue;
+      if (room.state !== "waiting" && room.state !== "playing" && room.state !== "starting") continue;
       list.push({
         roomId: room.id,
         playerCount: room.players.size,
         maxPlayers: MAX_PLAYERS,
         host: Array.from(room.players.values())[0]?.username || "",
+        state: room.state,
         createdAt: room.createdAt,
       });
     }
-    list.sort((a, b) => b.createdAt - a.createdAt);
+    list.sort((a, b) => {
+      if (a.state === "waiting" && b.state !== "waiting") return -1;
+      if (a.state !== "waiting" && b.state === "waiting") return 1;
+      return b.createdAt - a.createdAt;
+    });
     return list;
   }
 
