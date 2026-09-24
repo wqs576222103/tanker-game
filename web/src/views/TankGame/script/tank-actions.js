@@ -321,8 +321,9 @@ export const TankActions = {
       t.x = cen.x - t.w / 2;
       t.y = cen.y - t.h / 2;
       lastTeleport[t.id] = gtMs;
-      spawnExplosion(cen.x, cen.y, 20, "#58a6ff");
-      addFloat(cen.x, cen.y - 18, "传送", "#58a6ff");
+      const fxColor = g.color || "#58a6ff";
+      spawnExplosion(cen.x, cen.y, 20, fxColor);
+      addFloat(cen.x, cen.y - 18, "传送", fxColor);
       sfx("tp");
     }
   },
@@ -400,7 +401,7 @@ export const TankActions = {
           b.y = cen.y;
           b.tp = true;
           b.tpPair = g.pairId;
-          spawnExplosion(cen.x, cen.y, 14, "#58a6ff");
+          spawnExplosion(cen.x, cen.y, 14, g.color || "#58a6ff");
           sfx("tp");
           continue;
         }

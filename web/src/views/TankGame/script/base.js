@@ -541,8 +541,9 @@ export function connectivityOk() {
 export function placeGates() {
   if (window.tutorialGateBlock) { gates = []; window.gates = gates; return; }
   gates = [];
-  const mkGate = (c1, r1, c2, r2, pair) => {
-    const g = { cells: [], partner: null, pair };
+  const colors = ["#58a6ff", "#c084fc", "#fb923c"];
+  const mkGate = (c1, r1, c2, r2, pair, color) => {
+    const g = { cells: [], partner: null, pair, color };
     for (let r = r1; r <= r2; r++)
       for (let c = c1; c <= c2; c++) {
         map[r][c] = GATE;
@@ -551,10 +552,10 @@ export function placeGates() {
     gates.push(g);
     return g;
   };
-  const gA = mkGate(1, 14, 1, 14, "h"),
-    gB = mkGate(COLS - 2, 14, COLS - 2, 14, "h");
-  const gC = mkGate(Math.floor(COLS / 2), 1, Math.floor(COLS / 2), 1, "v"),
-    gD = mkGate(Math.floor(COLS / 2), 28, Math.floor(COLS / 2), 28, "v");
+  const gA = mkGate(1, 14, 1, 14, "h", colors[0]),
+    gB = mkGate(COLS - 2, 14, COLS - 2, 14, "h", colors[0]);
+  const gC = mkGate(Math.floor(COLS / 2), 1, Math.floor(COLS / 2), 1, "v", colors[1]),
+    gD = mkGate(Math.floor(COLS / 2), 28, Math.floor(COLS / 2), 28, "v", colors[1]);
   gA.partner = gB;
   gB.partner = gA;
   gC.partner = gD;
@@ -565,6 +566,15 @@ export function gateAt(c, r) {
   for (const g of gates)
     for (const cell of g.cells) if (cell.c === c && cell.r === r) return g;
   return null;
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace("#", "");
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
 }
 
 // 击碎碎石墙
@@ -1444,12 +1454,14 @@ export function drawMap() {
       }
       if (v === GATE) {
         const pulse = 0.5 + 0.5 * Math.sin(gtMs / 250 + c * 0.6 + r * 0.3);
-        ctx.fillStyle = `rgba(40,90,140,${0.25 + pulse * 0.35})`;
+        const gateColor = gateAt(c, r)?.color || "#58a6ff";
+        const rgb = hexToRgb(gateColor);
+        ctx.fillStyle = `rgba(${rgb.r * 0.35},${rgb.g * 0.35},${rgb.b * 0.35},${0.25 + pulse * 0.35})`;
         ctx.fillRect(x, y, CELL, CELL);
-        ctx.strokeStyle = `rgba(120,200,255,${0.4 + pulse * 0.5})`;
+        ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${0.4 + pulse * 0.5})`;
         ctx.lineWidth = 2;
         ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
-        ctx.fillStyle = `rgba(160,220,255,${0.5 + pulse * 0.4})`;
+        ctx.fillStyle = `rgba(${Math.min(255, rgb.r + 40)},${Math.min(255, rgb.g + 40)},${Math.min(255, rgb.b + 40)},${0.5 + pulse * 0.4})`;
         ctx.beginPath();
         ctx.arc(x + CELL / 2, y + CELL / 2, 3 + pulse * 3, 0, Math.PI * 2);
         ctx.fill();

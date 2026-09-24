@@ -5,7 +5,8 @@ const {
   TANK_SPEED_MIN, TANK_SPEED_MAX,
   BULLET_SPEED, FIRE_CD, FIRE_CD_FAST,
   ITEM_SPAWN_INTERVAL_MIN, ITEM_SPAWN_INTERVAL_MAX,
-  MAX_ITEMS, ITEM_DEFS,
+  MAX_ITEMS, MAX_PLAYERS, ITEM_DEFS,
+  GATE_PAIR_COLORS,
   RESPAWN_DELAY_MS, RESPAWN_INVINCIBLE_MS, TELEPORT_COOLDOWN_MS,
   GAME_TIME_LIMIT_MS,
   DRONE_MAX, DRONE_RANGE, DRONE_FIRE_CD, DRONE_SEARCH_CD,
@@ -109,6 +110,7 @@ class GameEngine {
       gates: this.gates.map((g) => ({
         cells: g.cells,
         partnerCells: g.partner ? g.partner.cells : [],
+        color: g.color,
       })),
       tanks: this.tanks.map((t) => ({
         ...t,
@@ -210,8 +212,9 @@ class GameEngine {
       usedCells.add(`${c1},${r1}`);
       usedCells.add(`${c2},${r2}`);
 
-      const gate1 = { cells: [{ c: c1, r: r1 }], partner: null };
-      const gate2 = { cells: [{ c: c2, r: r2 }], partner: null };
+      const color = GATE_PAIR_COLORS[i % GATE_PAIR_COLORS.length];
+      const gate1 = { cells: [{ c: c1, r: r1 }], partner: null, color };
+      const gate2 = { cells: [{ c: c2, r: r2 }], partner: null, color };
       gate1.partner = gate2;
       gate2.partner = gate1;
       this.gates.push(gate1, gate2);
@@ -474,6 +477,7 @@ class GameEngine {
         id: t.id,
         x: Math.round(cenX),
         y: Math.round(cenY),
+        color: (partner && partner.color) || (g && g.color) || "#58a6ff",
       });
     }
   }
@@ -1088,6 +1092,7 @@ class GameEngine {
       gates: this.gates.map((g) => ({
         cells: g.cells,
         partnerCells: g.partner ? g.partner.cells : [],
+        color: g.color,
       })),
       crackHp: this.crackHp,
       tanks: this.tanks.map((t) => ({

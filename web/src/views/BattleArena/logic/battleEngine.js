@@ -522,8 +522,9 @@ export function moveBattleTank(t, dt) {
       t.x = cen.x - t.w / 2;
       t.y = cen.y - t.h / 2;
       window.lastTeleport[t.id] = window.gtMs;
-      spawnExplosion(cen.x, cen.y, 20, "#58a6ff");
-      addFloat(cen.x, cen.y - 18, "传送", "#58a6ff");
+      const fxColor = (g && g.color) || "#58a6ff";
+      spawnExplosion(cen.x, cen.y, 20, fxColor);
+      addFloat(cen.x, cen.y - 18, "传送", fxColor);
       sfx("tp");
     }
   }

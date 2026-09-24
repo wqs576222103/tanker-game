@@ -136,13 +136,18 @@ export function resetGame() {
     // 构建传送门
     window.gates = [];
     if (cfg.gates && cfg.gates.length > 0) {
+      const gateColors = ["#58a6ff", "#c084fc", "#fb923c"];
       // 先为每条 gate 定义自动展开 partnerCells 为独立传送门
       const expandedGates = [];
       for (const gDef of cfg.gates) {
         const cells = gDef.cells || [];
         const partnerCells = gDef.partnerCells || [];
         if (cells.length > 0) {
-          expandedGates.push({ cells, pair: gDef.pair || null });
+          expandedGates.push({
+            cells,
+            pair: gDef.pair || null,
+            color: gDef.color || null,
+          });
         }
         // 如果有 partnerCells 但没有对应的另一条 gate 定义，则自动补建
         if (partnerCells.length > 0) {
@@ -159,6 +164,7 @@ export function resetGame() {
             expandedGates.push({
               cells: partnerCells,
               pair: gDef.pair || null,
+              color: gDef.color || null,
             });
           }
         }
@@ -171,6 +177,7 @@ export function resetGame() {
           partner: null,
           pairId: null,
           pair: gDef.pair || null,
+          color: gDef.color || null,
         };
         for (const cell of g.cells) {
           if (window.map[cell.r]) window.map[cell.r][cell.c] = GATE;
@@ -188,9 +195,25 @@ export function resetGame() {
           g.partner = pairMap[g.pair];
           pairMap[g.pair].pairId = i;
           g.pairId = i;
+          if (!g.color && pairMap[g.pair].color) g.color = pairMap[g.pair].color;
+          if (!pairMap[g.pair].color && g.color) pairMap[g.pair].color = g.color;
         } else {
           pairMap[g.pair] = g;
         }
+      }
+
+      // 未指定颜色的按顺序分配不同颜色
+      let colorIdx = 0;
+      const seenPairs = new Set();
+      for (const g of window.gates) {
+        const key = g.pair || `__${g.pairId ?? Math.random()}`;
+        if (seenPairs.has(key)) continue;
+        seenPairs.add(key);
+        if (!g.color) {
+          g.color = gateColors[colorIdx % gateColors.length];
+          if (g.partner && !g.partner.color) g.partner.color = g.color;
+        }
+        colorIdx++;
       }
     }
 

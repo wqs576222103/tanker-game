@@ -45,8 +45,9 @@ export function updateServerState(state, fullState) {
     window.map = localMap;
     window.gates = [];
     for (const g of localGates) {
-      const gate1 = { cells: g.cells, partner: null };
-      const gate2 = { cells: g.partnerCells, partner: null };
+      const color = g.color || "#58a6ff";
+      const gate1 = { cells: g.cells, partner: null, color };
+      const gate2 = { cells: g.partnerCells, partner: null, color };
       gate1.partner = gate2;
       gate2.partner = gate1;
       window.gates.push(gate1, gate2);
@@ -290,8 +291,9 @@ export function playItemFx(data) {
 
 export function playTeleportFx(data) {
   if (!data) return;
-  spawnExplosion(data.x, data.y, 20, "#58a6ff");
-  addFloat(data.x, data.y - 18, "传送", "#58a6ff");
+  const color = data.color || "#58a6ff";
+  spawnExplosion(data.x, data.y, 20, color);
+  addFloat(data.x, data.y - 18, "传送", color);
   sfx("tp");
 }
 

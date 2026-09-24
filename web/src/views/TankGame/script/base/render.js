@@ -17,8 +17,17 @@ import {
   PORTAL,
 } from "./constants.js";
 import { playerImg, enemyImg, bossImg, dogImg } from "./constants.js";
-import { protectedKey } from "./map.js";
+import { protectedKey, gateAt } from "./map.js";
 import { AIPlayer } from "../ai-player.js";
+
+function hexToRgb(hex) {
+  const h = hex.replace("#", "");
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
+}
 
 // ====================== 绘制 ======================
 export function drawMap() {
@@ -241,12 +250,14 @@ export function drawMap() {
       if (v === GATE) {
         const pulse =
           0.5 + 0.5 * Math.sin(window.gtMs / 250 + c * 0.6 + r * 0.3);
-        window.ctx.fillStyle = `rgba(40,90,140,${0.25 + pulse * 0.35})`;
+        const gateColor = gateAt(c, r)?.color || "#58a6ff";
+        const rgb = hexToRgb(gateColor);
+        window.ctx.fillStyle = `rgba(${rgb.r * 0.35},${rgb.g * 0.35},${rgb.b * 0.35},${0.25 + pulse * 0.35})`;
         window.ctx.fillRect(x, y, CELL, CELL);
-        window.ctx.strokeStyle = `rgba(120,200,255,${0.4 + pulse * 0.5})`;
+        window.ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${0.4 + pulse * 0.5})`;
         window.ctx.lineWidth = 2;
         window.ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
-        window.ctx.fillStyle = `rgba(160,220,255,${0.5 + pulse * 0.4})`;
+        window.ctx.fillStyle = `rgba(${Math.min(255, rgb.r + 40)},${Math.min(255, rgb.g + 40)},${Math.min(255, rgb.b + 40)},${0.5 + pulse * 0.4})`;
         window.ctx.beginPath();
         window.ctx.arc(
           x + CELL / 2,
