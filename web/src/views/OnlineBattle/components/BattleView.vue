@@ -77,18 +77,29 @@
       </div>
       <div id="online-btn-group">
         <button class="ctrl-btn" @click="toggleFullscreen">全屏</button>
-        <button class="ctrl-btn exit" @click="backToRoom">退出</button>
+        <button class="ctrl-btn exit" @click="confirmExit">退出游戏</button>
       </div>
       <div class="panel-room-info">
         <span>房间: {{ roomId }}</span>
       </div>
     </div>
+
+    <GameModal
+      :visible="exitConfirmVisible"
+      message="确定要退出游戏吗？"
+      confirm-text="退出游戏"
+      cancel-text="取消"
+      :show-cancel="true"
+      @confirm="handleExitConfirm"
+      @close="exitConfirmVisible = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { getSocket } from "@/utils/socket";
+import { getSocket, getLastRoomId } from "@/utils/socket";
+import GameModal from "@/components/GameModal.vue";
 import {
   setOnlineCtx,
   updateServerState,
@@ -116,6 +127,7 @@ const gameOverStats = ref("");
 const myBuffs = ref([]);
 const myAlive = ref(true);
 const respawnSec = ref(0);
+const exitConfirmVisible = ref(false);
 let animFrameId = null;
 
 const sortedPlayers = computed(() => {
@@ -144,7 +156,7 @@ function buildBuffs(me, gtMs) {
 let redirectTimer = null;
 
 onMounted(() => {
-  roomId.value = socket._lastRoomId || "";
+  roomId.value = socket._lastRoomId || getLastRoomId() || "";
   setupCanvas();
   setupSocketListeners();
   setupKeyboard();
@@ -348,6 +360,15 @@ function backToRoom() {
     socket.emit("leave-battle");
   }
   emit("back");
+}
+
+function confirmExit() {
+  exitConfirmVisible.value = true;
+}
+
+function handleExitConfirm() {
+  exitConfirmVisible.value = false;
+  backToRoom();
 }
 </script>
 

@@ -256,7 +256,12 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { getSocket, disconnectSocket } from "@/utils/socket";
+import {
+  getSocket,
+  disconnectSocket,
+  saveLastRoomId,
+  getLastRoomId,
+} from "@/utils/socket";
 import { getUserInfo } from "@/utils/user";
 import { inviteStore } from "@/utils/inviteStore";
 import { getOnlineBattleRooms } from "@/api/onlineBattle";
@@ -324,9 +329,21 @@ onMounted(() => {
   if (inviteStore.autoJoinRoomId) {
     const rid = inviteStore.autoJoinRoomId;
     inviteStore.autoJoinRoomId = "";
+    saveLastRoomId(rid);
     socket.emit("join-room", { roomId: rid, userInfo: _getUserInfoPayload() });
   } else {
     socket.emit("get-my-room");
+    const savedRoomId = getLastRoomId();
+    if (savedRoomId) {
+      setTimeout(() => {
+        if (!inRoom.value && socket) {
+          socket.emit("join-room", {
+            roomId: savedRoomId,
+            userInfo: _getUserInfoPayload(),
+          });
+        }
+      }, 150);
+    }
   }
   socket.emit("get-online-users");
 });
@@ -350,6 +367,7 @@ function setupSocketListeners() {
       mySocketId.value = socket.id;
       errorMsg.value = "";
       inviteStore.pending = null;
+      saveLastRoomId(data.roomId);
     },
     "queue-joined": () => {
       matching.value = true;
@@ -369,6 +387,7 @@ function setupSocketListeners() {
       errorMsg.value = "";
       roomName.value = generateRoomName();
       inviteStore.pending = null;
+      saveLastRoomId(data.roomId);
       socket.emit("get-rooms");
     },
     "room-joined": (data) => {
@@ -380,6 +399,7 @@ function setupSocketListeners() {
       errorMsg.value = "";
       inviteStore.pending = null;
       showInviteModal.value = false;
+      saveLastRoomId(data.roomId);
     },
     "player-joined": (data) => {
       roomPlayers.value = data.players;
@@ -389,6 +409,12 @@ function setupSocketListeners() {
     },
     "join-error": (data) => {
       errorMsg.value = data.message;
+      if (
+        data.message &&
+        data.message.includes("房间不存在")
+      ) {
+        saveLastRoomId("");
+      }
     },
     "start-error": (data) => {
       errorMsg.value = data.message;
@@ -410,6 +436,7 @@ function setupSocketListeners() {
         currentRoomName.value = data.roomName || "";
         roomPlayers.value = data.players || [];
         mySocketId.value = socket.id;
+        saveLastRoomId(data.roomId);
       }
     },
     "rooms-list": (data) => {
@@ -436,6 +463,7 @@ function setupSocketListeners() {
       roomPlayers.value = [];
       battleStarting.value = false;
       roomName.value = generateRoomName();
+      saveLastRoomId("");
       showToast(data.message || "你已被移出房间");
     },
     reminded: (data) => {
@@ -577,6 +605,7 @@ function showToast(msg) {
 function leaveRoom() {
   if (!socket) return;
   socket.emit("leave-room");
+  saveLastRoomId("");
   inRoom.value = false;
   currentRoomId.value = "";
   currentRoomName.value = "";

@@ -79,6 +79,7 @@ class RoomManager {
         ready: true,
         isHost: room.players.size === 0,
         alive: true,
+        disconnected: false,
       });
       this.rooms.set(player.socketId, roomId);
     }
@@ -143,6 +144,7 @@ class RoomManager {
       ready: false,
       isHost: true,
       alive: true,
+      disconnected: false,
     });
 
     this.rooms.set(socketId, roomId);
@@ -161,6 +163,43 @@ class RoomManager {
     };
   }
 
+  getRoomIdBySocket(socketId) {
+    return this.rooms.get(socketId) || null;
+  }
+
+  markDisconnected(socketId, graceMs, onExpire) {
+    const roomId = this.rooms.get(socketId);
+    if (!roomId) return null;
+
+    const room = this.rooms.get(`room:${roomId}`);
+    if (!room) {
+      this.rooms.delete(socketId);
+      return null;
+    }
+
+    const player = room.players.get(socketId);
+    if (!player) {
+      this.rooms.delete(socketId);
+      return null;
+    }
+
+    player.disconnected = true;
+    player.disconnectedAt = Date.now();
+    this.rooms.delete(socketId);
+
+    if (player._leaveTimer) clearTimeout(player._leaveTimer);
+    player._leaveTimer = setTimeout(() => {
+      player._leaveTimer = null;
+      if (!player.disconnected || player.socketId !== socketId) return;
+      const current = this.rooms.get(`room:${roomId}`);
+      if (!current || current.players.get(socketId) !== player) return;
+      const result = this._removePlayerFromRoom(roomId, socketId);
+      if (onExpire) onExpire(result, socketId);
+    }, graceMs);
+
+    return { roomId, room, player, socketId };
+  }
+
   joinRoom(socketId, roomId, userInfo) {
     const existingRoomId = this.rooms.get(socketId);
     if (existingRoomId && existingRoomId !== roomId) {
@@ -171,17 +210,56 @@ class RoomManager {
     }
     const room = this.rooms.get(`room:${roomId}`);
     if (!room) return { error: "房间不存在" };
+
+    const empId = userInfo.employeeId || "";
+    const userName = userInfo.username || "";
+    if (empId || userName) {
+      for (const [key, p] of room.players) {
+        const sameUser = empId
+          ? p.employeeId === empId
+          : p.username === userName && userName !== "匿名";
+        if (!sameUser) continue;
+        if (p._leaveTimer) {
+          clearTimeout(p._leaveTimer);
+          p._leaveTimer = null;
+        }
+        const oldSocketId = key;
+        if (key !== socketId) {
+          room.players.delete(key);
+          this.rooms.delete(key);
+        }
+        p.socketId = socketId;
+        p.disconnected = false;
+        p.disconnectedAt = 0;
+        p.username = userInfo.username || p.username;
+        p.tankName = userInfo.tankName || p.tankName;
+        if (empId) p.employeeId = empId;
+        this.rooms.set(socketId, roomId);
+        return {
+          success: true,
+          reconnected: true,
+          oldSocketId,
+          roomId,
+          roomName: room.roomName || "",
+          players: this._getRoomPlayerList(room),
+          player: p,
+          inGame: room.state === "starting" || room.state === "playing",
+        };
+      }
+    }
+
     if (room.players.size >= MAX_PLAYERS) return { error: "房间已满" };
 
     const player = {
       socketId,
-      employeeId: userInfo.employeeId || "",
+      employeeId: empId,
       username: userInfo.username || "匿名",
       tankName: userInfo.tankName || "坦克",
       teamId: this._nextTeamId(room),
       ready: false,
       isHost: false,
       alive: true,
+      disconnected: false,
     };
     room.players.set(socketId, player);
 
@@ -234,6 +312,10 @@ class RoomManager {
     const target = room.players.get(targetSocketId);
     if (!target) return { error: "玩家不在房间中" };
 
+    if (target._leaveTimer) {
+      clearTimeout(target._leaveTimer);
+      target._leaveTimer = null;
+    }
     room.players.delete(targetSocketId);
     this.rooms.delete(targetSocketId);
     return {
@@ -261,8 +343,27 @@ class RoomManager {
       return null;
     }
 
+    return this._removePlayerFromRoom(roomId, socketId);
+  }
+
+  _removePlayerFromRoom(roomId, socketId) {
+    const room = this.rooms.get(`room:${roomId}`);
+    if (!room) {
+      this.rooms.delete(socketId);
+      return null;
+    }
+
     const leaving = room.players.get(socketId);
-    const wasHost = !!(leaving && leaving.isHost);
+    if (!leaving) {
+      this.rooms.delete(socketId);
+      return null;
+    }
+
+    const wasHost = !!leaving.isHost;
+    if (leaving._leaveTimer) {
+      clearTimeout(leaving._leaveTimer);
+      leaving._leaveTimer = null;
+    }
 
     room.players.delete(socketId);
     this.rooms.delete(socketId);
@@ -354,6 +455,7 @@ class RoomManager {
       ready: p.ready,
       isHost: p.isHost,
       alive: p.alive,
+      disconnected: !!p.disconnected,
     }));
   }
 

@@ -90,8 +90,8 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const token = to.query.token;
-  setToken(token);
   if (token) {
+    setToken(token);
     try {
       const res = await getUserInfoByToken(token);
       if (res.code !== 200) {
@@ -100,7 +100,6 @@ router.beforeEach(async (to, from, next) => {
       const userInfo = res.data;
       setUserInfo(userInfo);
     } catch (err) {
-      setUserInfo({});
       console.error("获取用户信息失败:", err);
     }
   }

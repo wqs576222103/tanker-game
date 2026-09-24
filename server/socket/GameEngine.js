@@ -345,6 +345,23 @@ class GameEngine {
     this.drones = this.drones.filter((d) => d.ownerId !== socketId);
   }
 
+  rebindPlayer(oldSocketId, newSocketId) {
+    if (!oldSocketId || !newSocketId || oldSocketId === newSocketId) {
+      return false;
+    }
+    let found = false;
+    for (const t of this.tanks) {
+      if (t.id === oldSocketId) {
+        t.id = newSocketId;
+        found = true;
+      }
+    }
+    for (const d of this.drones) {
+      if (d.ownerId === oldSocketId) d.ownerId = newSocketId;
+    }
+    return found;
+  }
+
   handleInput(socketId, input) {
     const tank = this.tanks.find((t) => t.id === socketId);
     if (!tank || !tank.alive) return;

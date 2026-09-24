@@ -4,13 +4,36 @@ import { inviteStore } from "./inviteStore";
 
 let socket = null;
 
-function _userInfoPayload() {
+const LAST_ROOM_KEY = "tanke-lastRoomId";
+
+export function userInfoPayload() {
   const info = getUserInfo();
   return {
     employeeId: info.employeeId || "",
     username: info.username || "匿名",
     tankName: info.username || "坦克",
   };
+}
+
+function _userInfoPayload() {
+  return userInfoPayload();
+}
+
+export function saveLastRoomId(roomId) {
+  try {
+    if (roomId) localStorage.setItem(LAST_ROOM_KEY, roomId);
+    else localStorage.removeItem(LAST_ROOM_KEY);
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+export function getLastRoomId() {
+  try {
+    return localStorage.getItem(LAST_ROOM_KEY) || "";
+  } catch (_) {
+    return "";
+  }
 }
 
 export function getSocket() {

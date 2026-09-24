@@ -1,7 +1,10 @@
 const { Server } = require("socket.io");
 const RoomManager = require("./RoomManager");
 const GameEngine = require("./GameEngine");
-const { MAX_PLAYERS } = require("../shared/constants");
+const {
+  MAX_PLAYERS,
+  ROOM_DISCONNECT_GRACE_MS,
+} = require("../shared/constants");
 const { saveOnlineBattleRecord } = require("../api/onlineBattle");
 
 const roomManager = new RoomManager();
@@ -141,13 +144,22 @@ function setupSocket(server) {
         roomId,
         roomName: result.roomName || "",
         players: result.players,
+        reconnected: !!result.reconnected,
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
       io.emit("online-users-updated", { users: roomManager.getOnlineUsers() });
 
-      if (result.inGame) {
-        const engine = engines.get(roomId);
-        if (engine && engine.state !== "over") {
+      const engine = engines.get(roomId);
+      if (engine && engine.state !== "over") {
+        if (result.reconnected) {
+          const rebound =
+            result.oldSocketId &&
+            engine.rebindPlayer(result.oldSocketId, socket.id);
+          if (!rebound) {
+            engine.addPlayer({ ...userInfo, socketId: socket.id });
+          }
+          socket.emit("game-start", engine.getJoinState());
+        } else if (result.inGame) {
           engine.addPlayer({ ...userInfo, socketId: socket.id });
           socket.emit("game-start", engine.getJoinState());
         }
@@ -290,7 +302,17 @@ function setupSocket(server) {
       io.emit("online-users-updated", {
         users: roomManager.getOnlineUsers(),
       });
-      _handleLeave(socket, io);
+
+      const roomId = roomManager.getRoomIdBySocket(socket.id);
+      if (roomId) {
+        roomManager.markDisconnected(
+          socket.id,
+          ROOM_DISCONNECT_GRACE_MS,
+          (result, oldSocketId) => {
+            _afterDisconnectExpired(result, oldSocketId, io);
+          },
+        );
+      }
     });
   });
 
@@ -349,6 +371,40 @@ function _handleLeave(socket, io) {
   });
 
   _checkGameTermination(result.roomId, socket.id);
+}
+
+function _afterDisconnectExpired(result, oldSocketId, io) {
+  if (!result) return;
+
+  if (result.roomEmpty) {
+    const engine = engines.get(result.roomId);
+    if (engine) {
+      const gameActive =
+        engine.state === "countdown" || engine.state === "playing";
+      if (gameActive) {
+        engine.removePlayer(oldSocketId);
+        engine.forceEnd({
+          creditRemaining: true,
+          quitters: [],
+        });
+      } else {
+        engine.stop();
+      }
+      engines.delete(result.roomId);
+    }
+    console.log(`[Socket] Room ${result.roomId} cancelled (empty)`);
+    io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+    io.emit("online-users-updated", { users: roomManager.getOnlineUsers() });
+    return;
+  }
+
+  io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+  io.emit("online-users-updated", { users: roomManager.getOnlineUsers() });
+  io.to(result.roomId).emit("player-left", {
+    socketId: oldSocketId,
+    players: result.players,
+  });
+  _checkGameTermination(result.roomId, oldSocketId);
 }
 
 function _checkGameTermination(roomId, removedSocketId) {
