@@ -38,11 +38,17 @@ function setupSocket(server) {
 
     socket.on("create-room", (data) => {
       const userInfo = data.userInfo || {};
-      const roomId = roomManager.createPrivateRoom(socket.id, userInfo);
+      const roomId = roomManager.createPrivateRoom(
+        socket.id,
+        userInfo,
+        data.roomName,
+      );
       socket.join(roomId);
+      const room = roomManager.getRoom(roomId);
       socket.emit("room-created", {
         roomId,
-        players: roomManager.getRoomPlayerList(roomManager.getRoom(roomId)),
+        roomName: room?.roomName || "",
+        players: roomManager.getRoomPlayerList(room),
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
     });
@@ -53,7 +59,10 @@ function setupSocket(server) {
 
     socket.on("get-my-room", () => {
       const myRoom = roomManager.getMyRoom(socket.id);
-      socket.emit("my-room", myRoom ? { inRoom: true, ...myRoom } : { inRoom: false });
+      socket.emit(
+        "my-room",
+        myRoom ? { inRoom: true, ...myRoom } : { inRoom: false },
+      );
     });
 
     socket.on("join-room", (data) => {
@@ -70,6 +79,7 @@ function setupSocket(server) {
       });
       socket.emit("room-joined", {
         roomId,
+        roomName: result.roomName || "",
         players: result.players,
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
@@ -198,9 +208,13 @@ function setupSocket(server) {
       if (!engine) return;
       const snapshot = _snapshotTank(engine, socket.id);
       engine.removePlayer(socket.id);
-      const gameActive = engine.state === "countdown" || engine.state === "playing";
+      const gameActive =
+        engine.state === "countdown" || engine.state === "playing";
       if (gameActive && engine.tanks.length < 2) {
-        engine.forceEnd({ creditRemaining: true, quitters: snapshot ? [snapshot] : [] });
+        engine.forceEnd({
+          creditRemaining: true,
+          quitters: snapshot ? [snapshot] : [],
+        });
       }
     });
 
@@ -242,10 +256,14 @@ function _handleLeave(socket, io) {
   if (result.roomEmpty) {
     const engine = engines.get(result.roomId);
     if (engine) {
-      const gameActive = engine.state === "countdown" || engine.state === "playing";
+      const gameActive =
+        engine.state === "countdown" || engine.state === "playing";
       if (gameActive) {
         const snapshot = _snapshotTank(engine, socket.id);
-        engine.forceEnd({ creditRemaining: true, quitters: snapshot ? [snapshot] : [] });
+        engine.forceEnd({
+          creditRemaining: true,
+          quitters: snapshot ? [snapshot] : [],
+        });
       } else {
         engine.stop();
       }
@@ -274,10 +292,12 @@ function _checkGameTermination(roomId, removedSocketId) {
   const room = roomManager.getRoom(roomId);
   const gameActive = engine.state === "countdown" || engine.state === "playing";
   if (!gameActive) return;
-  const shouldEnd =
-    engine.tanks.length < 2 || (room && room.players.size < 2);
+  const shouldEnd = engine.tanks.length < 2 || (room && room.players.size < 2);
   if (shouldEnd) {
-    engine.forceEnd({ creditRemaining: true, quitters: snapshot ? [snapshot] : [] });
+    engine.forceEnd({
+      creditRemaining: true,
+      quitters: snapshot ? [snapshot] : [],
+    });
   }
 }
 

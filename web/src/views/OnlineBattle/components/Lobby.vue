@@ -22,7 +22,9 @@
           </div>
           <div v-if="matching" class="lobby-actions matching-box">
             <div class="matching-spinner"></div>
-            <span class="matching-text">匹配中... 已等待 {{ matchElapsed }}s</span>
+            <span class="matching-text"
+              >匹配中... 已等待 {{ matchElapsed }}s</span
+            >
             <button class="btn-cancel" @click="cancelMatch">取消</button>
           </div>
         </div>
@@ -30,7 +32,13 @@
         <div class="lobby-section">
           <h3>创建房间</h3>
           <p class="lobby-desc">创建房间邀请好友对战</p>
-          <div v-if="!matching && !inRoom" class="lobby-actions">
+          <div v-if="!matching && !inRoom" class="lobby-actions join-form">
+            <input
+              v-model="roomName"
+              placeholder="输入房间名"
+              maxlength="20"
+              @keyup.enter="createRoom"
+            />
             <button class="btn-create" @click="createRoom">创建房间</button>
           </div>
           <div v-if="createdRoomId" class="room-code">
@@ -50,7 +58,11 @@
               maxlength="20"
               @keyup.enter="joinRoom"
             />
-            <button class="btn-join" @click="joinRoom" :disabled="!joinRoomInput.trim()">
+            <button
+              class="btn-join"
+              @click="joinRoom"
+              :disabled="!joinRoomInput.trim()"
+            >
               加入
             </button>
           </div>
@@ -64,7 +76,10 @@
           <h3>公开房间</h3>
           <div v-if="inRoom" class="room-players">
             <div class="room-info">
-              <span>房间号: <code>{{ currentRoomId }}</code></span>
+              <span>房间名: {{ currentRoomName || "未命名" }}</span>
+              <span
+                >房间号: <code>{{ currentRoomId }}</code></span
+              >
               <span>玩家: {{ roomPlayers.length }}/8</span>
             </div>
             <div class="player-list">
@@ -72,33 +87,47 @@
                 v-for="(p, idx) in roomPlayers"
                 :key="p.socketId"
                 class="player-item"
-                :style="{ borderLeftColor: teamColors[idx % teamColors.length] }"
+                :style="{
+                  borderLeftColor: teamColors[idx % teamColors.length],
+                }"
               >
-                <span class="player-avatar" :style="{ background: teamColors[idx % teamColors.length] }">
-                  {{ (p.username || '玩家')[0] }}
+                <span
+                  class="player-avatar"
+                  :style="{ background: teamColors[idx % teamColors.length] }"
+                >
+                  {{ (p.username || "玩家")[0] }}
                 </span>
-                <span class="player-name">{{ p.username || '玩家' }}</span>
+                <span class="player-name">{{ p.username || "玩家" }}</span>
                 <span v-if="p.isHost" class="player-host-tag">房主</span>
-                <span v-if="p.socketId === mySocketId" class="player-tag">我</span>
+                <span v-if="p.socketId === mySocketId" class="player-tag"
+                  >我</span
+                >
                 <span
                   v-if="!p.isHost"
                   class="ready-status"
                   :class="p.ready ? 'ready-yes' : 'ready-no'"
                 >
-                  {{ p.ready ? '已准备' : '未准备' }}
+                  {{ p.ready ? "已准备" : "未准备" }}
                 </span>
-                <div v-if="isHost && p.socketId !== mySocketId" class="host-ops">
+                <div
+                  v-if="isHost && p.socketId !== mySocketId"
+                  class="host-ops"
+                >
                   <button
                     v-if="!p.ready"
                     class="btn-mini remind"
                     title="提醒准备"
                     @click="remindReady(p.socketId)"
-                  >提醒</button>
+                  >
+                    提醒
+                  </button>
                   <button
                     class="btn-mini kick"
                     title="踢出房间"
                     @click="kickPlayer(p.socketId)"
-                  >踢出</button>
+                  >
+                    踢出
+                  </button>
                 </div>
               </div>
             </div>
@@ -108,7 +137,7 @@
                 :class="{ 'is-ready': myReady }"
                 @click="toggleReady"
               >
-                {{ myReady ? '取消准备' : '准备' }}
+                {{ myReady ? "取消准备" : "准备" }}
               </button>
             </div>
             <div v-if="isHost && roomPlayers.length >= 2" class="room-actions">
@@ -117,22 +146,29 @@
                 :disabled="!allReady"
                 @click="startBattle"
               >
-                {{ allReady ? '开始对战' : '等待玩家准备...' }}
+                {{ allReady ? "开始对战" : "等待玩家准备..." }}
               </button>
             </div>
-            <div v-else-if="!isHost && roomPlayers.length >= 2" class="room-hint">
+            <div
+              v-else-if="!isHost && roomPlayers.length >= 2"
+              class="room-hint"
+            >
               等待房主开始...
               <button
                 class="btn-mini remind"
                 style="margin-left: 8px"
                 @click="remindStart"
-              >提醒开始</button>
+              >
+                提醒开始
+              </button>
             </div>
             <div v-else class="room-hint">等待更多玩家加入...</div>
             <button class="btn-leave" @click="leaveRoom">离开房间</button>
           </div>
           <div v-else>
-            <div v-if="publicRooms.length === 0" class="room-empty">暂无公开房间</div>
+            <div v-if="publicRooms.length === 0" class="room-empty">
+              暂无公开房间
+            </div>
             <div v-else class="room-list">
               <div
                 v-for="room in publicRooms"
@@ -140,7 +176,9 @@
                 class="room-list-item"
               >
                 <div class="room-list-info">
-                  <span class="room-list-host">{{ room.host || '匿名' }} 的房间</span>
+                  <span class="room-list-host">{{
+                    room.roomName || (room.host || "匿名") + " 的房间"
+                  }}</span>
                   <span class="room-list-meta">
                     {{ room.playerCount }}/{{ room.maxPlayers }} 人
                   </span>
@@ -172,15 +210,27 @@
             >
               <span class="recent-winner">
                 <template v-if="game.is_draw">平局</template>
-                <template v-else>赢家：{{ game.winner_username || game.winner_name || '未知' }}</template>
+                <template v-else
+                  >赢家：{{
+                    game.winner_username || game.winner_name || "未知"
+                  }}</template
+                >
               </span>
               <span class="recent-info">
-                {{ game.player_count }}人 · {{ formatDuration(game.game_duration_ms) }}
+                {{ game.player_count }}人 ·
+                {{ formatDuration(game.game_duration_ms) }}
                 <template v-if="game.players && game.players.length">
-                  · {{ game.players.map(p => `${p.kills}杀${p.deaths}亡`).join(' / ') }}
+                  ·
+                  {{
+                    game.players
+                      .map((p) => `${p.kills}杀${p.deaths}亡`)
+                      .join(" / ")
+                  }}
                 </template>
               </span>
-              <span class="recent-time">{{ formatTime(game.create_time) }}</span>
+              <span class="recent-time">{{
+                formatTime(game.create_time)
+              }}</span>
             </div>
           </div>
         </div>
@@ -201,7 +251,9 @@ const router = useRouter();
 const matching = ref(false);
 const inRoom = ref(false);
 const currentRoomId = ref("");
+const currentRoomName = ref("");
 const createdRoomId = ref("");
+const roomName = ref(generateRoomName());
 const joinRoomInput = ref("");
 const roomPlayers = ref([]);
 const errorMsg = ref("");
@@ -231,8 +283,14 @@ const allReady = computed(() => {
 });
 
 const teamColors = [
-  "#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4",
-  "#ffeaa7", "#dfe6e9", "#a29bfe", "#fd79a8",
+  "#ff6b6b",
+  "#4ecdc4",
+  "#45b7d1",
+  "#96ceb4",
+  "#ffeaa7",
+  "#dfe6e9",
+  "#a29bfe",
+  "#fd79a8",
 ];
 
 let socket = null;
@@ -276,15 +334,18 @@ function setupSocketListeners() {
     "room-created": (data) => {
       inRoom.value = true;
       currentRoomId.value = data.roomId;
+      currentRoomName.value = data.roomName || "";
       createdRoomId.value = data.roomId;
       roomPlayers.value = data.players;
       mySocketId.value = socket.id;
       errorMsg.value = "";
+      roomName.value = generateRoomName();
       socket.emit("get-rooms");
     },
     "room-joined": (data) => {
       inRoom.value = true;
       currentRoomId.value = data.roomId;
+      currentRoomName.value = data.roomName || "";
       roomPlayers.value = data.players;
       mySocketId.value = socket.id;
       errorMsg.value = "";
@@ -315,6 +376,7 @@ function setupSocketListeners() {
       if (data && data.inRoom && data.roomId) {
         inRoom.value = true;
         currentRoomId.value = data.roomId;
+        currentRoomName.value = data.roomName || "";
         roomPlayers.value = data.players || [];
         mySocketId.value = socket.id;
       }
@@ -338,9 +400,11 @@ function setupSocketListeners() {
     kicked: (data) => {
       inRoom.value = false;
       currentRoomId.value = "";
+      currentRoomName.value = "";
       createdRoomId.value = "";
       roomPlayers.value = [];
       battleStarting.value = false;
+      roomName.value = generateRoomName();
       showToast(data.message || "你已被移出房间");
     },
     reminded: (data) => {
@@ -395,8 +459,11 @@ function joinPublicRoom(roomId) {
 function createRoom() {
   if (!socket) return;
   errorMsg.value = "";
+  const name = roomName.value.trim() || generateRoomName();
+  roomName.value = name;
   socket.emit("create-room", {
     userInfo: _getUserInfoPayload(),
+    roomName: name,
   });
 }
 
@@ -449,9 +516,11 @@ function leaveRoom() {
   socket.emit("leave-room");
   inRoom.value = false;
   currentRoomId.value = "";
+  currentRoomName.value = "";
   createdRoomId.value = "";
   roomPlayers.value = [];
   battleStarting.value = false;
+  roomName.value = generateRoomName();
 }
 
 function goHome() {
@@ -479,9 +548,12 @@ function copyRoomId() {
     showToast("复制失败，请手动复制");
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
-      fallbackCopy(text) ? onSuccess() : onFail();
-    });
+    navigator.clipboard
+      .writeText(text)
+      .then(onSuccess)
+      .catch(() => {
+        fallbackCopy(text) ? onSuccess() : onFail();
+      });
   } else {
     fallbackCopy(text) ? onSuccess() : onFail();
   }
@@ -511,6 +583,12 @@ function _getUserInfoPayload() {
     username: info.username || "匿名",
     tankName: info.username || "坦克",
   };
+}
+
+function generateRoomName() {
+  const info = getUserInfo();
+  const rand = Math.random().toString(36).slice(2, 6);
+  return `${info.username || "玩家"}的房间-${rand}`.slice(0, 20);
 }
 
 async function fetchRecentGames() {
@@ -545,7 +623,7 @@ function formatTime(timeStr) {
   flex-direction: column;
   background: #1a2118;
   color: #e0e0e0;
-  font-family: 'Microsoft YaHei', sans-serif;
+  font-family: "Microsoft YaHei", sans-serif;
   overflow: hidden;
 }
 
@@ -587,7 +665,8 @@ function formatTime(timeStr) {
   overflow: hidden;
 }
 
-.lobby-left, .lobby-right {
+.lobby-left,
+.lobby-right {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -645,7 +724,10 @@ function formatTime(timeStr) {
   flex-wrap: wrap;
 }
 
-.btn-match, .btn-create, .btn-join, .btn-start {
+.btn-match,
+.btn-create,
+.btn-join,
+.btn-start {
   padding: 10px 24px;
   border: none;
   border-radius: 6px;
@@ -847,7 +929,9 @@ function formatTime(timeStr) {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .room-list {
@@ -1069,8 +1153,14 @@ function formatTime(timeStr) {
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 .battle-loading {

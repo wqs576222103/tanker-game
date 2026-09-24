@@ -24,7 +24,10 @@ class RoomManager {
   _tryMatch(io) {
     if (this.matchQueue.length < 2) return;
 
-    const matched = this.matchQueue.splice(0, Math.min(this.matchQueue.length, MAX_PLAYERS));
+    const matched = this.matchQueue.splice(
+      0,
+      Math.min(this.matchQueue.length, MAX_PLAYERS),
+    );
     if (matched.length < 2) {
       this.matchQueue.unshift(...matched);
       return;
@@ -64,7 +67,9 @@ class RoomManager {
       });
     }
 
-    console.log(`[RoomManager] Room ${roomId} created with ${matched.length} players`);
+    console.log(
+      `[RoomManager] Room ${roomId} created with ${matched.length} players`,
+    );
   }
 
   addToQueue(socketId, userInfo) {
@@ -78,7 +83,9 @@ class RoomManager {
       tankName: userInfo.tankName || "坦克",
       joinedAt: Date.now(),
     });
-    console.log(`[RoomManager] Player ${socketId} joined queue (${this.matchQueue.length} in queue)`);
+    console.log(
+      `[RoomManager] Player ${socketId} joined queue (${this.matchQueue.length} in queue)`,
+    );
   }
 
   removeFromQueue(socketId) {
@@ -86,10 +93,14 @@ class RoomManager {
     if (idx >= 0) this.matchQueue.splice(idx, 1);
   }
 
-  createPrivateRoom(socketId, userInfo) {
+  createPrivateRoom(socketId, userInfo, roomName) {
     const roomId = this._genRoomId();
     const room = {
       id: roomId,
+      roomName: this._sanitizeRoomName(
+        roomName,
+        `${userInfo.username || "匿名"}的房间`,
+      ),
       players: new Map(),
       state: "waiting",
       map: null,
@@ -117,6 +128,7 @@ class RoomManager {
     if (!room) return null;
     return {
       roomId: room.id,
+      roomName: room.roomName || "",
       players: this._getRoomPlayerList(room),
       state: room.state,
     };
@@ -142,6 +154,8 @@ class RoomManager {
     this.rooms.set(socketId, roomId);
     return {
       success: true,
+      roomId,
+      roomName: room.roomName || "",
       players: this._getRoomPlayerList(room),
       player,
       inGame: room.state === "starting" || room.state === "playing",
@@ -149,7 +163,9 @@ class RoomManager {
   }
 
   _nextTeamId(room) {
-    const used = new Set(Array.from(room.players.values()).map((p) => p.teamId));
+    const used = new Set(
+      Array.from(room.players.values()).map((p) => p.teamId),
+    );
     let id = 0;
     while (used.has(id)) id++;
     return id;
@@ -186,7 +202,11 @@ class RoomManager {
 
     room.players.delete(targetSocketId);
     this.rooms.delete(targetSocketId);
-    return { roomId, kickedSocketId: targetSocketId, players: this._getRoomPlayerList(room) };
+    return {
+      roomId,
+      kickedSocketId: targetSocketId,
+      players: this._getRoomPlayerList(room),
+    };
   }
 
   allReady(room) {
@@ -223,7 +243,9 @@ class RoomManager {
       const nextHost = room.players.values().next().value;
       if (nextHost) {
         nextHost.isHost = true;
-        console.log(`[RoomManager] Room ${roomId} new host: ${nextHost.username}`);
+        console.log(
+          `[RoomManager] Room ${roomId} new host: ${nextHost.username}`,
+        );
       }
     }
 
@@ -245,9 +267,15 @@ class RoomManager {
     for (const [key, room] of this.rooms) {
       if (typeof key !== "string" || !key.startsWith("room:")) continue;
       if (room.players.size === 0) continue;
-      if (room.state !== "waiting" && room.state !== "playing" && room.state !== "starting") continue;
+      if (
+        room.state !== "waiting" &&
+        room.state !== "playing" &&
+        room.state !== "starting"
+      )
+        continue;
       list.push({
         roomId: room.id,
+        roomName: room.roomName || "",
         playerCount: room.players.size,
         maxPlayers: MAX_PLAYERS,
         host: Array.from(room.players.values())[0]?.username || "",
@@ -297,6 +325,13 @@ class RoomManager {
 
   _genRoomId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  _sanitizeRoomName(name, fallback) {
+    const s = String(name || "")
+      .trim()
+      .slice(0, 20);
+    return s || fallback;
   }
 }
 
