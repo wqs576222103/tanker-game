@@ -1,6 +1,7 @@
 const { Server } = require("socket.io");
 const RoomManager = require("./RoomManager");
 const GameEngine = require("./GameEngine");
+const { MAX_PLAYERS } = require("../shared/constants");
 const { saveOnlineBattleRecord } = require("../api/onlineBattle");
 
 const roomManager = new RoomManager();
@@ -18,6 +19,64 @@ function setupSocket(server) {
 
   io.on("connection", (socket) => {
     console.log(`[Socket] Connected: ${socket.id}`);
+
+    socket.on("register-user", (data) => {
+      roomManager.registerUser(socket.id, data?.userInfo || {});
+      socket.emit("online-users", { users: roomManager.getOnlineUsers() });
+      io.emit("online-users-updated", {
+        users: roomManager.getOnlineUsers(),
+      });
+    });
+
+    socket.on("get-online-users", () => {
+      socket.emit("online-users", { users: roomManager.getOnlineUsers() });
+    });
+
+    socket.on("invite-player", (data) => {
+      const targetSocketId = data?.targetSocketId;
+      if (!targetSocketId || targetSocketId === socket.id) return;
+      const room = roomManager.getRoomBySocket(socket.id);
+      if (!room) {
+        socket.emit("invite-error", { message: "你不在房间中" });
+        return;
+      }
+      if (!roomManager.getOnlineUser(targetSocketId)) {
+        socket.emit("invite-error", { message: "对方不在线" });
+        return;
+      }
+      if (roomManager.getRoomBySocket(targetSocketId)) {
+        socket.emit("invite-error", { message: "对方已在房间中" });
+        return;
+      }
+      if (room.players.size >= MAX_PLAYERS) {
+        socket.emit("invite-error", { message: "房间已满" });
+        return;
+      }
+      const sender = room.players.get(socket.id);
+      const targetSocket = io.sockets.sockets.get(targetSocketId);
+      if (!targetSocket) {
+        socket.emit("invite-error", { message: "对方不在线" });
+        return;
+      }
+      targetSocket.emit("invited", {
+        roomId: room.id,
+        roomName: room.roomName || "",
+        fromSocketId: socket.id,
+        fromUsername: (sender && sender.username) || "玩家",
+      });
+      socket.emit("invite-sent", { targetSocketId });
+    });
+
+    socket.on("decline-invite", (data) => {
+      const fromSocketId = data?.fromSocketId;
+      if (!fromSocketId) return;
+      const fromSocket = io.sockets.sockets.get(fromSocketId);
+      if (fromSocket) {
+        fromSocket.emit("invite-declined", {
+          message: "对方拒绝了房间邀请",
+        });
+      }
+    });
 
     socket.on("join-queue", (data) => {
       const userInfo = data.userInfo || {};
@@ -51,6 +110,7 @@ function setupSocket(server) {
         players: roomManager.getRoomPlayerList(room),
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+      io.emit("online-users-updated", { users: roomManager.getOnlineUsers() });
     });
 
     socket.on("get-rooms", () => {
@@ -83,6 +143,7 @@ function setupSocket(server) {
         players: result.players,
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+      io.emit("online-users-updated", { users: roomManager.getOnlineUsers() });
 
       if (result.inGame) {
         const engine = engines.get(roomId);
@@ -225,6 +286,10 @@ function setupSocket(server) {
     socket.on("disconnect", () => {
       console.log(`[Socket] Disconnected: ${socket.id}`);
       roomManager.removeFromQueue(socket.id);
+      roomManager.unregisterUser(socket.id);
+      io.emit("online-users-updated", {
+        users: roomManager.getOnlineUsers(),
+      });
       _handleLeave(socket, io);
     });
   });
@@ -271,10 +336,12 @@ function _handleLeave(socket, io) {
     }
     console.log(`[Socket] Room ${result.roomId} cancelled (empty)`);
     io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+    io.emit("online-users-updated", { users: roomManager.getOnlineUsers() });
     return;
   }
 
   io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
+  io.emit("online-users-updated", { users: roomManager.getOnlineUsers() });
 
   io.to(result.roomId).emit("player-left", {
     socketId: socket.id,

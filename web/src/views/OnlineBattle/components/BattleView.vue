@@ -7,12 +7,19 @@
           <span id="online-hud-alive" class="hud-value">{{ aliveCount }}</span>
         </div>
         <div class="hud-center">
-          <span v-if="myBuffs.length" class="hud-buffs">{{ myBuffs.join(" ") }}</span>
+          <span v-if="myBuffs.length" class="hud-buffs">{{
+            myBuffs.join(" ")
+          }}</span>
         </div>
         <div class="hud-right">
           <span class="hud-label">地雷</span>
           <span class="hud-value">{{ myMines }}</span>
-          <span id="online-hud-time" class="hud-value" style="margin-left: 12px">{{ gameTime }}</span>
+          <span
+            id="online-hud-time"
+            class="hud-value"
+            style="margin-left: 12px"
+            >{{ gameTime }}</span
+          >
         </div>
       </div>
 
@@ -27,7 +34,10 @@
           <div class="waiting-text">等待其他玩家...</div>
         </div>
 
-        <div v-if="gamePhase === 'playing' && !myAlive && respawnSec > 0" class="overlay respawn-overlay">
+        <div
+          v-if="gamePhase === 'playing' && !myAlive && respawnSec > 0"
+          class="overlay respawn-overlay"
+        >
           <div class="respawn-text">{{ respawnSec }} 秒后复活</div>
         </div>
 
@@ -39,15 +49,14 @@
           </div>
         </div>
       </div>
-
-      <div id="online-btn-group">
-        <button class="ctrl-btn" @click="toggleFullscreen">全屏</button>
-        <button class="ctrl-btn" @click="backToRoom">退出</button>
-      </div>
-      <div class="ctrl-hint">方向键/WASD 移动 · 空格/J 射击 · K/L 放雷 · 8分钟决胜 · 可随时退出</div>
     </div>
 
     <div id="online-player-panel">
+      <div class="ctrl-hint">
+        <p>方向键/WASD 移动</p>
+        <p>J 射击 K放雷</p>
+        <p>8分钟决胜 可随时退出</p>
+      </div>
       <div class="panel-title">玩家列表</div>
       <div class="panel-list">
         <div
@@ -59,10 +68,16 @@
           <span class="panel-rank">{{ idx + 1 }}</span>
           <span class="panel-color" :style="{ background: p.color }"></span>
           <span class="panel-name">{{ p.username }}</span>
-          <span class="panel-hp">{{ p.alive ? `HP:${Math.ceil(p.hp)}` : deathLabel(p) }}</span>
+          <span class="panel-hp">{{
+            p.alive ? `HP:${Math.ceil(p.hp)}` : deathLabel(p)
+          }}</span>
           <span class="panel-score">{{ p.score }}分</span>
           <span class="panel-kd">{{ p.kills }}杀{{ p.deaths }}淘汰</span>
         </div>
+      </div>
+      <div id="online-btn-group">
+        <button class="ctrl-btn" @click="toggleFullscreen">全屏</button>
+        <button class="ctrl-btn exit" @click="backToRoom">退出</button>
       </div>
       <div class="panel-room-info">
         <span>房间: {{ roomId }}</span>
@@ -115,10 +130,12 @@ function deathLabel(p) {
 function buildBuffs(me, gtMs) {
   if (!me || !me.alive) return [];
   const arr = [];
-  if (me.shieldT > gtMs) arr.push(`🛡️${Math.ceil((me.shieldT - gtMs) / 1000)}s`);
+  if (me.shieldT > gtMs)
+    arr.push(`🛡️${Math.ceil((me.shieldT - gtMs) / 1000)}s`);
   if (me.fireT > gtMs) arr.push(`⚡${Math.ceil((me.fireT - gtMs) / 1000)}s`);
   if (me.speedT > gtMs) arr.push(`💨${Math.ceil((me.speedT - gtMs) / 1000)}s`);
-  if (me.spreadT > gtMs) arr.push(`✨${Math.ceil((me.spreadT - gtMs) / 1000)}s`);
+  if (me.spreadT > gtMs)
+    arr.push(`✨${Math.ceil((me.spreadT - gtMs) / 1000)}s`);
   if (me.drones > 0) arr.push(`🚁${me.drones}`);
   if (me.bounces) arr.push("🔄");
   return arr;
@@ -150,7 +167,9 @@ onUnmounted(() => {
   cleanupOnlineEngine();
   removeKeyboard();
   if (socket._bvHandlers) {
-    Object.entries(socket._bvHandlers).forEach(([ev, fn]) => socket.off(ev, fn));
+    Object.entries(socket._bvHandlers).forEach(([ev, fn]) =>
+      socket.off(ev, fn),
+    );
     socket._bvHandlers = null;
   }
 });
@@ -203,12 +222,17 @@ function setupSocketListeners() {
     },
     "game-state": (data) => {
       updateServerState(data, null);
-      aliveCount.value = data.tanks ? data.tanks.filter((t) => t.alive).length : 0;
+      aliveCount.value = data.tanks
+        ? data.tanks.filter((t) => t.alive).length
+        : 0;
       remotePlayers.value = data.tanks || [];
-      const me = data.tanks ? data.tanks.find((t) => t.id === mySocketId.value) : null;
+      const me = data.tanks
+        ? data.tanks.find((t) => t.id === mySocketId.value)
+        : null;
       myMines.value = me ? me.mines || 0 : 0;
       myAlive.value = me ? !!me.alive : false;
-      respawnSec.value = me && !me.alive ? Math.ceil((me.respawnIn || 0) / 1000) : 0;
+      respawnSec.value =
+        me && !me.alive ? Math.ceil((me.respawnIn || 0) / 1000) : 0;
       myBuffs.value = buildBuffs(me, data.gtMs || 0);
       if (data.gtMs) {
         const mins = Math.floor(data.gtMs / 60000);
@@ -227,7 +251,11 @@ function setupSocketListeners() {
         gameOverText.value = "对战结束";
       }
       gameOverStats.value = data.players
-        ? data.players.map((p) => `${p.username}: ${p.score}分(${p.kills}杀${p.deaths}淘汰)`).join("　")
+        ? data.players
+            .map(
+              (p) => `${p.username}: ${p.score}分(${p.kills}杀${p.deaths}淘汰)`,
+            )
+            .join("　")
         : "";
     },
     "player-left": (data) => {
@@ -267,7 +295,9 @@ function removeKeyboard() {
 
 function onKeyDown(e) {
   const code = e.code;
-  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(code)) {
+  if (
+    ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(code)
+  ) {
     e.preventDefault();
   }
   if ((code === "KeyK" || code === "KeyL") && gamePhase.value === "playing") {
@@ -280,7 +310,9 @@ function onKeyDown(e) {
       mine: true,
     });
     minePulse = true;
-    setTimeout(() => { minePulse = false; }, 100);
+    setTimeout(() => {
+      minePulse = false;
+    }, 100);
   }
   keysDown.add(code);
 }
@@ -413,8 +445,15 @@ function backToRoom() {
 }
 
 @keyframes countPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.8; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
 }
 
 .waiting-text {
@@ -462,10 +501,12 @@ function backToRoom() {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  justify-content: space-around;
+  margin-bottom: 10px;
 }
 
 .ctrl-btn {
-  padding: 6px 16px;
+  padding: 8px 20px;
   background: #3a4a3a;
   color: #ccc;
   border: none;
@@ -476,6 +517,11 @@ function backToRoom() {
 
 .ctrl-btn:hover {
   background: #4a5a4a;
+}
+.ctrl-hint {
+  padding: 10px;
+  color: #ffeaa7;
+  font-size: 16px;
 }
 
 #online-player-panel {

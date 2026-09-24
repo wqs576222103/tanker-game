@@ -6,7 +6,34 @@ class RoomManager {
   constructor() {
     this.rooms = new Map();
     this.matchQueue = [];
+    this.onlineUsers = new Map();
     this._matchTimer = null;
+  }
+
+  registerUser(socketId, userInfo) {
+    this.onlineUsers.set(socketId, {
+      socketId,
+      employeeId: userInfo.employeeId || "",
+      username: userInfo.username || "匿名",
+      registeredAt: Date.now(),
+    });
+  }
+
+  unregisterUser(socketId) {
+    this.onlineUsers.delete(socketId);
+  }
+
+  getOnlineUser(socketId) {
+    return this.onlineUsers.get(socketId) || null;
+  }
+
+  getOnlineUsers() {
+    return Array.from(this.onlineUsers.values()).map((u) => ({
+      socketId: u.socketId,
+      employeeId: u.employeeId,
+      username: u.username,
+      inRoom: !!this.getRoomBySocket(u.socketId),
+    }));
   }
 
   startMatchLoop(io) {
@@ -135,6 +162,13 @@ class RoomManager {
   }
 
   joinRoom(socketId, roomId, userInfo) {
+    const existingRoomId = this.rooms.get(socketId);
+    if (existingRoomId && existingRoomId !== roomId) {
+      return { error: "你已在其他房间中" };
+    }
+    if (existingRoomId === roomId) {
+      return { error: "你已在该房间中" };
+    }
     const room = this.rooms.get(`room:${roomId}`);
     if (!room) return { error: "房间不存在" };
     if (room.players.size >= MAX_PLAYERS) return { error: "房间已满" };

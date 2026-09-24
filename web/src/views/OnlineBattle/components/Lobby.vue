@@ -163,6 +163,11 @@
               </button>
             </div>
             <div v-else class="room-hint">等待更多玩家加入...</div>
+            <div class="room-actions invite-row">
+              <button class="btn-invite" @click="openInviteModal">
+                邀请在线玩家
+              </button>
+            </div>
             <button class="btn-leave" @click="leaveRoom">离开房间</button>
           </div>
           <div v-else>
@@ -236,6 +241,15 @@
         </div>
       </div>
     </div>
+
+    <InvitePlayersModal
+      v-if="showInviteModal"
+      :users="onlineUsers"
+      :invited-ids="invitedIds"
+      :my-socket-id="mySocketId"
+      @close="showInviteModal = false"
+      @invite="invitePlayer"
+    />
   </div>
 </template>
 
@@ -244,7 +258,9 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { getSocket, disconnectSocket } from "@/utils/socket";
 import { getUserInfo } from "@/utils/user";
+import { inviteStore } from "@/utils/inviteStore";
 import { getOnlineBattleRooms } from "@/api/onlineBattle";
+import InvitePlayersModal from "@/components/InvitePlayersModal.vue";
 
 const router = useRouter();
 
@@ -264,6 +280,9 @@ const matchElapsed = ref(0);
 const battleStarting = ref(false);
 const toastMsg = ref("");
 const copied = ref(false);
+const onlineUsers = ref([]);
+const showInviteModal = ref(false);
+const invitedIds = ref([]);
 let matchTimer = null;
 let toastTimer = null;
 
@@ -301,7 +320,15 @@ onMounted(() => {
   mySocketId.value = socket.id;
   setupSocketListeners();
   fetchRecentGames();
-  socket.emit("get-my-room");
+  socket.emit("register-user", { userInfo: _getUserInfoPayload() });
+  if (inviteStore.autoJoinRoomId) {
+    const rid = inviteStore.autoJoinRoomId;
+    inviteStore.autoJoinRoomId = "";
+    socket.emit("join-room", { roomId: rid, userInfo: _getUserInfoPayload() });
+  } else {
+    socket.emit("get-my-room");
+  }
+  socket.emit("get-online-users");
 });
 
 onUnmounted(() => {
@@ -322,6 +349,7 @@ function setupSocketListeners() {
       roomPlayers.value = data.players;
       mySocketId.value = socket.id;
       errorMsg.value = "";
+      inviteStore.pending = null;
     },
     "queue-joined": () => {
       matching.value = true;
@@ -340,6 +368,7 @@ function setupSocketListeners() {
       mySocketId.value = socket.id;
       errorMsg.value = "";
       roomName.value = generateRoomName();
+      inviteStore.pending = null;
       socket.emit("get-rooms");
     },
     "room-joined": (data) => {
@@ -349,6 +378,8 @@ function setupSocketListeners() {
       roomPlayers.value = data.players;
       mySocketId.value = socket.id;
       errorMsg.value = "";
+      inviteStore.pending = null;
+      showInviteModal.value = false;
     },
     "player-joined": (data) => {
       roomPlayers.value = data.players;
@@ -409,6 +440,27 @@ function setupSocketListeners() {
     },
     reminded: (data) => {
       showToast(data.message || "房主提醒您准备！");
+    },
+    "online-users": (data) => {
+      onlineUsers.value = data.users || [];
+    },
+    "online-users-updated": (data) => {
+      onlineUsers.value = data.users || [];
+    },
+    "invite-sent": (data) => {
+      if (
+        data?.targetSocketId &&
+        !invitedIds.value.includes(data.targetSocketId)
+      ) {
+        invitedIds.value.push(data.targetSocketId);
+      }
+      showToast("邀请已发送");
+    },
+    "invite-error": (data) => {
+      showToast(data.message || "邀请失败");
+    },
+    "invite-declined": (data) => {
+      showToast(data.message || "对方拒绝了邀请");
     },
   };
   Object.entries(lobbyHandlers).forEach(([ev, fn]) => socket.on(ev, fn));
@@ -480,6 +532,17 @@ function joinRoom() {
 function startBattle() {
   if (!socket) return;
   socket.emit("start-battle");
+}
+
+function openInviteModal() {
+  invitedIds.value = [];
+  showInviteModal.value = true;
+  if (socket) socket.emit("get-online-users");
+}
+
+function invitePlayer(targetSocketId) {
+  if (!socket || !targetSocketId) return;
+  socket.emit("invite-player", { targetSocketId });
 }
 
 function toggleReady() {
@@ -782,6 +845,27 @@ function formatTime(timeStr) {
   border-radius: 4px;
   cursor: pointer;
   width: 100%;
+}
+
+.invite-row {
+  margin-top: 4px;
+}
+
+.btn-invite {
+  width: 100%;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #45b7d1, #96ceb4);
+  color: #1a2118;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.btn-invite:hover {
+  transform: scale(1.02);
 }
 
 .join-form {
