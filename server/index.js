@@ -9,6 +9,7 @@ const battleRecordRouter = require("./api/battleRecord");
 const levelRecordRouter = require("./api/levelRecord");
 const mapRouter = require("./api/map");
 const onlineBattleRouter = require("./api/onlineBattle");
+const { ensureSchemaColumns } = require("./db");
 const { setupSocket } = require("./socket");
 
 const app = new Koa();
@@ -29,4 +30,7 @@ setupSocket(server);
 
 server.listen(PORT, () => {
   console.log(`server listening on http://localhost:${PORT}`);
+  ensureSchemaColumns().catch((err) => {
+    console.error(`[db] 数据表字段检查失败: ${err.message}`);
+  });
 });

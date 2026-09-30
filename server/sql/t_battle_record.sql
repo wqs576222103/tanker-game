@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS `t_battle_record_detail` (
   `kills` INT NOT NULL DEFAULT 0 COMMENT '击杀数',
   `deaths` INT NOT NULL DEFAULT 0 COMMENT '死亡数',
   `death_reason` VARCHAR(256) NOT NULL DEFAULT '' COMMENT '最后淘汰原因',
+  `quit_mid_game` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否中途退出 1=是 0=否',
   `is_winner` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否获胜者',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

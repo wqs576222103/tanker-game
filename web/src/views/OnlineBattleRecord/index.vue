@@ -19,7 +19,9 @@
     <div class="record-list">
       <div v-if="loading" class="loading">加载中...</div>
       <div v-else-if="error" class="error">{{ error }}</div>
-      <div v-else-if="filteredRecords.length === 0" class="empty">暂无对战记录</div>
+      <div v-else-if="filteredRecords.length === 0" class="empty">
+        暂无对战记录
+      </div>
       <div v-else class="list">
         <div
           v-for="item in filteredRecords"
@@ -47,8 +49,11 @@
               class="mini-player"
               :class="{ 'is-winner': p.is_winner }"
             >
-              <span class="mp-name">{{ p.username || p.tank_name || "匿名" }}</span>
+              <span class="mp-name">{{
+                p.username || p.tank_name || "匿名"
+              }}</span>
               <span class="mp-kd">{{ p.kills }}杀{{ p.deaths }}亡</span>
+              <span v-if="isQuitter(p)" class="mp-quit">中途退出</span>
             </div>
           </div>
           <div class="record-arrow">›</div>
@@ -85,7 +90,11 @@
             </div>
             <div class="detail-meta">
               <span>房间：{{ detailData.room.room_id }}</span>
-              <span>时长：{{ formatDuration(detailData.room.game_duration_ms) }}</span>
+              <span
+                >时长：{{
+                  formatDuration(detailData.room.game_duration_ms)
+                }}</span
+              >
               <span>{{ formatTime(detailData.room.create_time) }}</span>
             </div>
           </div>
@@ -101,6 +110,7 @@
               <div class="player-info">
                 <div class="player-name">
                   <span v-if="p.is_winner" class="win-tag">胜</span>
+                  <span v-if="isQuitter(p)" class="quit-tag">中途退出</span>
                   {{ p.username || p.tank_name || "匿名" }}
                 </div>
                 <div class="player-id">{{ p.employee_id || "-" }}</div>
@@ -217,6 +227,11 @@ function formatDuration(ms) {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function isQuitter(p) {
+  if (!p) return false;
+  return Number(p.quit_mid_game) === 1 || p.death_reason === "中途退出";
 }
 
 function goBack() {
@@ -438,6 +453,15 @@ onMounted(fetchData);
   font-weight: bold;
 }
 
+.mp-quit {
+  font-size: 10px;
+  color: #ff9f9f;
+  border: 1px solid rgba(255, 159, 159, 0.5);
+  border-radius: 3px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
 .record-arrow {
   font-size: 20px;
   color: #3a5a3a;
@@ -618,6 +642,15 @@ onMounted(fetchData);
   font-size: 10px;
   color: #0a0f08;
   background: #c8a84e;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 4px;
+}
+
+.quit-tag {
+  font-size: 10px;
+  color: #ffd0d0;
+  background: rgba(180, 60, 60, 0.7);
   padding: 1px 5px;
   border-radius: 3px;
   margin-right: 4px;

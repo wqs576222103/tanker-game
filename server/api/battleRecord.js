@@ -28,7 +28,7 @@ async function saveBattleRecord({ winnerName, winnerEmployeeId, totalPlayers, ga
     const recordId = result.insertId;
 
     if (players && players.length > 0) {
-      const placeholders = players.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, NOW())").join(", ");
+      const placeholders = players.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())").join(", ");
       const flatValues = [];
       for (const p of players) {
         flatValues.push(
@@ -39,11 +39,12 @@ async function saveBattleRecord({ winnerName, winnerEmployeeId, totalPlayers, ga
           p.kills || 0,
           p.deaths || 0,
           p.deathReason || "",
+          p.quitMidGame ? 1 : 0,
           p.isWinner ? 1 : 0,
         );
       }
       await conn.execute(
-        `INSERT INTO \`${DETAIL_TABLE}\` (record_id, employee_id, tank_name, score, kills, deaths, death_reason, is_winner, create_time)
+        `INSERT INTO \`${DETAIL_TABLE}\` (record_id, employee_id, tank_name, score, kills, deaths, death_reason, quit_mid_game, is_winner, create_time)
          VALUES ${placeholders}`,
         flatValues,
       );
@@ -207,7 +208,7 @@ router.get("/:id", async (ctx) => {
 
     const [details] = await getPool().execute(
       `SELECT d.employee_id, d.tank_name, d.score, d.kills, d.deaths,
-              d.death_reason, d.is_winner, u.username
+              d.death_reason, d.quit_mid_game, d.is_winner, u.username
        FROM \`${DETAIL_TABLE}\` d
        LEFT JOIN \`${USER_TABLE}\` u ON d.employee_id = u.employee_id
        WHERE d.record_id = ?
@@ -237,7 +238,7 @@ router.get("/employee/:employeeId", async (ctx) => {
 
     const [rows] = await getPool().execute(
       `SELECT d.id, d.record_id, d.tank_name, d.score, d.kills, d.deaths,
-              d.death_reason, d.is_winner, d.create_time
+              d.death_reason, d.quit_mid_game, d.is_winner, d.create_time
        FROM \`${DETAIL_TABLE}\` d
        WHERE d.employee_id = ?
        ORDER BY d.create_time DESC

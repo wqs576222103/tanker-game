@@ -21,6 +21,17 @@ function assertIdentifier(name) {
 
 let pool = null;
 
+const COLUMN_SPECS = [
+  [
+    process.env.DB_ONLINE_PLAYER_TABLE || "t_online_battle_player",
+    "quit_mid_game",
+  ],
+  [
+    process.env.DB_BATTLE_DETAIL_TABLE || "t_battle_record_detail",
+    "quit_mid_game",
+  ],
+];
+
 function getPool() {
   if (!pool) {
     pool = mysql.createPool(config);
@@ -28,4 +39,25 @@ function getPool() {
   return pool;
 }
 
-module.exports = { getPool, assertIdentifier };
+async function ensureSchemaColumns() {
+  const conn = await getPool().getConnection();
+  try {
+    for (const [table, column] of COLUMN_SPECS) {
+      assertIdentifier(table);
+      const [rows] = await conn.execute(
+        `SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+        [table, column],
+      );
+      if (rows[0].cnt > 0) continue;
+      await conn.execute(
+        `ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否中途退出 1=是 0=否'`,
+      );
+      console.log(`[db] 表 ${table} 已新增字段 ${column}`);
+    }
+  } finally {
+    conn.release();
+  }
+}
+
+module.exports = { getPool, assertIdentifier, ensureSchemaColumns };

@@ -196,7 +196,7 @@ export function placeGates() {
   window.gates = [];
   const colors = ["#58a6ff", "#c084fc", "#fb923c"];
   const mkGate = (c1, r1, c2, r2, pair, color) => {
-    const g = { cells: [], partner: null, pair, color };
+    const g = { cells: [], partner: null, pair, pairId: pair, color };
     for (let r = r1; r <= r2; r++)
       for (let c = c1; c <= c2; c++) {
         window.map[r][c] = GATE;
@@ -207,8 +207,22 @@ export function placeGates() {
   };
   const gA = mkGate(1, 14, 1, 14, "h", colors[0]),
     gB = mkGate(COLS - 2, 14, COLS - 2, 14, "h", colors[0]);
-  const gC = mkGate(Math.floor(COLS / 2), 1, Math.floor(COLS / 2), 1, "v", colors[1]),
-    gD = mkGate(Math.floor(COLS / 2), 28, Math.floor(COLS / 2), 28, "v", colors[1]);
+  const gC = mkGate(
+      Math.floor(COLS / 2),
+      1,
+      Math.floor(COLS / 2),
+      1,
+      "v",
+      colors[1],
+    ),
+    gD = mkGate(
+      Math.floor(COLS / 2),
+      28,
+      Math.floor(COLS / 2),
+      28,
+      "v",
+      colors[1],
+    );
   gA.partner = gB;
   gB.partner = gA;
   gC.partner = gD;

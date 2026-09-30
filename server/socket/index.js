@@ -441,6 +441,7 @@ async function _saveRecord(roomId, result) {
         kills: t.kills,
         deaths: t.deaths,
         deathReason: t.lastDeathReason,
+        quitMidGame: !!t.quitMidGame,
         isWinner: result.winner && result.winner.id === t.id,
       })),
     });

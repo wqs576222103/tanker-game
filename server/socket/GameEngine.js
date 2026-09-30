@@ -12,6 +12,8 @@ const {
   DRONE_MAX, DRONE_RANGE, DRONE_FIRE_CD, DRONE_SEARCH_CD,
 } = require("../shared/constants");
 
+const QUIT_MID_GAME_REASON = "中途退出";
+
 class GameEngine {
   constructor(roomId, players) {
     this.roomId = roomId;
@@ -363,7 +365,7 @@ class GameEngine {
       score: 0,
       kills: tank.kills || 0,
       deaths: tank.deaths || 0,
-      lastDeathReason: tank.lastDeathReason || "",
+      lastDeathReason: QUIT_MID_GAME_REASON,
       quitMidGame: true,
     });
   }
@@ -1032,7 +1034,12 @@ class GameEngine {
     const collectQuitter = (q) => {
       if (!q || !q.id || quitIds.has(q.id)) return;
       quitIds.add(q.id);
-      quitters.push({ ...q, score: 0, quitMidGame: true });
+      quitters.push({
+        ...q,
+        score: 0,
+        quitMidGame: true,
+        lastDeathReason: QUIT_MID_GAME_REASON,
+      });
     };
     this.quitters.forEach(collectQuitter);
     (Array.isArray(opts.quitters) ? opts.quitters : []).forEach(collectQuitter);
@@ -1058,6 +1065,7 @@ class GameEngine {
           kills: t.kills || 0,
           deaths: t.deaths || 0,
           deathReason: t.lastDeathReason || "",
+          quitMidGame: !!t.quitMidGame,
           isWinner: winner && winner.id === t.id,
         })),
         gameDurationMs: Math.floor(this.gtMs),

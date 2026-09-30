@@ -21,7 +21,7 @@ async function saveOnlineBattleRecord({ roomId, winnerEmployeeId, winnerName, pl
     );
 
     if (players && players.length > 0) {
-      const placeholders = players.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())").join(", ");
+      const placeholders = players.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())").join(", ");
       const flatValues = [];
       for (const p of players) {
         flatValues.push(
@@ -34,11 +34,12 @@ async function saveOnlineBattleRecord({ roomId, winnerEmployeeId, winnerName, pl
           p.kills || 0,
           p.deaths || 0,
           p.deathReason || "",
+          p.quitMidGame ? 1 : 0,
           p.isWinner ? 1 : 0,
         );
       }
       await conn.execute(
-        `INSERT INTO \`${PLAYER_TABLE}\` (room_id, employee_id, username, tank_name, team_id, score, kills, deaths, death_reason, is_winner, create_time)
+        `INSERT INTO \`${PLAYER_TABLE}\` (room_id, employee_id, username, tank_name, team_id, score, kills, deaths, death_reason, quit_mid_game, is_winner, create_time)
          VALUES ${placeholders}`,
         flatValues,
       );
@@ -83,7 +84,7 @@ router.get("/rooms", async (ctx) => {
       const placeholders = roomIds.map(() => "?").join(", ");
       const [playerRows] = await getPool().execute(
         `SELECT room_id, employee_id, username, tank_name, team_id, score,
-                kills, deaths, death_reason, is_winner
+                kills, deaths, death_reason, quit_mid_game, is_winner
          FROM \`${PLAYER_TABLE}\`
          WHERE room_id IN (${placeholders})
          ORDER BY score DESC`,
@@ -122,7 +123,7 @@ router.get("/room/:roomId", async (ctx) => {
 
     const [players] = await getPool().execute(
       `SELECT p.employee_id, p.username, p.tank_name, p.team_id, p.score,
-              p.kills, p.deaths, p.death_reason, p.is_winner
+              p.kills, p.deaths, p.death_reason, p.quit_mid_game, p.is_winner
        FROM \`${PLAYER_TABLE}\` p
        WHERE p.room_id = ?
        ORDER BY p.score DESC`,

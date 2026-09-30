@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS `t_online_battle_player` (
   `kills` INT DEFAULT 0 COMMENT '击杀数',
   `deaths` INT DEFAULT 0 COMMENT '死亡数',
   `death_reason` VARCHAR(256) DEFAULT '' COMMENT '死亡原因',
+  `quit_mid_game` TINYINT(1) DEFAULT 0 COMMENT '是否中途退出 1=是 0=否',
   `is_winner` TINYINT(1) DEFAULT 0 COMMENT '是否胜利',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

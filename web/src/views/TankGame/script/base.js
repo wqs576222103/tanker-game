@@ -296,9 +296,9 @@ export function playMp3(url) {
   try {
     const a = new Audio(url);
     a.volume = 0.6;
-    a.play().catch(() => { });
+    a.play().catch(() => {});
     return a;
-  } catch (e) { }
+  } catch (e) {}
 }
 
 // 背景音乐：仅在未开始游戏（开始/结束界面）时播放，每隔5秒播放一次
@@ -314,16 +314,16 @@ export function playBgm() {
       bgmAudio.volume = 0.35;
     }
     bgmAudio.currentTime = 0;
-    bgmAudio.play().catch(() => { });
+    bgmAudio.play().catch(() => {});
     if (!bgmTimer) {
       bgmTimer = setInterval(() => {
         if (!sfxEnabled || state === "playing" || deathSoundTimer) return;
         const a = new Audio(bgmMp3);
         a.volume = 0.35;
-        a.play().catch(() => { });
+        a.play().catch(() => {});
       }, 10000);
     }
-  } catch (e) { }
+  } catch (e) {}
 }
 export function stopBgm() {
   try {
@@ -335,7 +335,7 @@ export function stopBgm() {
       bgmAudio.pause();
       bgmAudio.currentTime = 0;
     }
-  } catch (e) { }
+  } catch (e) {}
 }
 
 export function sfx(type) {
@@ -368,7 +368,7 @@ export function sfx(type) {
     g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
     o.start(t);
     o.stop(t + p[1]);
-  } catch (e) { }
+  } catch (e) {}
 }
 
 // ====================== 地图 ======================
@@ -539,11 +539,15 @@ export function connectivityOk() {
 }
 
 export function placeGates() {
-  if (window.tutorialGateBlock) { gates = []; window.gates = gates; return; }
+  if (window.tutorialGateBlock) {
+    gates = [];
+    window.gates = gates;
+    return;
+  }
   gates = [];
   const colors = ["#58a6ff", "#c084fc", "#fb923c"];
   const mkGate = (c1, r1, c2, r2, pair, color) => {
-    const g = { cells: [], partner: null, pair, color };
+    const g = { cells: [], partner: null, pair, pairId: pair, color };
     for (let r = r1; r <= r2; r++)
       for (let c = c1; c <= c2; c++) {
         map[r][c] = GATE;
@@ -554,8 +558,22 @@ export function placeGates() {
   };
   const gA = mkGate(1, 14, 1, 14, "h", colors[0]),
     gB = mkGate(COLS - 2, 14, COLS - 2, 14, "h", colors[0]);
-  const gC = mkGate(Math.floor(COLS / 2), 1, Math.floor(COLS / 2), 1, "v", colors[1]),
-    gD = mkGate(Math.floor(COLS / 2), 28, Math.floor(COLS / 2), 28, "v", colors[1]);
+  const gC = mkGate(
+      Math.floor(COLS / 2),
+      1,
+      Math.floor(COLS / 2),
+      1,
+      "v",
+      colors[1],
+    ),
+    gD = mkGate(
+      Math.floor(COLS / 2),
+      28,
+      Math.floor(COLS / 2),
+      28,
+      "v",
+      colors[1],
+    );
   gA.partner = gB;
   gB.partner = gA;
   gC.partner = gD;
@@ -833,7 +851,7 @@ export function spawnEnemy(instant) {
       : Math.min(55 + diff * 10, 88);
   t.hp = baseEnemyHp;
   t.maxHp = baseEnemyHp;
-  t.invincible = window.tutorialMode ? 0 : (instant ? 300 : 800);
+  t.invincible = window.tutorialMode ? 0 : instant ? 300 : 800;
   tanks.push(t);
   sfx("enemy");
 }
@@ -1284,7 +1302,9 @@ export function updateMines(dt) {
       }
     }
     if (!m.dead && boss && boss.alive) {
-      if (TankActions.rectHit({ x: boss.x, y: boss.y, w: boss.w, h: boss.h }, m)) {
+      if (
+        TankActions.rectHit({ x: boss.x, y: boss.y, w: boss.w, h: boss.h }, m)
+      ) {
         explodeMine(m);
       }
     }
@@ -1899,7 +1919,7 @@ export function updateHud() {
     if (player.drones > 0)
       arr.push(
         "🚁×" +
-        Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
+          Math.min(player.drones, ITEMS.find((i) => i.id === "drone").max),
       );
     if (player.bounces) arr.push("🔄");
     buff.textContent = arr.length ? arr.join(" ") : "";
@@ -2189,34 +2209,37 @@ export function initGame() {
         .map(
           (r, i) => `
       <div class="log-item">
-        <div class="log-header">淘汰 #${i + 1} - ${r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
-            } - ${r.deathReason}</div>
+        <div class="log-header">淘汰 #${i + 1} - ${
+          r.type === "ai" ? `🤖 ${r.aiName || "AI"}` : "🎮 玩家"
+        } - ${r.deathReason}</div>
         <div class="log-detail">时间: <span>${new Date(r.timestamp).toLocaleString()}</span></div>
         <div class="log-detail">击杀: <span>${r.kills ?? 0}</span></div>
         <div class="log-detail">Boss击杀: <span>${r.bossKills ?? 0}</span></div>
         <div class="log-detail">位置: <span>(${Math.round(r.playerState.x)}, ${Math.round(r.playerState.y)})</span></div>
-        ${r.type === "ai"
-              ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
-              : ""
-            }
+        ${
+          r.type === "ai"
+            ? `<div class="log-detail">躲避中: <span>${r.aiState.wasDodging ? "是" : "否"}</span></div>`
+            : ""
+        }
         <div class="log-detail">环境 - 敌人数: <span>${r.surroundings.enemyCount}</span> | 子弹数: <span>${r.surroundings.bulletCount}</span></div>
         ${r.surroundings.threatBullets.length > 0 ? `<div class="log-detail">威胁子弹: <span>${r.surroundings.threatBullets.length}个</span></div>` : ""}
-        ${r.type === "ai" && r.decisionLog.length > 0
-              ? `
+        ${
+          r.type === "ai" && r.decisionLog.length > 0
+            ? `
           <div class="log-decisions">
             <div style="margin-bottom:4px;font-weight:bold">决策历史 (最近${r.decisionLog.length}次):</div>
             ${r.decisionLog
-                .slice(-5)
-                .map(
-                  (d) => `
+              .slice(-5)
+              .map(
+                (d) => `
               <div>[${d.time.toFixed(1)}s] ${d.action}</div>
             `,
-                )
-                .join("")}
+              )
+              .join("")}
           </div>
         `
-              : ""
-            }
+            : ""
+        }
       </div>
     `,
         )

@@ -394,13 +394,13 @@ export const TankActions = {
           g.partner &&
           wasOutside &&
           gtMs - b.born > 60 &&
-          b.tpPair !== g.pairId
+          b.tpPair !== (g.pairId ?? g.pair)
         ) {
           const cen = centerOf(g.partner.cells[0].c, g.partner.cells[0].r);
           b.x = cen.x;
           b.y = cen.y;
           b.tp = true;
-          b.tpPair = g.pairId;
+          b.tpPair = g.pairId ?? g.pair;
           spawnExplosion(cen.x, cen.y, 14, g.color || "#58a6ff");
           sfx("tp");
           continue;

@@ -265,7 +265,10 @@ function setupSocketListeners() {
       gameOverStats.value = data.players
         ? data.players
             .map(
-              (p) => `${p.username}: ${p.score}分(${p.kills}杀${p.deaths}淘汰)`,
+              (p) =>
+                `${p.username}: ${p.score}分(${p.kills}杀${p.deaths}淘汰)${
+                  p.quitMidGame ? " 中途退出" : ""
+                }`,
             )
             .join("　")
         : "";
