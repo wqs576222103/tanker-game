@@ -37,7 +37,8 @@
           ><br />
         </p>
         <p v-if="!levelMode" style="color: #58a6ff; font-size: 14px">
-          点击下方 “📥 导入AI” 按钮，获取提示词，生成脚本，定制化你的AI坦克。
+          点击下方 “📥 导入AI” 按钮，获取提示词，生成定制化AI坦克，
+          开启⏩加速按钮，加速战斗。
         </p>
         <p v-if="!levelMode" style="color: #58a6ff; font-size: 14px">
           点击 "🗺️ 更换地图"
