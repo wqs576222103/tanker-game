@@ -38,7 +38,7 @@
             <div class="ob-player-stats">
               <span class="ob-stat-score">{{ p.score }}分</span>
               <span class="ob-stat-kills">{{ p.kills }}杀</span>
-              <span class="ob-stat-deaths">{{ p.deaths }}亡</span>
+              <span class="ob-stat-deaths">{{ p.deaths }}淘汰</span>
             </div>
           </div>
         </div>

@@ -228,7 +228,7 @@
                   ·
                   {{
                     game.players
-                      .map((p) => `${p.kills}杀${p.deaths}亡`)
+                      .map((p) => `${p.kills}杀${p.deaths}淘汰`)
                       .join(" / ")
                   }}
                 </template>

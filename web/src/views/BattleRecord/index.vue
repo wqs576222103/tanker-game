@@ -112,7 +112,7 @@
               <div class="player-stats">
                 <span class="stat-score">{{ p.score }}分</span>
                 <span class="stat-kills">{{ p.kills }}杀</span>
-                <span class="stat-deaths">{{ p.deaths }}亡</span>
+                <span class="stat-deaths">{{ p.deaths }}淘汰</span>
               </div>
               <div class="player-reason">{{ p.death_reason || "-" }}</div>
             </div>

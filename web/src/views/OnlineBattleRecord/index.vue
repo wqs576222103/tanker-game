@@ -52,7 +52,7 @@
               <span class="mp-name">{{
                 p.username || p.tank_name || "匿名"
               }}</span>
-              <span class="mp-kd">{{ p.kills }}杀{{ p.deaths }}亡</span>
+              <span class="mp-kd">{{ p.kills }}杀{{ p.deaths }}淘汰</span>
               <span v-if="isQuitter(p)" class="mp-quit">中途退出</span>
             </div>
           </div>
@@ -118,7 +118,7 @@
               <div class="player-stats">
                 <span class="stat-score">{{ p.score }}分</span>
                 <span class="stat-kills">{{ p.kills }}杀</span>
-                <span class="stat-deaths">{{ p.deaths }}亡</span>
+                <span class="stat-deaths">{{ p.deaths }}淘汰</span>
               </div>
             </div>
           </div>
