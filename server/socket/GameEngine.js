@@ -16,6 +16,7 @@ class GameEngine {
   constructor(roomId, players) {
     this.roomId = roomId;
     this.tanks = [];
+    this.quitters = [];
     this.bullets = [];
     this.items = [];
     this.mines = [];
@@ -341,8 +342,30 @@ class GameEngine {
 
   removePlayer(socketId) {
     const idx = this.tanks.findIndex((t) => t.id === socketId);
-    if (idx >= 0) this.tanks.splice(idx, 1);
+    if (idx >= 0) {
+      const tank = this.tanks[idx];
+      if (this.state === "countdown" || this.state === "playing") {
+        this._recordQuitter(tank);
+      }
+      this.tanks.splice(idx, 1);
+    }
     this.drones = this.drones.filter((d) => d.ownerId !== socketId);
+  }
+
+  _recordQuitter(tank) {
+    if (!tank || !tank.id) return;
+    if (this.quitters.some((q) => q.id === tank.id)) return;
+    this.quitters.push({
+      id: tank.id,
+      employeeId: tank.employeeId,
+      username: tank.username,
+      tankName: tank.tankName,
+      score: 0,
+      kills: tank.kills || 0,
+      deaths: tank.deaths || 0,
+      lastDeathReason: tank.lastDeathReason || "",
+      quitMidGame: true,
+    });
   }
 
   rebindPlayer(oldSocketId, newSocketId) {
@@ -1003,16 +1026,25 @@ class GameEngine {
     }
 
     const sorted = [...this.tanks].sort((a, b) => b.score - a.score);
-    const maxScore = sorted[0]?.score || 0;
-    const winners = maxScore > 0 ? sorted.filter((t) => t.score === maxScore) : [];
+
+    const quitIds = new Set();
+    const quitters = [];
+    const collectQuitter = (q) => {
+      if (!q || !q.id || quitIds.has(q.id)) return;
+      quitIds.add(q.id);
+      quitters.push({ ...q, score: 0, quitMidGame: true });
+    };
+    this.quitters.forEach(collectQuitter);
+    (Array.isArray(opts.quitters) ? opts.quitters : []).forEach(collectQuitter);
+
+    const candidates = sorted.filter((t) => !quitIds.has(t.id));
+    const maxScore = candidates[0]?.score || 0;
+    const winners =
+      maxScore > 0 ? candidates.filter((t) => t.score === maxScore) : [];
     const isDraw = winners.length !== 1;
     const winner = isDraw ? null : winners[0];
 
-    const tankIds = new Set(sorted.map((t) => t.id));
-    const quitters = (Array.isArray(opts.quitters) ? opts.quitters : []).filter(
-      (q) => q && q.id && !tankIds.has(q.id),
-    );
-    const allPlayers = [...sorted, ...quitters];
+    const allPlayers = [...candidates, ...quitters];
 
     if (this._broadcastFn) {
       this._broadcastFn("game-over", {

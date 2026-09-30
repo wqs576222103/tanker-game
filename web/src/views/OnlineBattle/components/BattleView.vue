@@ -271,7 +271,12 @@ function setupSocketListeners() {
         : "";
     },
     "player-left": (data) => {
-      remotePlayers.value = data.players || [];
+      const leftId = data && data.socketId;
+      if (leftId) {
+        remotePlayers.value = remotePlayers.value.filter(
+          (p) => p.id !== leftId,
+        );
+      }
     },
     "item-picked": (data) => {
       playItemFx(data);
