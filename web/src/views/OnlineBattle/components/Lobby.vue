@@ -68,7 +68,7 @@
           </div>
         </div>
 
-        <!-- <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div> -->
+        <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
       </div>
 
       <div class="lobby-right">
@@ -418,9 +418,13 @@ function setupSocketListeners() {
       roomPlayers.value = data.players;
     },
     "join-error": (data) => {
-      errorMsg.value = data.message;
+  
       if (data.message && data.message.includes("房间不存在")) {
+        console.error("data.message");
         saveLastRoomId("");
+        errorMsg.value = "";
+      } else {
+        errorMsg.value = data.message;
       }
     },
     "start-error": (data) => {
