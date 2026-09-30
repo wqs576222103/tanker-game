@@ -44,7 +44,7 @@
           </div>
           <div class="record-players">
             <div
-              v-for="(p, i) in item.players"
+              v-for="(p, i) in item.players.filter((pl) => pl.is_winner)"
               :key="i"
               class="mini-player"
               :class="{ 'is-winner': p.is_winner }"

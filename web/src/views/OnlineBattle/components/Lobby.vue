@@ -250,6 +250,12 @@
       @close="showInviteModal = false"
       @invite="invitePlayer"
     />
+    <OnlineBattleDetailModal
+      v-if="showDetailModal"
+      :visible="showDetailModal"
+      :room-id="selectedRoomId"
+      @close="showDetailModal = false"
+    />
   </div>
 </template>
 
@@ -267,6 +273,7 @@ import { resolveUserInfo } from "@/utils/user";
 import { inviteStore } from "@/utils/inviteStore";
 import { getOnlineBattleRooms } from "@/api/onlineBattle";
 import InvitePlayersModal from "@/components/InvitePlayersModal.vue";
+import OnlineBattleDetailModal from "@/components/OnlineBattleDetailModal.vue";
 
 const router = useRouter();
 
@@ -289,6 +296,8 @@ const copied = ref(false);
 const onlineUsers = ref([]);
 const showInviteModal = ref(false);
 const invitedIds = ref([]);
+const showDetailModal = ref(false);
+const selectedRoomId = ref("");
 let matchTimer = null;
 let toastTimer = null;
 
@@ -624,8 +633,8 @@ function goRecords() {
 }
 
 function openRecord(game) {
-  if (inRoom.value) leaveRoom();
-  router.push("/online-battle-record");
+  selectedRoomId.value = game.room_id;
+  showDetailModal.value = true;
 }
 
 function copyRoomId() {
