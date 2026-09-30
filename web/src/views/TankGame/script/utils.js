@@ -284,6 +284,33 @@ export const GameUtils = {
     };
   },
 
+  // 获取天空落石位置（预警阶段与下落阶段）
+  getFallingStonePositions() {
+    const stones =
+      (typeof window !== "undefined" && window.fallingStones) || [];
+    return stones.map((s) => {
+      const warnTotal = s.warnTotal || 1.5;
+      const warning = s.phase === "warning";
+      const warnRemaining = warning
+        ? Math.max(0, warnTotal - (s.warnTimer || 0))
+        : 0;
+      const speed = s.speed || 250;
+      return {
+        x: s.x,
+        y: s.y,
+        groundY: s.groundY,
+        column: Math.floor(s.x / CELL),
+        row: Math.floor(s.groundY / CELL),
+        phase: s.phase,
+        warnRemaining,
+        timeToImpact: warning
+          ? warnRemaining
+          : Math.max(0, s.groundY - s.y) / speed,
+        radius: s.radius || CELL * 1.5,
+      };
+    });
+  },
+
   // 检查指定位置是否被占用
   isPositionOccupied(x, y, excludeTankId) {
     for (const t of tanks) {

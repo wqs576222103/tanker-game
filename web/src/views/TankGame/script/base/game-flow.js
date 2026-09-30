@@ -195,8 +195,10 @@ export function resetGame() {
           g.partner = pairMap[g.pair];
           pairMap[g.pair].pairId = i;
           g.pairId = i;
-          if (!g.color && pairMap[g.pair].color) g.color = pairMap[g.pair].color;
-          if (!pairMap[g.pair].color && g.color) pairMap[g.pair].color = g.color;
+          if (!g.color && pairMap[g.pair].color)
+            g.color = pairMap[g.pair].color;
+          if (!pairMap[g.pair].color && g.color)
+            pairMap[g.pair].color = g.color;
         } else {
           pairMap[g.pair] = g;
         }
@@ -498,6 +500,8 @@ function spawnFallingStone() {
       speed: STONE_SPEED,
       phase: "warning",
       warnTimer: 0,
+      warnTotal: STONE_WARNING,
+      radius: STONE_RADIUS,
     });
   } else {
     // 未配置位置时，随机生成
@@ -518,6 +522,8 @@ function spawnFallingStone() {
       speed: STONE_SPEED,
       phase: "warning",
       warnTimer: 0,
+      warnTotal: STONE_WARNING,
+      radius: STONE_RADIUS,
     });
   }
 }

@@ -36,6 +36,32 @@ function isInGrass(tank) {
     cy >= 0 && cy < ROWS && cx >= 0 && cx < COLS && window.map[cy][cx] === GRASS
   );
 }
+
+function getFallingStoneSnapshot() {
+  const stones = window.fallingStones;
+  if (!stones || !stones.length) return [];
+  return stones.map((s) => {
+    const warnTotal = s.warnTotal || 1.5;
+    const warning = s.phase === "warning";
+    const warnRemaining = warning
+      ? Math.max(0, warnTotal - (s.warnTimer || 0))
+      : 0;
+    const speed = s.speed || 250;
+    return {
+      x: s.x,
+      y: s.y,
+      groundY: s.groundY,
+      column: Math.floor(s.x / CELL),
+      row: Math.floor(s.groundY / CELL),
+      phase: s.phase,
+      warnRemaining,
+      timeToImpact: warning
+        ? warnRemaining
+        : Math.max(0, s.groundY - s.y) / speed,
+      radius: s.radius || CELL * 1.5,
+    };
+  });
+}
 import { getUserInfo } from "@/utils/user";
 import { aiTanks, gameState } from "./gameState.js";
 import { setBattleCtx, drawBattle } from "./draw.js";
@@ -1082,6 +1108,9 @@ export function buildBattleContext(ai) {
             height: window.boss.h,
           };
         },
+        getFallingStonePositions() {
+          return getFallingStoneSnapshot();
+        },
         isPositionOccupied(x, y, excludeTankId) {
           for (const t of window.tanks) {
             if (!t.alive || t.id === excludeTankId || t.id === ownTank.id)
@@ -1536,6 +1565,9 @@ export function buildBattleContext(ai) {
           width: window.boss.w,
           height: window.boss.h,
         };
+      },
+      getFallingStonePositions() {
+        return getFallingStoneSnapshot();
       },
       isPositionOccupied(x, y, excludeTankId) {
         for (const t of window.tanks) {

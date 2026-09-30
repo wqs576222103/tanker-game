@@ -166,6 +166,7 @@ export default {
 | `getItemPositions()`                    | 道具位置                       |
 | `getMinePositions()`                    | 地雷位置                       |
 | `getBossPosition()`                     | Boss 位置（无则 null）         |
+| `getFallingStonePositions()`            | 天空落石位置（无落石返回 `[]`） |
 | `isPositionOccupied(x,y,excludeTankId)` | 位置是否被其它坦克占用         |
 | `isPositionObstacle(x,y)`               | 位置是否为障碍                 |
 | `getCellType(column,row)`               | 取格子类型                     |
@@ -317,3 +318,72 @@ decide(ctx, dt) {
   return result;
 }
 ```
+
+---
+
+## 八、天空落石（fallingStones）
+
+游戏过程中会自动从天空掉落落石：**每 5 秒生成一块**。关卡/自定义地图可通过 `fallingStones` 配置固定落点（循环使用），未配置时随机选择空地落点。
+
+### 生命周期
+
+1. **`warning`（预警）**：持续 **1.5 秒**，落点地面显示红色预警圈，此时石块尚未砸下。
+2. **`falling`（下落）**：以 **250 px/s** 速度竖直下落。
+3. **落地**：对圆心 `radius`（30 像素 = `CELL × 1.5`）范围内的所有坦克造成 **2 点伤害**（玩家、AI、Boss 之外的坦克均会中招），随后石块消失。
+
+> AI 对决（Battle Arena）模式没有落石，该方法恒返回 `[]`。
+
+### `ctx.utils.getFallingStonePositions()`
+
+返回当前场上所有落石，每个元素：
+
+| 字段             | 类型   | 说明                                                             |
+| ---------------- | ------ | ---------------------------------------------------------------- |
+| `x`              | number | 落点中心 X（预警圈圆心 X）                                       |
+| `groundY`        | number | 落点中心 Y（预警圈圆心 Y，伤害判定圆心）                         |
+| `y`              | number | 石块当前 Y（`warning` 阶段在高空，**不可**当作落点）             |
+| `column` , `row` | number | 落点所在格子                                                     |
+| `phase`          | string | `"warning`（预警中）/ `falling`（下落中）"                       |
+| `warnRemaining`  | number | 预警剩余秒数（`falling` 阶段为 0）                               |
+| `timeToImpact`   | number | 预计落地剩余秒数（`warning` 阶段等于 `warnRemaining`）           |
+| `radius`         | number | 伤害半径（像素）                                                 |
+
+### 策略示例：躲避落石
+
+```js
+decide(ctx, dt) {
+  const { player, utils, distance, DIRS, isBlocked } = ctx;
+  if (!player) return {};
+
+  const px = player.x + player.w / 2;
+  const py = player.y + player.h / 2;
+
+  // 已进入某个落石的伤害圈
+  const danger = utils
+    .getFallingStonePositions()
+    .find((s) => distance(px, py, s.x, s.groundY) < s.radius + 10);
+
+  const res = { up: false, down: false, left: false, right: false, fire: true };
+  if (danger) {
+    // 选一个能最快远离落点且可通行的方向
+    let best = null;
+    let bestDist = -1;
+    for (const name of ["up", "down", "left", "right"]) {
+      const d = DIRS[name];
+      if (isBlocked(d)) continue;
+      const nx = px + d.x * 20;
+      const ny = py + d.y * 20;
+      const dist = distance(nx, ny, danger.x, danger.groundY);
+      if (dist > bestDist) {
+        bestDist = dist;
+        best = name;
+      }
+    }
+    if (best) res[best] = true;
+  }
+  return res;
+}
+```
+
+- 落石每 **5 秒**才生成一块，`getFallingStonePositions()` 返回空数组属于正常情况。
+- 预警阶段（`phase === "warning"`）就跑开，比等下落阶段再躲避从容得多；`timeToImpact` 可用于判断是否来得及走开。
