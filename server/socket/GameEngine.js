@@ -682,7 +682,7 @@ class GameEngine {
           if (partner) {
             const pc = partner.cells[0];
             const dir = { x: b.dx / b.speed, y: b.dy / b.speed };
-            if (dir.y !== 0) {
+            if (Math.abs(dir.y) >= Math.abs(dir.x)) {
               b.x = pc.c * CELL + CELL / 2;
               b.y = pc.r * CELL + (dir.y < 0 ? -4 : CELL + 1);
             } else {

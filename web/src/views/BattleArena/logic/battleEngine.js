@@ -657,7 +657,7 @@ function updateBattleBullets(dt) {
           const pc = partner.cells[0];
           const dir = { x: b.dx / b.speed, y: b.dy / b.speed };
           let tx, ty;
-          if (dir.y !== 0) {
+          if (Math.abs(dir.y) >= Math.abs(dir.x)) {
             tx = pc.c * CELL + CELL / 2;
             ty = pc.r * CELL + (dir.y < 0 ? -4 : CELL + 1);
           } else {

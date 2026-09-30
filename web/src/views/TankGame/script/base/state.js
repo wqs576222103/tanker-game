@@ -46,6 +46,7 @@ window.lastBossKills = 0;
 window.shootQueued = false;
 
 window.damageFlash = 0;
+window.damageFlashBlink = false;
 window.itemSpawnTimer = 3;
 window.deathReason = "";
 window.tutorialMode = false;

@@ -453,6 +453,11 @@ function updateFallingStones(dt) {
         const dist = Math.sqrt((stone.x - tx) ** 2 + (stone.y - ty) ** 2);
         if (dist < STONE_RADIUS) {
           t.hp -= 2;
+          t.flash = 300;
+          if (t.isPlayer) {
+            window.damageFlash = 800;
+            window.damageFlashBlink = true;
+          }
           if (t.hp <= 0) {
             t.alive = false;
             if (t.isPlayer) {

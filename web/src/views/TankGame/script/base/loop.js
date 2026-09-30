@@ -36,8 +36,8 @@ export function loop(ts) {
   window.lastTime = ts;
   if (window.state === "playing") update(dt * window.gameSpeed);
   if (window.damageFlash > 0) window.damageFlash -= dt * 1000;
-  if (window.player && window.player.flash > 0)
-    window.player.flash -= dt * 1000;
+  else window.damageFlashBlink = false;
+  for (const t of window.tanks) if (t.flash > 0) t.flash -= dt * 1000;
   updateHud();
 
   drawMap();
@@ -57,7 +57,10 @@ export function loop(ts) {
   drawFloats();
 
   if (window.damageFlash > 0) {
-    window.ctx.strokeStyle = `rgba(255, 0, 0, ${0.4 * Math.min(1, window.damageFlash / 150)})`;
+    let alpha = 0.4 * Math.min(1, window.damageFlash / 150);
+    if (window.damageFlashBlink && Math.floor(window.damageFlash / 90) % 2 === 1)
+      alpha = 0;
+    window.ctx.strokeStyle = `rgba(255, 0, 0, ${alpha})`;
     window.ctx.lineWidth = 12;
     window.ctx.strokeRect(2, 2, W - 4, H - 4);
   }
