@@ -1,5 +1,5 @@
 import { io } from "socket.io-client";
-import { getUserInfo } from "./user";
+import { resolveUserInfo } from "./user";
 import { inviteStore } from "./inviteStore";
 
 let socket = null;
@@ -7,7 +7,7 @@ let socket = null;
 const LAST_ROOM_KEY = "tanke-lastRoomId";
 
 export function userInfoPayload() {
-  const info = getUserInfo();
+  const info = resolveUserInfo();
   return {
     employeeId: info.employeeId || "",
     username: info.username || "匿名",

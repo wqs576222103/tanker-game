@@ -1,8 +1,14 @@
+const ANONYMOUS_NAME_PREFIX = "匿名玩家";
+
+let cachedFingerprint = "";
+
 /**
  * 生成浏览器指纹
  * @returns {string} 基于浏览器特征生成的唯一标识
  */
 export function generateFingerprint() {
+  if (cachedFingerprint) return cachedFingerprint;
+
   const components = [];
 
   // User Agent
@@ -66,7 +72,24 @@ export function generateFingerprint() {
 
   // 生成 hash
   const rawString = components.join("###");
-  return simpleHash(rawString);
+  cachedFingerprint = simpleHash(rawString);
+  return cachedFingerprint;
+}
+
+/**
+ * 获取匿名身份（无 token 且无 employeeId 时使用）
+ * 玩家名称与工号均由浏览器指纹生成
+ * @returns {{ employeeId: string, username: string, tankName: string }}
+ */
+export function getAnonymousIdentity() {
+  const fingerprint = generateFingerprint();
+  const suffix = fingerprint.replace(/^F_/, "");
+  const username = ANONYMOUS_NAME_PREFIX + suffix;
+  return {
+    employeeId: fingerprint,
+    username,
+    tankName: username,
+  };
 }
 
 /**

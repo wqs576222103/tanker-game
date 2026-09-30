@@ -261,8 +261,9 @@ import {
   disconnectSocket,
   saveLastRoomId,
   getLastRoomId,
+  userInfoPayload,
 } from "@/utils/socket";
-import { getUserInfo } from "@/utils/user";
+import { resolveUserInfo } from "@/utils/user";
 import { inviteStore } from "@/utils/inviteStore";
 import { getOnlineBattleRooms } from "@/api/onlineBattle";
 import InvitePlayersModal from "@/components/InvitePlayersModal.vue";
@@ -325,12 +326,12 @@ onMounted(() => {
   mySocketId.value = socket.id;
   setupSocketListeners();
   fetchRecentGames();
-  socket.emit("register-user", { userInfo: _getUserInfoPayload() });
+  socket.emit("register-user", { userInfo: userInfoPayload() });
   if (inviteStore.autoJoinRoomId) {
     const rid = inviteStore.autoJoinRoomId;
     inviteStore.autoJoinRoomId = "";
     saveLastRoomId(rid);
-    socket.emit("join-room", { roomId: rid, userInfo: _getUserInfoPayload() });
+    socket.emit("join-room", { roomId: rid, userInfo: userInfoPayload() });
   } else {
     socket.emit("get-my-room");
     const savedRoomId = getLastRoomId();
@@ -339,7 +340,7 @@ onMounted(() => {
         if (!inRoom.value && socket) {
           socket.emit("join-room", {
             roomId: savedRoomId,
-            userInfo: _getUserInfoPayload(),
+            userInfo: userInfoPayload(),
           });
         }
       }, 150);
@@ -409,10 +410,7 @@ function setupSocketListeners() {
     },
     "join-error": (data) => {
       errorMsg.value = data.message;
-      if (
-        data.message &&
-        data.message.includes("房间不存在")
-      ) {
+      if (data.message && data.message.includes("房间不存在")) {
         saveLastRoomId("");
       }
     },
@@ -516,7 +514,7 @@ function quickMatch() {
   matching.value = true;
   startMatchTimer();
   socket.emit("quick-match", {
-    userInfo: _getUserInfoPayload(),
+    userInfo: userInfoPayload(),
   });
 }
 
@@ -532,7 +530,7 @@ function joinPublicRoom(roomId) {
   errorMsg.value = "";
   socket.emit("join-room", {
     roomId,
-    userInfo: _getUserInfoPayload(),
+    userInfo: userInfoPayload(),
   });
 }
 
@@ -542,7 +540,7 @@ function createRoom() {
   const name = roomName.value.trim() || generateRoomName();
   roomName.value = name;
   socket.emit("create-room", {
-    userInfo: _getUserInfoPayload(),
+    userInfo: userInfoPayload(),
     roomName: name,
   });
 }
@@ -553,7 +551,7 @@ function joinRoom() {
   errorMsg.value = "";
   socket.emit("join-room", {
     roomId,
-    userInfo: _getUserInfoPayload(),
+    userInfo: userInfoPayload(),
   });
 }
 
@@ -668,17 +666,8 @@ function fallbackCopy(text) {
   return ok;
 }
 
-function _getUserInfoPayload() {
-  const info = getUserInfo();
-  return {
-    employeeId: info.employeeId || "",
-    username: info.username || "匿名",
-    tankName: info.username || "坦克",
-  };
-}
-
 function generateRoomName() {
-  const info = getUserInfo();
+  const info = resolveUserInfo();
   const rand = Math.random().toString(36).slice(2, 6);
   return `${info.username || "玩家"}的房间-${rand}`.slice(0, 20);
 }
