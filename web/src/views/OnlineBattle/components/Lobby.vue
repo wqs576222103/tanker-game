@@ -68,7 +68,7 @@
           </div>
         </div>
 
-        <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
+        <!-- <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div> -->
       </div>
 
       <div class="lobby-right">

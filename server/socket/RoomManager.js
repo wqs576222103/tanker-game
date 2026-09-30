@@ -234,6 +234,7 @@ class RoomManager {
         p.username = userInfo.username || p.username;
         p.tankName = userInfo.tankName || p.tankName;
         if (empId) p.employeeId = empId;
+        room.players.set(socketId, p);
         this.rooms.set(socketId, roomId);
         return {
           success: true,
