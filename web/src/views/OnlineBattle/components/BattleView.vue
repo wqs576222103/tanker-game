@@ -160,6 +160,7 @@ onMounted(() => {
   setupCanvas();
   setupSocketListeners();
   setupKeyboard();
+  window.addEventListener("beforeunload", handleBeforeUnload);
   if (socket._pendingGameState) {
     gamePhase.value = "playing";
     updateServerState(null, socket._pendingGameState);
@@ -178,6 +179,7 @@ onUnmounted(() => {
   if (redirectTimer) clearTimeout(redirectTimer);
   cleanupOnlineEngine();
   removeKeyboard();
+  window.removeEventListener("beforeunload", handleBeforeUnload);
   if (socket._bvHandlers) {
     Object.entries(socket._bvHandlers).forEach(([ev, fn]) =>
       socket.off(ev, fn),
@@ -185,6 +187,13 @@ onUnmounted(() => {
     socket._bvHandlers = null;
   }
 });
+
+function handleBeforeUnload(e) {
+  if (gamePhase.value === "playing" || gamePhase.value === "countdown") {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+}
 
 function setupCanvas() {
   const canvas = document.getElementById("online-game");
