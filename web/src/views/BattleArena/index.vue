@@ -88,11 +88,21 @@ function handleImport(files) {
   importAIFiles(files);
 }
 
+function handleBeforeUnload(e) {
+  const s = window.state;
+  if (s === "playing" || s === "paused") {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+}
+
 onMounted(() => {
   initBattleGame(document.getElementById("game"));
+  window.addEventListener("beforeunload", handleBeforeUnload);
 });
 
 onUnmounted(() => {
+  window.removeEventListener("beforeunload", handleBeforeUnload);
   if (window.gameLoopId) {
     cancelAnimationFrame(window.gameLoopId);
     window.gameLoopId = null;

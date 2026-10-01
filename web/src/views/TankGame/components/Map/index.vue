@@ -257,6 +257,7 @@ onMounted(async () => {
   // 每帧检查状态（game loop 中会更新 window.state）
   stateCheckInterval = setInterval(checkState, 100);
   checkState();
+  window.addEventListener("beforeunload", handleBeforeUnload);
   // 有用户信息且查询到已保存的 AI 脚本时，默认加载用户脚本；否则保持默认脚本
   if (employeeId.value) {
     await loadUserAI(employeeId.value);
@@ -265,6 +266,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (stateCheckInterval) clearInterval(stateCheckInterval);
+  window.removeEventListener("beforeunload", handleBeforeUnload);
   // 离开页面时停止游戏循环，避免残留循环与其他页面互相影响（倍速叠加）
   stopGameLoop();
   // 清除导入的地图配置，避免污染其它页面
@@ -272,6 +274,13 @@ onUnmounted(() => {
   window.customEnemySpawns = null;
   window.mapGenerated = false;
 });
+
+function handleBeforeUnload(e) {
+  if (gameState.value === "playing" || gameState.value === "paused") {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+}
 
 // 加载该员工上次导入并保存在服务器的 AI 脚本作为默认AI
 async function loadUserAI(empId) {
