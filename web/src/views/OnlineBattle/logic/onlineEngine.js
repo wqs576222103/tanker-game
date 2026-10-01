@@ -36,6 +36,24 @@ export function setOnlineCtx(ctx) {
   onlineCtx = ctx;
 }
 
+function makeLocalTank(remote) {
+  return {
+    ...remote,
+    w: remote.w || 16,
+    h: remote.h || 16,
+    alive: remote.alive !== false,
+    moveUp: false, moveDown: false, moveLeft: false, moveRight: false,
+    fire: false,
+    fireCd: 0,
+    invincible: remote.invincible || 0,
+    shieldT: remote.shieldT || 0,
+    fireT: remote.fireT || 0,
+    speedT: remote.speedT || 0,
+    spreadT: remote.spreadT || 0,
+    respawnIn: remote.respawnIn || 0,
+  };
+}
+
 export function updateServerState(state, fullState) {
   serverState = state;
   if (fullState) {
@@ -56,16 +74,7 @@ export function updateServerState(state, fullState) {
     localDrones = [];
     window.drones = localDrones;
 
-    localTanks = (fullState.tanks || []).map((t) => ({
-      ...t,
-      alive: true,
-      moveUp: false, moveDown: false, moveLeft: false, moveRight: false,
-      fire: false,
-      fireCd: 0,
-      invincible: 0,
-      shieldT: 0, fireT: 0, speedT: 0, spreadT: 0,
-      respawnIn: 0,
-    }));
+    localTanks = (fullState.tanks || []).map((t) => makeLocalTank(t));
     window.tanks = localTanks;
   }
 
@@ -104,6 +113,8 @@ export function updateServerState(state, fullState) {
         local.respawnIn = remote.respawnIn || 0;
         local.bounces = !!remote.bounces;
         if (remote.tankName) local.tankName = remote.tankName;
+      } else {
+        localTanks.push(makeLocalTank(remote));
       }
     }
     localTanks = localTanks.filter((t) =>

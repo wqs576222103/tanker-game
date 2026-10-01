@@ -1089,6 +1089,8 @@ class GameEngine {
         id: t.id,
         x: Math.round(t.x * 10) / 10,
         y: Math.round(t.y * 10) / 10,
+        w: t.w,
+        h: t.h,
         dir: t.dir,
         dirName: t.dirName,
         hp: Math.round(t.hp * 10) / 10,
