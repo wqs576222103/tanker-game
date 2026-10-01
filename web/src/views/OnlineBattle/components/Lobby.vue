@@ -188,13 +188,20 @@
                     {{ room.playerCount }}/{{ room.maxPlayers }} 人
                   </span>
                 </div>
-                <button
-                  class="btn-enter-room"
-                  :disabled="room.playerCount >= room.maxPlayers || matching"
-                  @click="joinPublicRoom(room.roomId)"
-                >
-                  进入
-                </button>
+                <div class="room-list-actions">
+                  <span
+                    v-if="room.playerCount >= room.maxPlayers"
+                    class="room-full-tip"
+                    >房间已满</span
+                  >
+                  <button
+                    class="btn-enter-room"
+                    :disabled="room.playerCount >= room.maxPlayers || matching"
+                    @click="joinPublicRoom(room.roomId)"
+                  >
+                    进入
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1081,6 +1088,19 @@ function formatTime(timeStr) {
 .room-list-meta {
   font-size: 12px;
   color: #8a9a8a;
+}
+
+.room-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.room-full-tip {
+  font-size: 12px;
+  color: #ff6b6b;
+  white-space: nowrap;
 }
 
 .btn-enter-room {

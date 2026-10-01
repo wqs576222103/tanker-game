@@ -52,7 +52,7 @@ const ITEM_DEFS = [
 ];
 
 const GATE_PAIR_COLORS = ["#58a6ff", "#c084fc", "#fb923c"];
-const ROOM_DISCONNECT_GRACE_MS = 20000;
+const ROOM_DISCONNECT_GRACE_MS = 3000;
 
 module.exports = {
   CELL, COLS, ROWS, W, H,
