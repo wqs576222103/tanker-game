@@ -14,18 +14,28 @@
             @input="debounceSearch"
           />
         </div>
-        <div class="map-list" v-if="mapList.length > 0">
+        <div class="import-row">
+          <button class="btn-import" @click="showMapImport = true">
+            📥 导入地图
+          </button>
+          <span class="import-tip">导入后点击「使用」即可应用</span>
+        </div>
+        <div class="map-list" v-if="displayList.length > 0">
           <div
-            v-for="item in mapList"
-            :key="item.id"
+            v-for="item in displayList"
+            :key="item.id ?? 'local-map'"
             class="map-item"
             @click="handleSelect(item)"
           >
             <div class="map-info">
-              <div class="map-name">{{ item.mapName }}</div>
+              <div class="map-name">
+                {{ item.mapName }}
+                <span v-if="item._local" class="local-tag">刚导入</span>
+              </div>
               <div class="map-meta">
                 <span v-if="item.username">{{ item.username }}</span>
-                <span v-else>{{ item.employeeId }}</span>
+                <span v-else-if="item.employeeId">{{ item.employeeId }}</span>
+                <span v-else>本地</span>
                 <span class="map-time">{{ formatTime(item.createTime) }}</span>
               </div>
             </div>
@@ -33,7 +43,7 @@
               使用
             </button>
             <button
-              v-if="item.employeeId === currentEmployeeId"
+              v-if="item.id && item.employeeId === currentEmployeeId"
               class="btn-delete"
               @click.stop="handleDelete(item)"
             >
@@ -67,13 +77,21 @@
       @confirm="confirmDelete"
       @close="showDeleteConfirm = false"
     />
+    <MapScriptImportModal
+      v-if="showMapImport"
+      :on-import="handleMapImport"
+      :employee-id="currentEmployeeId"
+      @close="showMapImport = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { getMapScriptList, deleteMapScript } from "@/api/map.js";
+import { getMapScriptList, deleteMapScript, uploadMapScript } from "@/api/map.js";
+import { parseMapScript, validateMapConfig } from "@/views/TankGame/script/base/map-script.js";
 import GameModal from "@/components/GameModal.vue";
+import MapScriptImportModal from "@/components/MapScriptImportModal.vue";
 
 const props = defineProps({
   currentEmployeeId: {
@@ -92,8 +110,23 @@ const pageSize = ref(10);
 const total = ref(0);
 const showDeleteConfirm = ref(false);
 const deleteTarget = ref(null);
+const showMapImport = ref(false);
+const localImported = ref(null);
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value));
+
+const displayList = computed(() => {
+  const local = localImported.value;
+  if (
+    !local ||
+    page.value !== 1 ||
+    (keyword.value && !local.mapName.includes(keyword.value))
+  ) {
+    return mapList.value;
+  }
+  const duplicated = mapList.value.some((m) => m.mapName === local.mapName);
+  return duplicated ? mapList.value : [local, ...mapList.value];
+});
 
 let searchTimer = null;
 function debounceSearch() {
@@ -134,6 +167,40 @@ async function fetchList() {
 function changePage(p) {
   page.value = p;
   fetchList();
+}
+
+async function handleMapImport(scriptContent, { saveToServer, mapName } = {}) {
+  const config = await parseMapScript(scriptContent);
+  const result = validateMapConfig(config);
+  if (!result.valid) {
+    throw new Error(result.message);
+  }
+  const name =
+    String(config.name || mapName || "自定义地图").trim().slice(0, 20) ||
+    "自定义地图";
+  if (saveToServer && props.currentEmployeeId) {
+    try {
+      const blob = new Blob([scriptContent], { type: "text/javascript" });
+      const file = new File([blob], `${mapName || "custom-map"}.js`, {
+        type: "text/javascript",
+      });
+      await uploadMapScript(props.currentEmployeeId, mapName, file);
+    } catch (err) {
+      console.warn("[PlayerMapList] 上传地图脚本到服务器失败:", err);
+    }
+  }
+  keyword.value = "";
+  page.value = 1;
+  await fetchList();
+  localImported.value = {
+    id: null,
+    employeeId: props.currentEmployeeId,
+    username: "",
+    mapName: name,
+    config,
+    createTime: Date.now(),
+    _local: true,
+  };
 }
 
 function handleSelect(item) {
@@ -247,6 +314,51 @@ onMounted(() => {
 
 .search-input::placeholder {
   color: #6a7a6a;
+}
+
+.import-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.btn-import {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #2a3a2a;
+  color: #9fb6a6;
+  border: 1px solid #4a5a4a;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-import:hover {
+  background: #3a4a3a;
+  color: #ffd76e;
+  border-color: #6a9a6a;
+}
+
+.import-tip {
+  font-size: 12px;
+  color: #6a7a6a;
+}
+
+.local-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: rgba(74, 222, 128, 0.15);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  border-radius: 8px;
+  font-size: 11px;
+  color: #4ade80;
+  font-weight: normal;
+  vertical-align: middle;
 }
 
 .map-list {

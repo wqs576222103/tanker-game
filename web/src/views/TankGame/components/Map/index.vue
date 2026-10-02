@@ -83,35 +83,14 @@
       </div>
     </div>
     <div id="btn-group" class="none-select">
-      <div
-        class="map-dropdown-wrap"
-        @mouseenter="showMapDropdown = true"
-        @mouseleave="hideMapDropdown"
-      >
-        <button
-          id="btn-refresh-map"
-          :disabled="gameState === 'playing'"
-          v-show="!hideRefreshMap"
-        >
-          🗺️ {{ currentMapName || "更换地图" }}
-        </button>
-        <div
-          class="map-dropdown"
-          v-show="showMapDropdown && gameState !== 'playing'"
-          @mouseenter="clearMapDropdownTimer"
-          @mouseleave="hideMapDropdown"
-        >
-          <div class="map-dropdown-item" @click="handleRandomMap">
-            <span class="map-dropdown-icon">🎲</span> 随机地图
-          </div>
-          <div class="map-dropdown-item" @click="showPlayerMapList = true">
-            <span class="map-dropdown-icon">👥</span> 玩家地图
-          </div>
-          <div class="map-dropdown-item" @click="showMapImport = true">
-            <span class="map-dropdown-icon">📥</span> 导入地图
-          </div>
-        </div>
-      </div>
+      <MapSelect
+        v-show="!hideRefreshMap"
+        :model-value="mapSelectModel"
+        placeholder="更换地图"
+        :disabled="gameState === 'playing'"
+        drop-up
+        @select="handleMapSelect"
+      />
       <button
         id="btn-pause"
         :style="{ display: gameState === 'start' ? 'none' : '' }"
@@ -150,22 +129,10 @@
       :on-import="tankGameOnImport"
       @close="showScriptImport = false"
     />
-    <MapScriptImportModal
-      v-if="showMapImport"
-      :on-import="handleMapImport"
-      :employee-id="employeeId"
-      @close="showMapImport = false"
-    />
-    <PlayerMapListModal
-      v-if="showPlayerMapList"
-      :current-employee-id="employeeId"
-      @close="showPlayerMapList = false"
-      @select="handlePlayerMapSelect"
-    />
   </div>
 </template>
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import aiGuideUrl from "@/assets/ai-script-guide.txt?url";
 import { getToken, getUserInfo } from "@/utils/user";
@@ -176,13 +143,7 @@ import SurvivalAI from "../../script/ai-tanker/survival-tank.js";
 import DefaultAI from "../../script/ai-tanker/default-tank.js";
 import LevelAI from "../../script/ai-tanker/level-tank.js";
 import ScriptImportModal from "@/components/ScriptImportModal.vue";
-import MapScriptImportModal from "@/components/MapScriptImportModal.vue";
-import PlayerMapListModal from "@/components/PlayerMapListModal.vue";
-import {
-  parseMapScript,
-  validateMapConfig,
-} from "../../script/base/map-script.js";
-import { getMapScript, uploadMapScript } from "@/api/map.js";
+import MapSelect from "@/components/MapSelect.vue";
 
 const props = defineProps({
   hideAi: {
@@ -227,14 +188,16 @@ const employeeId = ref("");
 const gameState = ref("start");
 const levelMode = ref(false);
 const showScriptImport = ref(false);
-const showMapImport = ref(false);
-const showMapDropdown = ref(false);
-const showPlayerMapList = ref(false);
 const currentMapName = ref("");
-let mapDropdownTimer = null;
 let stateCheckInterval = null;
 const token = getToken();
 const route = useRoute();
+
+const mapSelectModel = computed(() =>
+  currentMapName.value
+    ? { type: "custom", name: currentMapName.value }
+    : null,
+);
 
 console.log("[Map] token:", token);
 
@@ -326,36 +289,7 @@ async function tankGameOnImport(scriptContent) {
   AIPlayer.updateUI();
 }
 
-async function handleMapImport(scriptContent, { saveToServer, mapName } = {}) {
-  console.log(
-    "[Map] handleMapImport called, saveToServer:",
-    saveToServer,
-    "mapName:",
-    mapName,
-    "employeeId:",
-    employeeId.value,
-  );
-  if (saveToServer && employeeId.value) {
-    try {
-      const blob = new Blob([scriptContent], { type: "text/javascript" });
-      const file = new File([blob], `${mapName || "custom-map"}.js`, {
-        type: "text/javascript",
-      });
-      await uploadMapScript(employeeId.value, mapName, file);
-    } catch (err) {
-      console.warn("[Map] 上传地图脚本到服务器失败:", err);
-    }
-  }
-
-  const config = await parseMapScript(scriptContent);
-  const result = validateMapConfig(config);
-  if (!result.valid) {
-    throw new Error(result.message);
-  }
-  window.customMapConfig = config;
-  window.mapGenerated = false;
-  currentMapName.value = config.name || "";
-  resetGame();
+function showStartOverlay() {
   // 隐藏暂停/结束等遮罩，显示开始界面
   document.getElementById("ov-pause").classList.add("hidden");
   document.getElementById("ov-over").classList.add("hidden");
@@ -369,59 +303,21 @@ function refreshMap() {
   window.mapGenerated = false;
   currentMapName.value = "";
   resetGame();
-  // 隐藏暂停/结束等遮罩，显示开始界面
-  document.getElementById("ov-pause").classList.add("hidden");
-  document.getElementById("ov-over").classList.add("hidden");
-  document.getElementById("ov-start").classList.remove("hidden");
+  showStartOverlay();
 }
 
-function handleRandomMap() {
-  showMapDropdown.value = false;
-  refreshMap();
-}
-
-function hideMapDropdown() {
-  clearTimeout(mapDropdownTimer);
-  mapDropdownTimer = setTimeout(() => {
-    showMapDropdown.value = false;
-  }, 300);
-}
-
-function clearMapDropdownTimer() {
-  clearTimeout(mapDropdownTimer);
-}
-
-async function handlePlayerMapSelect(item) {
-  showPlayerMapList.value = false;
+function handleMapSelect(value) {
   if (gameState.value === "playing") return;
-  try {
-    const res = await getMapScript(item.id);
-    const scriptPath = res?.data?.scriptPath;
-    if (!scriptPath) {
-      console.error("地图脚本路径为空");
-      return;
-    }
-    const resp = await fetch(scriptPath);
-    if (!resp.ok) {
-      console.error("拉取地图脚本失败:", resp.status);
-      return;
-    }
-    const scriptContent = await resp.text();
-    const config = await parseMapScript(scriptContent);
-    const result = validateMapConfig(config);
-    if (!result.valid) {
-      console.error("地图脚本验证失败:", result.message);
-      return;
-    }
-    window.customMapConfig = config;
+  if (!value || value.type === "random") {
+    refreshMap();
+    return;
+  }
+  if (value.type === "custom" && value.config) {
+    window.customMapConfig = value.config;
     window.mapGenerated = false;
-    currentMapName.value = config.name || item.mapName || "";
+    currentMapName.value = value.config.name || value.name || "";
     resetGame();
-    document.getElementById("ov-pause").classList.add("hidden");
-    document.getElementById("ov-over").classList.add("hidden");
-    document.getElementById("ov-start").classList.remove("hidden");
-  } catch (err) {
-    console.error("加载玩家地图失败:", err);
+    showStartOverlay();
   }
 }
 </script>
@@ -717,49 +613,21 @@ canvas {
 #ov-ai-log button:hover {
   background: #3a4a3a;
 }
-.map-dropdown-wrap {
-  position: relative;
-  display: inline-block;
-}
-.map-dropdown {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 8px;
-  background: #1e2b22;
-  border: 1px solid #4a5a4a;
-  border-radius: 10px;
-  padding: 6px 0;
-  min-width: 150px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  z-index: 20;
-}
-.map-dropdown::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #4a5a4a;
-}
-.map-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  font-size: 14px;
+#btn-group :deep(.map-select-btn) {
+  background: #26332b;
   color: #cfe3cf;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
+  border: 1px solid #4a5a4a;
+  padding: 8px 22px;
+  border-radius: 20px;
+  font-size: 15px;
 }
-.map-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffd76e;
+#btn-group :deep(.map-select-btn:hover:not(:disabled)) {
+  background: #3a4a3a;
+  color: #7de07d;
+  border-color: #7de07d;
 }
-.map-dropdown-icon {
-  font-size: 16px;
+#btn-group :deep(.map-select-btn:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 </style>

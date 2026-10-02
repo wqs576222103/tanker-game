@@ -34,12 +34,9 @@
 
         <div class="lobby-section">
           <h3>创建房间</h3>
-          <p class="lobby-desc">选择地图后创建房间，邀请好友对战</p>
+          <p class="lobby-desc">默认随机地图，可选择玩家地图与好友对战</p>
           <div v-if="!matching && !inRoom" class="lobby-actions">
             <MapSelect v-model="createMap" placeholder="选择地图" />
-            <span v-if="!createMap" class="map-required-tip"
-              >请先选择地图</span
-            >
           </div>
           <div v-if="!matching && !inRoom" class="lobby-actions join-form">
             <input
@@ -48,11 +45,7 @@
               maxlength="20"
               @keyup.enter="createRoom"
             />
-            <button
-              class="btn-create"
-              :disabled="!createMap"
-              @click="createRoom"
-            >
+            <button class="btn-create" @click="createRoom">
               创建房间
             </button>
           </div>
@@ -297,7 +290,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import {
   getSocket,
@@ -311,9 +304,10 @@ import { inviteStore } from "@/utils/inviteStore";
 import { getOnlineBattleRooms } from "@/api/onlineBattle";
 import InvitePlayersModal from "@/components/InvitePlayersModal.vue";
 import OnlineBattleDetailModal from "@/components/OnlineBattleDetailModal.vue";
-import MapSelect from "./MapSelect.vue";
+import MapSelect from "@/components/MapSelect.vue";
 
 const DEFAULT_MAP = { type: "random", name: "随机地图" };
+const DEFAULT_MAP_PICK = { type: "random", name: "随机地图", config: null };
 
 const router = useRouter();
 
@@ -338,11 +332,19 @@ const showInviteModal = ref(false);
 const invitedIds = ref([]);
 const showDetailModal = ref(false);
 const selectedRoomId = ref("");
-const matchMap = ref({ type: "random", name: "随机地图", config: null });
-const createMap = ref(null);
+const matchMap = ref({ ...DEFAULT_MAP_PICK });
+const createMap = ref({ ...DEFAULT_MAP_PICK });
+const lastMapPick = ref({ ...DEFAULT_MAP_PICK });
 const roomMap = ref({ ...DEFAULT_MAP });
 let matchTimer = null;
 let toastTimer = null;
+
+watch(matchMap, (v) => {
+  if (v) lastMapPick.value = { ...v };
+});
+watch(createMap, (v) => {
+  if (v) lastMapPick.value = { ...v };
+});
 
 const myReady = computed(() => {
   const me = roomPlayers.value.find((p) => p.socketId === mySocketId.value);
@@ -532,6 +534,7 @@ function setupSocketListeners() {
       battleStarting.value = false;
       roomName.value = generateRoomName();
       saveLastRoomId("");
+      restoreLastMapPick();
       showToast(data.message || "你已被移出房间");
     },
     reminded: (data) => {
@@ -643,6 +646,7 @@ function onHostPickMap(map) {
   }
   errorMsg.value = "";
   socket.emit("switch-map", { map: toMapPayload(map) });
+  lastMapPick.value = { ...map };
 }
 
 function joinRoom() {
@@ -700,6 +704,13 @@ function showToast(msg) {
   }, 2500);
 }
 
+function restoreLastMapPick() {
+  const v = lastMapPick.value;
+  if (!v) return;
+  matchMap.value = { ...v };
+  createMap.value = { ...v };
+}
+
 function leaveRoom() {
   if (!socket) return;
   socket.emit("leave-room");
@@ -712,6 +723,7 @@ function leaveRoom() {
   roomMap.value = { ...DEFAULT_MAP };
   battleStarting.value = false;
   roomName.value = generateRoomName();
+  restoreLastMapPick();
 }
 
 function goHome() {
@@ -1084,11 +1096,6 @@ function formatTime(timeStr) {
 .room-map-tip {
   font-size: 12px;
   color: #ffeaa7;
-}
-
-.map-required-tip {
-  font-size: 12px;
-  color: #ff6b6b;
 }
 
 .player-list {

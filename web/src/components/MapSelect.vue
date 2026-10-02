@@ -12,24 +12,19 @@
     >
       🗺️ {{ displayLabel }}
     </button>
-    <div v-show="showDropdown && !disabled" class="map-dropdown">
+    <div
+      v-show="showDropdown && !disabled"
+      class="map-dropdown"
+      :class="{ 'drop-up': dropUp }"
+    >
       <div class="map-dropdown-item" @click="pickRandom">
         <span class="map-dropdown-icon">🎲</span> 随机地图
       </div>
       <div class="map-dropdown-item" @click="openPlayerMaps">
         <span class="map-dropdown-icon">👥</span> 玩家地图
       </div>
-      <div class="map-dropdown-item" @click="openImport">
-        <span class="map-dropdown-icon">📥</span> 导入地图
-      </div>
     </div>
 
-    <MapScriptImportModal
-      v-if="showMapImport"
-      :on-import="handleMapImport"
-      :employee-id="employeeId"
-      @close="showMapImport = false"
-    />
     <PlayerMapListModal
       v-if="showPlayerMapList"
       :current-employee-id="employeeId"
@@ -43,8 +38,7 @@
 import { ref, computed, onMounted } from "vue";
 import { getUserInfo } from "@/utils/user";
 import { parseMapScript, validateMapConfig } from "@/views/TankGame/script/base/map-script.js";
-import { getMapScript, uploadMapScript } from "@/api/map.js";
-import MapScriptImportModal from "@/components/MapScriptImportModal.vue";
+import { getMapScript } from "@/api/map.js";
 import PlayerMapListModal from "@/components/PlayerMapListModal.vue";
 
 const props = defineProps({
@@ -60,12 +54,15 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  dropUp: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "select"]);
 
 const showDropdown = ref(false);
-const showMapImport = ref(false);
 const showPlayerMapList = ref(false);
 const employeeId = ref("");
 let dropdownTimer = null;
@@ -100,11 +97,6 @@ function openPlayerMaps() {
   showPlayerMapList.value = true;
 }
 
-function openImport() {
-  showDropdown.value = false;
-  showMapImport.value = true;
-}
-
 function hideDropdown() {
   clearTimeout(dropdownTimer);
   dropdownTimer = setTimeout(() => {
@@ -126,25 +118,17 @@ async function buildCustomMap(scriptContent, name) {
   return { type: "custom", name: mapName, config };
 }
 
-async function handleMapImport(scriptContent, { saveToServer, mapName } = {}) {
-  const value = await buildCustomMap(scriptContent, mapName);
-  if (saveToServer && employeeId.value) {
-    try {
-      const blob = new Blob([scriptContent], { type: "text/javascript" });
-      const file = new File([blob], `${mapName || "custom-map"}.js`, {
-        type: "text/javascript",
-      });
-      await uploadMapScript(employeeId.value, mapName, file);
-    } catch (err) {
-      console.warn("[Map] 上传地图脚本到服务器失败:", err);
-    }
-  }
-  pick(value);
-}
-
 async function handlePlayerMapSelect(item) {
   showPlayerMapList.value = false;
   try {
+    if (item && item.config) {
+      pick({
+        type: "custom",
+        name: item.mapName || item.config.name || "自定义地图",
+        config: item.config,
+      });
+      return;
+    }
     const res = await getMapScript(item.id);
     const scriptPath = res?.data?.scriptPath;
     if (!scriptPath) {
@@ -205,6 +189,13 @@ async function handlePlayerMapSelect(item) {
   min-width: 150px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   z-index: 30;
+}
+
+.map-dropdown.drop-up {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 6px;
 }
 
 .map-dropdown-item {
