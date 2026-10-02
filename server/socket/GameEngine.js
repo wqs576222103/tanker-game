@@ -97,8 +97,8 @@ class GameEngine {
     const usedTeamIds = new Set(this.tanks.map((t) => t.teamId));
     let teamId = 0;
     while (usedTeamIds.has(teamId)) teamId++;
-    const sp = this._getSpawnPoints(1)[0];
-    const tank = this._createTank(playerInfo, teamId, sp);
+    const cell = this._pickRespawnCell(null);
+    const tank = this._createTank(playerInfo, teamId, cell);
     this.tanks.push(tank);
     this._ensureTankOutOfWalls(tank);
     return tank;
@@ -437,6 +437,37 @@ class GameEngine {
       push(c, r);
     }
     return result;
+  }
+
+  _pickRespawnCell(self) {
+    const candidates = [];
+    for (let r = 1; r < ROWS - 1; r++) {
+      for (let c = 1; c < COLS - 1; c++) {
+        if (this._canSpawnAt(c, r)) candidates.push({ c, r });
+      }
+    }
+    if (candidates.length === 0) {
+      return this._findValidSpawnCell(Math.floor(COLS / 2), Math.floor(ROWS / 2));
+    }
+    const safe = candidates.filter((cell) => this._isSafeRespawnCell(cell, self));
+    const pool = safe.length > 0 ? safe : candidates;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  _isSafeRespawnCell(cell, self) {
+    const cx = cell.c * CELL + CELL / 2;
+    const cy = cell.r * CELL + CELL / 2;
+    for (const o of this.tanks) {
+      if (!o.alive || o === self) continue;
+      const dist = Math.hypot(o.x + o.w / 2 - cx, o.y + o.h / 2 - cy);
+      if (dist < 5 * CELL) return false;
+    }
+    for (const m of this.mines) {
+      if (m.dead) continue;
+      const dist = Math.hypot(m.c * CELL + CELL / 2 - cx, m.r * CELL + CELL / 2 - cy);
+      if (dist < 3 * CELL) return false;
+    }
+    return true;
   }
 
   _findValidSpawnCell(c, r) {
@@ -1027,8 +1058,7 @@ class GameEngine {
 
   _tryRespawn(t) {
     if (!t.respawnAt || this.gtMs < t.respawnAt) return;
-    const sp = this._getSpawnPoints(1)[0];
-    const cell = this._findValidSpawnCell(sp.c, sp.r);
+    const cell = this._pickRespawnCell(t);
     t.x = cell.c * CELL;
     t.y = cell.r * CELL;
     t.hp = t.maxHp;

@@ -489,6 +489,7 @@ class RoomManager {
         maxPlayers: MAX_PLAYERS,
         host: Array.from(room.players.values())[0]?.username || "",
         state: room.state,
+        map: this.getMapInfo(room),
         createdAt: room.createdAt,
       });
     }

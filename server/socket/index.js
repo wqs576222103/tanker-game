@@ -186,6 +186,7 @@ function setupSocket(server) {
         players: result.players,
         map: result.map,
       });
+      io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
       console.log(
         `[Socket] Room ${result.roomId} map switched to ${result.map.type}:${result.map.name}`,
       );

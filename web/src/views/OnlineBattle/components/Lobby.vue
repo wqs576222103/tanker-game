@@ -212,6 +212,7 @@
                     room.roomName || (room.host || "匿名") + " 的房间"
                   }}</span>
                   <span class="room-list-meta">
+                    🗺️ {{ (room.map && room.map.name) || "随机地图" }} ·
                     {{ room.playerCount }}/{{ room.maxPlayers }} 人
                   </span>
                 </div>
