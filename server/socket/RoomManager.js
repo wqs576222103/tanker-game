@@ -1,6 +1,7 @@
-const { MAX_PLAYERS } = require("../shared/constants");
+const { MAX_PLAYERS, ROWS, COLS } = require("../shared/constants");
 
 const MATCH_INTERVAL_MS = 2000;
+const RANDOM_MAP_INFO = { type: "random", name: "随机地图" };
 
 class RoomManager {
   constructor() {
@@ -65,7 +66,7 @@ class RoomManager {
       id: roomId,
       players: new Map(),
       state: "waiting",
-      map: null,
+      map: (matched[0] && matched[0].map) || this.sanitizeMap(null),
       createdAt: Date.now(),
     };
 
@@ -92,6 +93,7 @@ class RoomManager {
       io.to(player.socketId).emit("matched", {
         roomId,
         players: this._getRoomPlayerList(room),
+        map: this.getMapInfo(room),
       });
     }
 
@@ -100,7 +102,7 @@ class RoomManager {
     );
   }
 
-  addToQueue(socketId, userInfo) {
+  addToQueue(socketId, userInfo, map) {
     const existing = this.matchQueue.findIndex((p) => p.socketId === socketId);
     if (existing >= 0) this.matchQueue.splice(existing, 1);
 
@@ -109,6 +111,7 @@ class RoomManager {
       employeeId: userInfo.employeeId || "",
       username: userInfo.username || "匿名",
       tankName: userInfo.tankName || "坦克",
+      map: this.sanitizeMap(map),
       joinedAt: Date.now(),
     });
     console.log(
@@ -121,7 +124,7 @@ class RoomManager {
     if (idx >= 0) this.matchQueue.splice(idx, 1);
   }
 
-  createPrivateRoom(socketId, userInfo, roomName) {
+  createPrivateRoom(socketId, userInfo, roomName, map) {
     const roomId = this._genRoomId();
     const room = {
       id: roomId,
@@ -131,7 +134,7 @@ class RoomManager {
       ),
       players: new Map(),
       state: "waiting",
-      map: null,
+      map: this.sanitizeMap(map),
       createdAt: Date.now(),
     };
 
@@ -160,6 +163,7 @@ class RoomManager {
       roomName: room.roomName || "",
       players: this._getRoomPlayerList(room),
       state: room.state,
+      map: this.getMapInfo(room),
     };
   }
 
@@ -244,6 +248,7 @@ class RoomManager {
           roomName: room.roomName || "",
           players: this._getRoomPlayerList(room),
           player: p,
+          map: this.getMapInfo(room),
           inGame: room.state === "starting" || room.state === "playing",
         };
       }
@@ -271,6 +276,7 @@ class RoomManager {
       roomName: room.roomName || "",
       players: this._getRoomPlayerList(room),
       player,
+      map: this.getMapInfo(room),
       inGame: room.state === "starting" || room.state === "playing",
     };
   }
@@ -300,6 +306,73 @@ class RoomManager {
     if (!player) return null;
     player.ready = !!ready;
     return { roomId, players: this._getRoomPlayerList(room) };
+  }
+
+  switchMap(socketId, rawMap) {
+    const roomId = this.rooms.get(socketId);
+    if (!roomId) return { error: "你不在房间中" };
+    const room = this.rooms.get(`room:${roomId}`);
+    if (!room) return { error: "房间不存在" };
+    const host = room.players.get(socketId);
+    if (!host || !host.isHost) return { error: "只有房主可以切换地图" };
+    if (room.state !== "waiting") return { error: "对局进行中，无法切换地图" };
+
+    room.map = this.sanitizeMap(rawMap);
+    this.resetReadyStates(room);
+    return {
+      roomId,
+      players: this._getRoomPlayerList(room),
+      map: this.getMapInfo(room),
+    };
+  }
+
+  sanitizeMap(raw) {
+    const fallback = { type: "random", name: RANDOM_MAP_INFO.name, config: null };
+    if (!raw || typeof raw !== "object" || raw.type !== "custom") return fallback;
+
+    const cfg = raw.config;
+    if (!cfg || !Array.isArray(cfg.map) || cfg.map.length !== ROWS) return fallback;
+    for (let r = 0; r < ROWS; r++) {
+      const row = cfg.map[r];
+      if (!Array.isArray(row) || row.length !== COLS) return fallback;
+      for (let c = 0; c < COLS; c++) {
+        const v = row[c];
+        if (!Number.isInteger(v) || v < 0 || v > 12) return fallback;
+      }
+    }
+
+    const name =
+      String(raw.name || cfg.name || "自定义地图").trim().slice(0, 20) ||
+      "自定义地图";
+
+    return {
+      type: "custom",
+      name,
+      config: {
+        map: cfg.map,
+        crackHp:
+          cfg.crackHp && typeof cfg.crackHp === "object" && !Array.isArray(cfg.crackHp)
+            ? cfg.crackHp
+            : {},
+        gates: Array.isArray(cfg.gates) ? cfg.gates.slice(0, 64) : [],
+        items: Array.isArray(cfg.items) ? cfg.items.slice(0, 64) : [],
+        playerSpawn:
+          cfg.playerSpawn && typeof cfg.playerSpawn === "object"
+            ? { c: cfg.playerSpawn.c, r: cfg.playerSpawn.r }
+            : null,
+        enemySpawns: Array.isArray(cfg.enemySpawns)
+          ? cfg.enemySpawns.slice(0, 32)
+          : [],
+      },
+    };
+  }
+
+  getMapInfo(room) {
+    const m = room && room.map;
+    if (m && m.type === "custom") {
+      return { type: "custom", name: m.name || "自定义地图" };
+    }
+    return { type: RANDOM_MAP_INFO.type, name: RANDOM_MAP_INFO.name };
   }
 
   kickPlayer(hostSocketId, targetSocketId) {

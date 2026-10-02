@@ -16,8 +16,9 @@
       <div class="lobby-left">
         <div class="lobby-section">
           <h3>快速匹配</h3>
-          <p class="lobby-desc">点击匹配按钮，系统将自动为你寻找对手</p>
+          <p class="lobby-desc">默认随机地图，也可先选择地图再进行匹配</p>
           <div v-if="!matching && !inRoom" class="lobby-actions">
+            <MapSelect v-model="matchMap" />
             <button class="btn-match" @click="quickMatch">开始匹配</button>
           </div>
           <div v-if="matching" class="lobby-actions matching-box">
@@ -31,7 +32,13 @@
 
         <div class="lobby-section">
           <h3>创建房间</h3>
-          <p class="lobby-desc">创建房间邀请好友对战</p>
+          <p class="lobby-desc">选择地图后创建房间，邀请好友对战</p>
+          <div v-if="!matching && !inRoom" class="lobby-actions">
+            <MapSelect v-model="createMap" placeholder="选择地图" />
+            <span v-if="!createMap" class="map-required-tip"
+              >请先选择地图</span
+            >
+          </div>
           <div v-if="!matching && !inRoom" class="lobby-actions join-form">
             <input
               v-model="roomName"
@@ -39,7 +46,13 @@
               maxlength="20"
               @keyup.enter="createRoom"
             />
-            <button class="btn-create" @click="createRoom">创建房间</button>
+            <button
+              class="btn-create"
+              :disabled="!createMap"
+              @click="createRoom"
+            >
+              创建房间
+            </button>
           </div>
           <div v-if="createdRoomId" class="room-code">
             <span>房间号：</span>
@@ -81,6 +94,20 @@
                 >房间号: <code>{{ currentRoomId }}</code></span
               >
               <span>玩家: {{ roomPlayers.length }}/8</span>
+            </div>
+            <div class="room-map-row">
+              <span class="room-map-label">地图:</span>
+              <MapSelect
+                v-if="isHost && !battleStarting"
+                :model-value="roomMap"
+                @select="onHostPickMap"
+              />
+              <span v-else class="room-map-name">{{
+                roomMap.name || "随机地图"
+              }}</span>
+              <span v-if="isHost" class="room-map-tip"
+                >切换地图后所有玩家需重新准备</span
+              >
             </div>
             <div class="player-list">
               <div
@@ -281,6 +308,9 @@ import { inviteStore } from "@/utils/inviteStore";
 import { getOnlineBattleRooms } from "@/api/onlineBattle";
 import InvitePlayersModal from "@/components/InvitePlayersModal.vue";
 import OnlineBattleDetailModal from "@/components/OnlineBattleDetailModal.vue";
+import MapSelect from "./MapSelect.vue";
+
+const DEFAULT_MAP = { type: "random", name: "随机地图" };
 
 const router = useRouter();
 
@@ -305,6 +335,9 @@ const showInviteModal = ref(false);
 const invitedIds = ref([]);
 const showDetailModal = ref(false);
 const selectedRoomId = ref("");
+const matchMap = ref({ type: "random", name: "随机地图", config: null });
+const createMap = ref(null);
+const roomMap = ref({ ...DEFAULT_MAP });
 let matchTimer = null;
 let toastTimer = null;
 
@@ -381,6 +414,7 @@ function setupSocketListeners() {
       inRoom.value = true;
       currentRoomId.value = data.roomId;
       roomPlayers.value = data.players;
+      roomMap.value = data.map || { ...DEFAULT_MAP };
       mySocketId.value = socket.id;
       errorMsg.value = "";
       inviteStore.pending = null;
@@ -400,6 +434,7 @@ function setupSocketListeners() {
       currentRoomName.value = data.roomName || "";
       createdRoomId.value = data.roomId;
       roomPlayers.value = data.players;
+      roomMap.value = data.map || { ...DEFAULT_MAP };
       mySocketId.value = socket.id;
       errorMsg.value = "";
       roomName.value = generateRoomName();
@@ -412,6 +447,7 @@ function setupSocketListeners() {
       currentRoomId.value = data.roomId;
       currentRoomName.value = data.roomName || "";
       roomPlayers.value = data.players;
+      roomMap.value = data.map || { ...DEFAULT_MAP };
       mySocketId.value = socket.id;
       errorMsg.value = "";
       inviteStore.pending = null;
@@ -453,6 +489,7 @@ function setupSocketListeners() {
         currentRoomId.value = data.roomId;
         currentRoomName.value = data.roomName || "";
         roomPlayers.value = data.players || [];
+        roomMap.value = data.map || { ...DEFAULT_MAP };
         mySocketId.value = socket.id;
         saveLastRoomId(data.roomId);
       }
@@ -465,6 +502,15 @@ function setupSocketListeners() {
     },
     "room-updated": (data) => {
       roomPlayers.value = data.players || [];
+      if (data.map) {
+        const changed =
+          data.map.type !== roomMap.value.type ||
+          (data.map.name || "") !== (roomMap.value.name || "");
+        roomMap.value = data.map;
+        if (changed) {
+          showToast(`地图已切换为「${data.map.name}」，请重新准备`);
+        }
+      }
       if (data.state === "waiting") {
         battleStarting.value = false;
       }
@@ -479,6 +525,7 @@ function setupSocketListeners() {
       currentRoomName.value = "";
       createdRoomId.value = "";
       roomPlayers.value = [];
+      roomMap.value = { ...DEFAULT_MAP };
       battleStarting.value = false;
       roomName.value = generateRoomName();
       saveLastRoomId("");
@@ -528,6 +575,17 @@ function stopMatchTimer() {
   }
 }
 
+function toMapPayload(map) {
+  if (map && map.type === "custom" && map.config) {
+    return {
+      type: "custom",
+      name: map.name || "自定义地图",
+      config: map.config,
+    };
+  }
+  return { type: "random", name: "随机地图" };
+}
+
 function quickMatch() {
   if (!socket) return;
   errorMsg.value = "";
@@ -535,6 +593,7 @@ function quickMatch() {
   startMatchTimer();
   socket.emit("quick-match", {
     userInfo: userInfoPayload(),
+    map: toMapPayload(matchMap.value),
   });
 }
 
@@ -557,12 +616,30 @@ function joinPublicRoom(roomId) {
 function createRoom() {
   if (!socket) return;
   errorMsg.value = "";
+  if (!createMap.value) {
+    errorMsg.value = "请先选择地图再创建房间";
+    return;
+  }
   const name = roomName.value.trim() || generateRoomName();
   roomName.value = name;
   socket.emit("create-room", {
     userInfo: userInfoPayload(),
     roomName: name,
+    map: toMapPayload(createMap.value),
   });
+}
+
+function onHostPickMap(map) {
+  if (!socket || !isHost.value || !map) return;
+  const current = roomMap.value || DEFAULT_MAP;
+  if (
+    current.type === map.type &&
+    (current.name || "") === (map.name || "")
+  ) {
+    return;
+  }
+  errorMsg.value = "";
+  socket.emit("switch-map", { map: toMapPayload(map) });
 }
 
 function joinRoom() {
@@ -629,6 +706,7 @@ function leaveRoom() {
   currentRoomName.value = "";
   createdRoomId.value = "";
   roomPlayers.value = [];
+  roomMap.value = { ...DEFAULT_MAP };
   battleStarting.value = false;
   roomName.value = generateRoomName();
 }
@@ -852,6 +930,12 @@ function formatTime(timeStr) {
   color: #1a2118;
 }
 
+.btn-create:disabled {
+  background: #3a4a3a;
+  color: #6a7a6a;
+  cursor: not-allowed;
+}
+
 .btn-join {
   background: linear-gradient(135deg, #a29bfe, #6c5ce7);
   color: #fff;
@@ -971,6 +1055,37 @@ function formatTime(timeStr) {
 
 .room-info code {
   color: #7de07d;
+}
+
+.room-map-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #8a9a8a;
+  flex-wrap: wrap;
+}
+
+.room-map-label {
+  flex-shrink: 0;
+}
+
+.room-map-name {
+  padding: 5px 10px;
+  background: #2a3a2a;
+  border: 1px solid #4a5a4a;
+  border-radius: 6px;
+  color: #cfe3cf;
+}
+
+.room-map-tip {
+  font-size: 12px;
+  color: #ffeaa7;
+}
+
+.map-required-tip {
+  font-size: 12px;
+  color: #ff6b6b;
 }
 
 .player-list {

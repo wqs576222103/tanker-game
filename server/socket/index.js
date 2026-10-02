@@ -82,8 +82,8 @@ function setupSocket(server) {
     });
 
     socket.on("join-queue", (data) => {
-      const userInfo = data.userInfo || {};
-      roomManager.addToQueue(socket.id, userInfo);
+      const userInfo = data?.userInfo || {};
+      roomManager.addToQueue(socket.id, userInfo, data?.map);
       socket.emit("queue-joined", { position: roomManager.matchQueue.length });
     });
 
@@ -93,17 +93,18 @@ function setupSocket(server) {
     });
 
     socket.on("quick-match", (data) => {
-      const userInfo = data.userInfo || {};
-      roomManager.addToQueue(socket.id, userInfo);
+      const userInfo = data?.userInfo || {};
+      roomManager.addToQueue(socket.id, userInfo, data?.map);
       socket.emit("matching");
     });
 
     socket.on("create-room", (data) => {
-      const userInfo = data.userInfo || {};
+      const userInfo = data?.userInfo || {};
       const roomId = roomManager.createPrivateRoom(
         socket.id,
         userInfo,
-        data.roomName,
+        data?.roomName,
+        data?.map,
       );
       socket.join(roomId);
       const room = roomManager.getRoom(roomId);
@@ -111,6 +112,7 @@ function setupSocket(server) {
         roomId,
         roomName: room?.roomName || "",
         players: roomManager.getRoomPlayerList(room),
+        map: roomManager.getMapInfo(room),
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
       io.emit("online-users-updated", { users: roomManager.getOnlineUsers() });
@@ -144,6 +146,7 @@ function setupSocket(server) {
         roomId,
         roomName: result.roomName || "",
         players: result.players,
+        map: result.map,
         reconnected: !!result.reconnected,
       });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
@@ -171,6 +174,21 @@ function setupSocket(server) {
       const result = roomManager.setPlayerReady(socket.id, ready);
       if (!result) return;
       io.to(result.roomId).emit("room-updated", { players: result.players });
+    });
+
+    socket.on("switch-map", (data) => {
+      const result = roomManager.switchMap(socket.id, data?.map);
+      if (result.error) {
+        socket.emit("start-error", { message: result.error });
+        return;
+      }
+      io.to(result.roomId).emit("room-updated", {
+        players: result.players,
+        map: result.map,
+      });
+      console.log(
+        `[Socket] Room ${result.roomId} map switched to ${result.map.type}:${result.map.name}`,
+      );
     });
 
     socket.on("kick-player", (data) => {
@@ -247,7 +265,7 @@ function setupSocket(server) {
       io.to(room.id).emit("battle-starting", { message: "正在进入游戏..." });
       io.emit("rooms-updated", { rooms: roomManager.getWaitingRooms() });
 
-      const engine = new GameEngine(room.id, players);
+      const engine = new GameEngine(room.id, players, room.map);
       engines.set(room.id, engine);
 
       engine.start(

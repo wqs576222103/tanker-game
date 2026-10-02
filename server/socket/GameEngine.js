@@ -15,7 +15,7 @@ const {
 const QUIT_MID_GAME_REASON = "中途退出";
 
 class GameEngine {
-  constructor(roomId, players) {
+  constructor(roomId, players, mapInfo) {
     this.roomId = roomId;
     this.tanks = [];
     this.quitters = [];
@@ -36,8 +36,13 @@ class GameEngine {
     this._endFn = null;
     this._mapDirty = false;
     this.lastTeleport = {};
+    this._customSpawns = null;
 
-    this._genMap();
+    if (mapInfo && mapInfo.type === "custom" && mapInfo.config) {
+      this._applyCustomMap(mapInfo.config);
+    } else {
+      this._genMap();
+    }
     this._initPlayers(players);
   }
 
@@ -224,6 +229,170 @@ class GameEngine {
     }
   }
 
+  _applyCustomMap(cfg) {
+    const SUPPORTED = new Set([EMPTY, WALL, BORDER, CRACK, GRASS]);
+
+    this.map = cfg.map.map((row) =>
+      row.map((v) => (Number.isInteger(v) && SUPPORTED.has(v) ? v : EMPTY)),
+    );
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) {
+          this.map[r][c] = BORDER;
+        }
+      }
+    }
+
+    this.crackHp = {};
+    if (cfg.crackHp && typeof cfg.crackHp === "object") {
+      for (const [key, v] of Object.entries(cfg.crackHp)) {
+        if (typeof v === "number" && v > 0) this.crackHp[key] = v;
+      }
+    }
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (this.map[r][c] === CRACK && !this.crackHp[`${c},${r}`]) {
+          this.crackHp[`${c},${r}`] = 3;
+        }
+      }
+    }
+
+    this._applyCustomGates(cfg.gates);
+
+    this._customSpawns = [];
+    if (cfg.playerSpawn && Number.isInteger(cfg.playerSpawn.c) && Number.isInteger(cfg.playerSpawn.r)) {
+      this._customSpawns.push({ c: cfg.playerSpawn.c, r: cfg.playerSpawn.r });
+    }
+    if (Array.isArray(cfg.enemySpawns)) {
+      for (const p of cfg.enemySpawns) {
+        if (p && Number.isInteger(p.c) && Number.isInteger(p.r)) {
+          this._customSpawns.push({ c: p.c, r: p.r });
+        }
+      }
+    }
+    if (this._customSpawns.length === 0) this._customSpawns = null;
+
+    this._preloadItems(cfg.items);
+  }
+
+  _isValidInnerCell(cell) {
+    return (
+      cell &&
+      Number.isInteger(cell.c) &&
+      Number.isInteger(cell.r) &&
+      cell.c > 0 &&
+      cell.c < COLS - 1 &&
+      cell.r > 0 &&
+      cell.r < ROWS - 1
+    );
+  }
+
+  _applyCustomGates(gateDefs) {
+    this.gates = [];
+    if (!Array.isArray(gateDefs) || gateDefs.length === 0) return;
+
+    const expanded = [];
+    for (const gDef of gateDefs) {
+      if (!gDef) continue;
+      const cells = Array.isArray(gDef.cells)
+        ? gDef.cells.filter((c) => this._isValidInnerCell(c))
+        : [];
+      const partnerCells = Array.isArray(gDef.partnerCells)
+        ? gDef.partnerCells.filter((c) => this._isValidInnerCell(c))
+        : [];
+      if (cells.length > 0) {
+        expanded.push({ cells, pair: gDef.pair || null, color: gDef.color || null });
+      }
+      if (partnerCells.length > 0) {
+        const hasPartner = gateDefs.some(
+          (other) =>
+            other &&
+            other !== gDef &&
+            other.pair === gDef.pair &&
+            Array.isArray(other.cells) &&
+            other.cells.length === partnerCells.length &&
+            partnerCells.every((pc) =>
+              other.cells.some((oc) => oc && oc.c === pc.c && oc.r === pc.r),
+            ),
+        );
+        if (!hasPartner) {
+          expanded.push({
+            cells: partnerCells,
+            pair: gDef.pair || null,
+            color: gDef.color || null,
+          });
+        }
+      }
+    }
+    if (expanded.length === 0) return;
+
+    const gates = expanded.map((g) => ({
+      cells: g.cells,
+      partner: null,
+      color: g.color,
+    }));
+
+    for (const g of gates) {
+      for (const cell of g.cells) {
+        this.map[cell.r][cell.c] = GATE;
+      }
+    }
+
+    const pairMap = {};
+    for (const g of gates) {
+      if (!g.pair) continue;
+      if (pairMap[g.pair]) {
+        g.partner = pairMap[g.pair];
+        pairMap[g.pair].partner = g;
+        if (!g.color && pairMap[g.pair].color) g.color = pairMap[g.pair].color;
+        if (!pairMap[g.pair].color && g.color) pairMap[g.pair].color = g.color;
+      } else {
+        pairMap[g.pair] = g;
+      }
+    }
+
+    const unpaired = gates.filter((g) => !g.partner);
+    for (let i = 0; i + 1 < unpaired.length; i += 2) {
+      unpaired[i].partner = unpaired[i + 1];
+      unpaired[i + 1].partner = unpaired[i];
+    }
+
+    let colorIdx = 0;
+    for (const g of gates) {
+      if (g.color) continue;
+      g.color = GATE_PAIR_COLORS[colorIdx % GATE_PAIR_COLORS.length];
+      if (g.partner && !g.partner.color) g.partner.color = g.color;
+      colorIdx++;
+    }
+
+    this.gates = gates;
+  }
+
+  _preloadItems(items) {
+    if (!Array.isArray(items) || items.length === 0) return;
+    const validIds = new Set(ITEM_DEFS.map((d) => d.id));
+    let count = 0;
+    for (const it of items) {
+      if (count >= MAX_ITEMS) break;
+      if (!it || !validIds.has(it.type)) continue;
+      if (!Number.isInteger(it.c) || !Number.isInteger(it.r)) continue;
+      if (it.c <= 0 || it.c >= COLS - 1 || it.r <= 0 || it.r >= ROWS - 1) continue;
+      if (this.map[it.r][it.c] !== EMPTY) continue;
+      const def = ITEM_DEFS.find((d) => d.id === it.type);
+      this.items.push({
+        x: it.c * CELL + 1,
+        y: it.r * CELL + 1,
+        w: 18,
+        h: 18,
+        def,
+        dead: false,
+        age: 0,
+      });
+      count++;
+    }
+  }
+
   _getSpawnPoints(count) {
     const rows = [1, Math.floor(ROWS / 3), Math.floor((2 * ROWS) / 3), ROWS - 2];
     const cols = [1, Math.floor(COLS / 3), Math.floor((2 * COLS) / 3), COLS - 2];
@@ -237,15 +406,35 @@ class GameEngine {
     const result = [];
     const usedRows = new Set();
     const usedCols = new Set();
+    const seen = new Set();
+    const push = (c, r) => {
+      if (result.length >= count) return;
+      const key = `${c},${r}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      usedRows.add(r);
+      usedCols.add(c);
+      result.push({ c, r });
+    };
+
+    if (Array.isArray(this._customSpawns)) {
+      for (const p of this._customSpawns) {
+        if (result.length >= count) break;
+        if (!p || !Number.isInteger(p.c) || !Number.isInteger(p.r)) continue;
+        if (p.c < 0 || p.c >= COLS || p.r < 0 || p.r >= ROWS) continue;
+        push(p.c, p.r);
+      }
+    }
+
     for (const p of shuffled) {
       if (result.length >= count) break;
       if (usedRows.has(p.r) || usedCols.has(p.c)) continue;
-      result.push(p);
-      usedRows.add(p.r);
-      usedCols.add(p.c);
+      push(p.c, p.r);
     }
     while (result.length < count) {
-      result.push({ c: 1 + Math.floor(Math.random() * (COLS - 2)), r: 1 + Math.floor(Math.random() * (ROWS - 2)) });
+      const c = 1 + Math.floor(Math.random() * (COLS - 2));
+      const r = 1 + Math.floor(Math.random() * (ROWS - 2));
+      push(c, r);
     }
     return result;
   }
