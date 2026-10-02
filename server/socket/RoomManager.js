@@ -52,14 +52,31 @@ class RoomManager {
   _tryMatch(io) {
     if (this.matchQueue.length < 2) return;
 
-    const matched = this.matchQueue.splice(
-      0,
-      Math.min(this.matchQueue.length, MAX_PLAYERS),
-    );
-    if (matched.length < 2) {
-      this.matchQueue.unshift(...matched);
-      return;
+    // 快速匹配按地图分组：只有选择了相同地图的玩家才会匹配到一起
+    const counts = new Map();
+    for (const p of this.matchQueue) {
+      counts.set(p.mapKey, (counts.get(p.mapKey) || 0) + 1);
     }
+    let targetKey = null;
+    for (const p of this.matchQueue) {
+      if ((counts.get(p.mapKey) || 0) >= 2) {
+        targetKey = p.mapKey;
+        break;
+      }
+    }
+    if (!targetKey) return;
+
+    const matched = [];
+    const rest = [];
+    for (const p of this.matchQueue) {
+      if (matched.length < MAX_PLAYERS && p.mapKey === targetKey) {
+        matched.push(p);
+      } else {
+        rest.push(p);
+      }
+    }
+    if (matched.length < 2) return;
+    this.matchQueue = rest;
 
     const roomId = this._genRoomId();
     const room = {
@@ -98,7 +115,7 @@ class RoomManager {
     }
 
     console.log(
-      `[RoomManager] Room ${roomId} created with ${matched.length} players`,
+      `[RoomManager] Room ${roomId} created with ${matched.length} players, map: ${room.map.type}:${room.map.name}`,
     );
   }
 
@@ -106,17 +123,34 @@ class RoomManager {
     const existing = this.matchQueue.findIndex((p) => p.socketId === socketId);
     if (existing >= 0) this.matchQueue.splice(existing, 1);
 
+    const mapInfo = this.sanitizeMap(map);
     this.matchQueue.push({
       socketId,
       employeeId: userInfo.employeeId || "",
       username: userInfo.username || "匿名",
       tankName: userInfo.tankName || "坦克",
-      map: this.sanitizeMap(map),
+      map: mapInfo,
+      mapKey: this._mapKey(mapInfo),
       joinedAt: Date.now(),
     });
     console.log(
-      `[RoomManager] Player ${socketId} joined queue (${this.matchQueue.length} in queue)`,
+      `[RoomManager] Player ${socketId} joined queue (${this.matchQueue.length} in queue, map: ${mapInfo.type}:${mapInfo.name})`,
     );
+  }
+
+  _mapKey(mapInfo) {
+    if (!mapInfo || mapInfo.type !== "custom" || !mapInfo.config) return "random";
+    return `custom:${mapInfo.name}:${this._hashMapConfig(mapInfo.config)}`;
+  }
+
+  _hashMapConfig(config) {
+    const s = JSON.stringify(config);
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h.toString(36);
   }
 
   removeFromQueue(socketId) {

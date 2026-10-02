@@ -16,7 +16,9 @@
       <div class="lobby-left">
         <div class="lobby-section">
           <h3>快速匹配</h3>
-          <p class="lobby-desc">默认随机地图，也可先选择地图再进行匹配</p>
+          <p class="lobby-desc">
+            默认随机地图，也可先选择地图再匹配，只会与选择相同地图的玩家匹配
+          </p>
           <div v-if="!matching && !inRoom" class="lobby-actions">
             <MapSelect v-model="matchMap" />
             <button class="btn-match" @click="quickMatch">开始匹配</button>
